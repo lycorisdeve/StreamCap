@@ -140,8 +140,10 @@ async def install_ffmpeg_mac(update_progress):
     await update_progress(0.1, "Get FFmpeg installation resources")
     await asyncio.sleep(2)
     await update_progress(0.3, "Please be patient and wait...")
+    timeout = 300
     try:
-        result = subprocess.run(["brew", "install", "ffmpeg"], capture_output=True, startupinfo=startupinfo)
+        result = subprocess.run(["brew", "install", "ffmpeg"], capture_output=True,
+                                startupinfo=startupinfo, timeout=timeout)
         if result.returncode == 0:
             logger.success("FFmpeg installation was successful. Restart for changes to take effect.")
             return True
@@ -159,21 +161,28 @@ async def install_ffmpeg_mac(update_progress):
 
 async def install_ffmpeg_linux(update_progress):
     is_rhs = True
+    timeout = 180
 
     try:
         logger.warning("ffmpeg is not installed.")
         logger.debug("Trying to install the stable version of ffmpeg")
         await update_progress(0.1, "Get FFmpeg installation resources")
-        result = subprocess.run(["yum", "-y", "update"], capture_output=True, startupinfo=startupinfo)
-        if result.returncode != 0:
-            logger.error("Failed to update package lists using yum.")
-            return False
+        try:
+            result = subprocess.run(["yum", "-y", "update"], capture_output=True,
+                                    startupinfo=startupinfo, timeout=timeout)
+            if result.returncode != 0:
+                logger.error("Failed to update package lists using yum.")
+                return False
 
-        result = subprocess.run(["yum", "install", "-y", "ffmpeg"], capture_output=True, startupinfo=startupinfo)
-        if result.returncode == 0:
-            logger.success("ffmpeg installation was successful using yum. Restart for changes to take effect.")
-            return True
-        logger.error(result.stderr.decode("utf-8").strip())
+            result = subprocess.run(["yum", "install", "-y", "ffmpeg"], capture_output=True,
+                                    startupinfo=startupinfo, timeout=timeout)
+            if result.returncode == 0:
+                logger.success("ffmpeg installation was successful using yum. Restart for changes to take effect.")
+                return True
+            logger.error(result.stderr.decode("utf-8").strip())
+        except subprocess.TimeoutExpired:
+            logger.error("Command execution timed out. Please try to manually install ffmpeg.")
+            raise Exception("Command execution timed out after {} seconds".format(timeout))
     except FileNotFoundError:
         logger.error("yum command not found, trying to install using apt...")
         is_rhs = False
@@ -183,17 +192,23 @@ async def install_ffmpeg_linux(update_progress):
     if not is_rhs:
         try:
             logger.debug("Trying to install the stable version of ffmpeg for Linux using apt...")
-            result = subprocess.run(["apt", "update"], capture_output=True, startupinfo=startupinfo)
-            if result.returncode != 0:
-                logger.error("Failed to update package lists using apt")
-                return False
+            try:
+                result = subprocess.run(["apt", "update"], capture_output=True,
+                                        startupinfo=startupinfo, timeout=timeout)
+                if result.returncode != 0:
+                    logger.error("Failed to update package lists using apt")
+                    return False
 
-            result = subprocess.run(["apt", "install", "-y", "ffmpeg"], capture_output=True, startupinfo=startupinfo)
-            if result.returncode == 0:
-                logger.success("ffmpeg installation was successful using apt. Restart for changes to take effect.")
-                return True
-            else:
-                logger.error(result.stderr.decode("utf-8").strip())
+                result = subprocess.run(["apt", "install", "-y", "ffmpeg"], capture_output=True,
+                                        startupinfo=startupinfo, timeout=timeout)
+                if result.returncode == 0:
+                    logger.success("ffmpeg installation was successful using apt. Restart for changes to take effect.")
+                    return True
+                else:
+                    logger.error(result.stderr.decode("utf-8").strip())
+            except subprocess.TimeoutExpired:
+                logger.error("Command execution timed out. Please try to manually install ffmpeg.")
+                raise Exception("Command execution timed out after {} seconds".format(timeout))
         except FileNotFoundError:
             logger.error("apt command not found, unable to install ffmpeg. Please manually install ffmpeg by yourself")
         except Exception as e:
