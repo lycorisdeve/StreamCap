@@ -1,5 +1,3 @@
-import os
-
 import flet as ft
 
 from .scripts.ffmpeg_install import check_ffmpeg_installed, install_ffmpeg
@@ -180,7 +178,6 @@ class InstallationManager:
 
     async def check_env(self):
         if not self.app.settings.user_config.get("hide_install_dialog", False):
-            os.environ['PATH'] = ''
             await self.get_install_components()
             if self.components_to_install:
                 logger.info(f"Missing components: {[i['name'] for i in self.components_to_install]}")
