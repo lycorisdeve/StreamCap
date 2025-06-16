@@ -94,7 +94,8 @@
     "not_disk_space_tip": "⚠️ 磁盘存储空间不足, 停止录制"
   },
   "stream_manager": {
-    "record_stream_error": "直播源录制出错"
+    "record_stream_error": "直播源录制出错",
+    "no_ffmpeg_tip": "⚠️ 未安装FFmpeg，请先安装FFmpeg"
   },
   "recording_card": {
     "stop_monitor_tip": "提示：已停止直播监控👁️",

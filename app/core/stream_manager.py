@@ -364,6 +364,17 @@ class LiveStreamRecorder:
 
         except Exception as e:
             logger.error(f"An error occurred during the subprocess execution: {e}")
+            self.recording.status_info = RecordingStatus.RECORDING_ERROR
+
+            try:
+                self.app.record_manager.stop_recording(self.recording)
+                await self.app.record_card_manager.update_card(self.recording)
+                self.app.page.pubsub.send_others_on_topic("update", self.recording)
+                await self.app.snack_bar.show_snack_bar(
+                    record_name + " " + self._["no_ffmpeg_tip"], duration=4000
+                )
+            except Exception as e:
+                logger.debug(f"Failed to update UI: {e}")
             return False
         finally:
             self.recording.record_url = None

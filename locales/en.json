@@ -93,7 +93,8 @@
     "not_disk_space_tip": "⚠️ Insufficient disk storage space, stop recording"
   },
     "stream_manager": {
-    "record_stream_error": "Live streaming source recording error"
+    "record_stream_error": "Live streaming source recording error",
+    "no_ffmpeg_tip": "⚠️ FFmpeg is not installed, please install FFmpeg first"
   },
   "recording_card": {
     "stop_monitor_tip": "Tip: Live monitoring has been stopped",
