@@ -77,7 +77,10 @@ class InstallationManager:
             self.page.update()
 
     async def update_component_progress(self, component_name, progress, status):
-        for item in self.install_dialog.content.controls[4].controls:
+        components_container = self.install_dialog.content.controls[4]
+        components_list = components_container.content
+        
+        for item in components_list.controls:
             if isinstance(item, ft.Row) and item.controls[0].controls[0].value == component_name:
                 item.controls[1].controls[0].value = progress
                 item.controls[1].controls[1].value = f"{int(progress * 100)}%"
@@ -88,7 +91,10 @@ class InstallationManager:
                 break
 
     async def show_install_dialog(self):
-        components_list = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
+        if self.page.web:
+            components_list = ft.Column(spacing=10, tight=True)
+        else:
+            components_list = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)
 
         for component in self.components_to_install:
             progress_ring = ft.ProgressRing(width=40, height=40, stroke_width=3)
@@ -104,13 +110,23 @@ class InstallationManager:
             )
             components_list.controls.append(component_item)
 
+        dialog_height = int(self.page.window.height * 0.6) if not self.page.web else 400
+        
+        padding = 20 if not self.page.web else 10
+        
+        components_container = ft.Container(
+            content=components_list,
+            padding=padding,
+            expand=True,
+        )
+        
         dialog_content = ft.Column(
             controls=[
                 ft.Icon(ft.Icons.DOWNLOADING, size=40, color=ft.Colors.BLUE_700),
                 ft.Text(self._["install_guide"], size=20),
                 ft.Divider(height=20),
                 ft.Text(self._["install_tip"], size=14),
-                components_list,
+                components_container,
                 ft.Row(
                     [ft.Checkbox(label=self._["dont_show_again"], value=False, on_change=self.on_dont_show_again)],
                     alignment=ft.MainAxisAlignment.START,
@@ -118,7 +134,7 @@ class InstallationManager:
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=15,
-            height=int(self.page.window.height * 0.6),
+            height=dialog_height,
         )
 
         self.install_dialog = ft.AlertDialog(
