@@ -1,5 +1,3 @@
-import webbrowser
-
 import flet as ft
 
 from ..base_page import PageBase
@@ -237,14 +235,14 @@ class AboutPage(PageBase):
         self.content_area.update()
 
     @staticmethod
-    async def open_update_page(_):
+    async def open_update_page(e):
         url = "https://github.com/ihmily/StreamCap/releases"
-        webbrowser.open(url)
+        e.page.launch_url(url)
 
     @staticmethod
-    async def open_dos_page(_):
+    async def open_dos_page(e):
         url = "https://github.com/ihmily/StreamCap/wiki"
-        webbrowser.open(url)
+        e.page.launch_url(url)
 
     async def on_keyboard(self, e: ft.KeyboardEvent):
         if e.alt and e.key == "H":

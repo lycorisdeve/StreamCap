@@ -212,8 +212,7 @@ class UpdateChecker:
 
     def open_download_page(self, update_info: dict[str, Any]) -> None:
         import platform
-        import webbrowser
-        
+
         url = update_info.get("download_url", "https://github.com/ihmily/StreamCap/releases/latest")
         
         download_urls = update_info.get("download_urls", {})
@@ -226,5 +225,5 @@ class UpdateChecker:
             elif system == "linux" and "linux" in download_urls:
                 url = download_urls["linux"]
         
-        webbrowser.open(url)
+        self.app.page.launch_url(url)
         self.close_dialog()

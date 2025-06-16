@@ -1,5 +1,4 @@
 import os
-import webbrowser
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -50,7 +49,7 @@ class VideoPlayer:
             await self.app.snack_bar.show_snack_bar(self._["copy_success"])
 
         async def open_in_browser(_):
-            webbrowser.open(room_url)
+            self.app.page.launch_url(room_url)
 
         actions = [
             ft.TextButton(self._["close"], on_click=close_dialog)
