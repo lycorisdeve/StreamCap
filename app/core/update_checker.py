@@ -111,12 +111,12 @@ class UpdateChecker:
                         download_urls = {}
                         for asset in latest_release.get("assets", []):
                             name = asset["name"].lower()
-                            if "win" in name or "windows" in name:
+                            if ("win" in name or "windows" in name) and "noff" not in name:
                                 download_urls["windows"] = asset["browser_download_url"]
-                            elif "mac" in name or "macos" in name:
+                            elif ("mac" in name or "macos" in name) and "noff" not in name:
                                 download_urls["macos"] = asset["browser_download_url"]
                             elif "linux" in name:
-                                download_urls["linux"] = asset["browser_download_url"]
+                                download_urls["linux"] = latest_release["html_url"]
                         
                         return {
                             "has_update": True,
