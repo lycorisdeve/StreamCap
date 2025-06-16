@@ -1,6 +1,5 @@
 import asyncio
 import os.path
-from functools import partial
 
 import flet as ft
 
@@ -54,31 +53,31 @@ class RecordingCardManager:
         record_button = ft.IconButton(
             icon=self.get_icon_for_recording_state(recording),
             tooltip=self.get_tip_for_recording_state(recording),
-            on_click=partial(self.recording_button_on_click, recording=recording),
+            on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_button_on_click, e, rec),
         )
 
         edit_button = ft.IconButton(
             icon=ft.Icons.EDIT,
             tooltip=self._["edit_record_config"],
-            on_click=partial(self.edit_recording_button_click, recording=recording),
+            on_click=lambda e, rec=recording: self.app.page.run_task(self.edit_recording_button_click, e, rec),
         )
 
         preview_button = ft.IconButton(
             icon=ft.Icons.VIDEO_LIBRARY,
             tooltip=self._["preview_video"],
-            on_click=partial(self.preview_video_button_on_click, recording=recording),
+            on_click=lambda e, rec=recording: self.app.page.run_task(self.preview_video_button_on_click, e, rec),
         )
 
         monitor_button = ft.IconButton(
             icon=self.get_icon_for_monitor_state(recording),
             tooltip=self.get_tip_for_monitor_state(recording),
-            on_click=partial(self.monitor_button_on_click, recording=recording),
+            on_click=lambda e, rec=recording: self.app.page.run_task(self.monitor_button_on_click, e, rec),
         )
 
         delete_button = ft.IconButton(
             icon=ft.Icons.DELETE,
             tooltip=self._["delete_monitor"],
-            on_click=partial(self.recording_delete_button_click, recording=recording),
+            on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_delete_button_click, e, rec),
         )
 
         status_prefix = ""
@@ -100,12 +99,12 @@ class RecordingCardManager:
         open_folder_button = ft.IconButton(
             icon=ft.Icons.FOLDER,
             tooltip=self._["open_folder"],
-            on_click=partial(self.recording_dir_button_on_click, recording=recording),
+            on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_dir_button_on_click, e, rec),
         )
         recording_info_button = ft.IconButton(
             icon=ft.Icons.INFO,
             tooltip=self._["recording_info"],
-            on_click=partial(self.recording_info_button_on_click, recording=recording),
+            on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_info_button_on_click, e, rec),
         )
         speed_text_label = ft.Text(speed, size=12)
 
@@ -142,7 +141,7 @@ class RecordingCardManager:
                 tight=True
             ),
             padding=8,
-            on_click=partial(self.recording_card_on_click, recording=recording),
+            on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_card_on_click, e, rec),
             bgcolor=self.get_card_background_color(recording),
             border_radius=5,
             border=ft.border.all(2, self.get_card_border_color(recording)),
