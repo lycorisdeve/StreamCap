@@ -1,3 +1,5 @@
+import os
+
 import flet as ft
 
 from .scripts.ffmpeg_install import check_ffmpeg_installed, install_ffmpeg
@@ -79,7 +81,7 @@ class InstallationManager:
     async def update_component_progress(self, component_name, progress, status):
         components_container = self.install_dialog.content.controls[4]
         components_list = components_container.content
-        
+
         for item in components_list.controls:
             if isinstance(item, ft.Row) and item.controls[0].controls[0].value == component_name:
                 item.controls[1].controls[0].value = progress
@@ -110,16 +112,14 @@ class InstallationManager:
             )
             components_list.controls.append(component_item)
 
-        dialog_height = int(self.page.window.height * 0.6) if not self.page.web else 400
-        
-        padding = 20 if not self.page.web else 10
-        
+        dialog_height = int(self.page.window.height * 0.6) if not self.page.web else int(self.page.height * 0.5)
+        dialog_width = int(self.page.window.height * 0.5) if not self.page.web else int(self.page.height * 0.5)
+
         components_container = ft.Container(
             content=components_list,
-            padding=padding,
             expand=True,
         )
-        
+
         dialog_content = ft.Column(
             controls=[
                 ft.Icon(ft.Icons.DOWNLOADING, size=40, color=ft.Colors.BLUE_700),
@@ -135,6 +135,7 @@ class InstallationManager:
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=15,
             height=dialog_height,
+            width=dialog_width,
         )
 
         self.install_dialog = ft.AlertDialog(
@@ -179,6 +180,7 @@ class InstallationManager:
 
     async def check_env(self):
         if not self.app.settings.user_config.get("hide_install_dialog", False):
+            os.environ['PATH'] = ''
             await self.get_install_components()
             if self.components_to_install:
                 logger.info(f"Missing components: {[i['name'] for i in self.components_to_install]}")
@@ -187,3 +189,4 @@ class InstallationManager:
             from .scripts import ffmpeg_install, node_install
             ffmpeg_install.update_env_path()
             node_install.update_env_path()
+            
