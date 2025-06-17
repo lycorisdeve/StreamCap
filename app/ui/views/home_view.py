@@ -131,40 +131,69 @@ class HomePage(PageBase):
         self.page.run_task(self.app.config_manager.save_user_config, self.app.settings.user_config)
 
     def create_home_title_area(self):
-        return ft.Row(
-            [
-                ft.Text(self._["recording_list"], theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
-                ft.Container(expand=True),
-                ft.IconButton(
-                    icon=ft.Icons.GRID_VIEW if self.is_grid_view else ft.Icons.LIST,
-                    tooltip=self._["toggle_view"],
-                    on_click=self.toggle_view_mode
-                ),
-                ft.IconButton(icon=ft.Icons.SEARCH, tooltip=self._["search"], on_click=self.search_on_click),
-                ft.IconButton(icon=ft.Icons.ADD, tooltip=self._["add_record"], on_click=self.add_recording_on_click),
-                ft.IconButton(icon=ft.Icons.REFRESH, tooltip=self._["refresh"], on_click=self.refresh_cards_on_click),
-                ft.IconButton(
-                    icon=ft.Icons.PLAY_ARROW,
-                    tooltip=self._["batch_start"],
-                    on_click=self.start_monitor_recordings_on_click,
-                ),
-                ft.IconButton(
-                    icon=ft.Icons.STOP, tooltip=self._["batch_stop"], on_click=self.stop_monitor_recordings_on_click
-                ),
-                ft.IconButton(
-                    icon=ft.Icons.DELETE_SWEEP,
-                    tooltip=self._["batch_delete"],
-                    on_click=self.delete_monitor_recordings_on_click,
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.START,
+        toggle_view_mode_button = ft.IconButton(
+            icon=ft.Icons.GRID_VIEW if self.is_grid_view else ft.Icons.LIST,
+            tooltip=self._["toggle_view"],
+            on_click=self.toggle_view_mode
         )
+
+        title_controls = [
+            ft.Text(self._["recording_list"], theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
+            ft.Container(expand=True),
+        ]
+        
+        if not self.app.is_mobile:
+            title_controls.append(toggle_view_mode_button)
+
+        batch_controls = [
+            ft.IconButton(icon=ft.Icons.SEARCH, tooltip=self._["search"], on_click=self.search_on_click),
+            ft.IconButton(icon=ft.Icons.ADD, tooltip=self._["add_record"], on_click=self.add_recording_on_click),
+            ft.IconButton(icon=ft.Icons.REFRESH, tooltip=self._["refresh"], on_click=self.refresh_cards_on_click),
+            ft.IconButton(
+                icon=ft.Icons.PLAY_ARROW,
+                tooltip=self._["batch_start"],
+                on_click=self.start_monitor_recordings_on_click,
+            ),
+            ft.IconButton(
+                icon=ft.Icons.STOP, 
+                tooltip=self._["batch_stop"], 
+                on_click=self.stop_monitor_recordings_on_click
+            ),
+            ft.IconButton(
+                icon=ft.Icons.DELETE_SWEEP,
+                tooltip=self._["batch_delete"],
+                on_click=self.delete_monitor_recordings_on_click,
+            ),
+        ]
+        
+        if self.app.is_mobile:
+            first_row = ft.Row(
+                title_controls,
+                alignment=ft.MainAxisAlignment.START,
+            )
+            second_row = ft.Row(
+                [
+                    ft.Text(self._["operations"] + ":", size=14),
+                    *batch_controls,
+                ],
+                alignment=ft.MainAxisAlignment.START,
+            )
+            
+            return ft.Column(
+                [first_row, second_row],
+                spacing=5,
+            )
+        else:
+            return ft.Row(
+                [*title_controls, *batch_controls],
+                alignment=ft.MainAxisAlignment.START,
+            )
     
     def create_filter_area(self):
         """Create the filter area"""
 
         filter_buttons = [
-            ft.Text(self._["status_filter"] + ":", size=14),
+            ft.Text(self._["status_filter"] if not self.app.is_mobile else self._["filter"], size=14),
             ft.ElevatedButton(
                 self._["filter_all"],
                 on_click=self.filter_all_on_click,
@@ -253,16 +282,42 @@ class HomePage(PageBase):
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         
-        return ft.Row(
-            [
-                *filter_buttons,
-                ft.Container(expand=True),
-                platform_filter_area
-            ],
-            alignment=ft.MainAxisAlignment.START,
-            spacing=5,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        )
+        if self.app.is_mobile:
+            status_filter_row = ft.Row(
+                filter_buttons,
+                alignment=ft.MainAxisAlignment.START,
+                spacing=3,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                wrap=True,
+            )
+            
+            platform_filter_row = ft.Row(
+                [platform_filter_area],
+                alignment=ft.MainAxisAlignment.START,
+                spacing=5,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            )
+            
+            return ft.Column(
+                [
+                    status_filter_row,
+                    platform_filter_row
+                ],
+                spacing=5,
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+            )
+        else:
+            return ft.Row(
+                [
+                    *filter_buttons,
+                    ft.Container(expand=True),
+                    platform_filter_area
+                ],
+                alignment=ft.MainAxisAlignment.START,
+                spacing=5,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            )
     
     async def filter_all_on_click(self, _):
         self.current_filter = "all"
@@ -355,7 +410,7 @@ class HomePage(PageBase):
                 ),
                 self.recording_card_area,
             ],
-            scroll=ft.ScrollMode.AUTO,
+            scroll=ft.ScrollMode.AUTO if not self.app.is_mobile else ft.ScrollMode.HIDDEN,
         )
 
     async def add_record_cards(self):
@@ -628,12 +683,25 @@ class HomePage(PageBase):
         if not self.is_grid_view:
             return
 
-        column_width = 350
+        if self.app.is_mobile:
+            column_width = 250
+            child_aspect_ratio = 2.5
+        else:
+            column_width = 350
+            child_aspect_ratio = 2.3
+
         runs_count = max(1, int(self.page.width / column_width))
 
         if isinstance(self.recording_card_area.content, ft.GridView):
             grid_view = self.recording_card_area.content
             grid_view.runs_count = runs_count
+            
+            grid_view.child_aspect_ratio = child_aspect_ratio
+            
+            if self.app.is_mobile:
+                grid_view.spacing = 5
+                grid_view.run_spacing = 5
+            
             grid_view.update()
 
     async def on_keyboard(self, e: ft.KeyboardEvent):

@@ -37,7 +37,9 @@
     "filter_offline": "未开播",
     "filter_stopped": "未监控",
     "platform_filter": "平台筛选",
-    "platform_sort": "平台排序"
+    "platform_sort": "平台排序",
+    "operations": "操作",
+    "filter": "筛选"
   },
   "recording_dialog": {
     "input_live_link": "输入直播间地址",

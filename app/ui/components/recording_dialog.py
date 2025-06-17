@@ -93,7 +93,12 @@ class RecordingDialog:
             menu_height=200
         )
 
-        format_row = ft.Row([media_type_dropdown, record_format_field], expand=True)
+        if self.app.is_mobile:
+            media_type_dropdown.width = 500
+            record_format_field.width = 500
+            format_row = ft.Column([media_type_dropdown, record_format_field], expand=True)
+        else:
+            format_row = ft.Row([media_type_dropdown, record_format_field], expand=True)
 
         recording_dir_field = ft.TextField(
             label=self._["input_save_path"],

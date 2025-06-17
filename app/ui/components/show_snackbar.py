@@ -2,8 +2,8 @@ import flet as ft
 
 
 class ShowSnackBar:
-    def __init__(self, page):
-        self.page = page
+    def __init__(self, app):
+        self.app = app
 
     async def show_snack_bar(self, message, bgcolor=None, duration=1500, action=None, emoji=None,
                              show_close_icon=False):
@@ -16,10 +16,12 @@ class ShowSnackBar:
             action=action,
             bgcolor=bgcolor,
             duration=duration,
-            margin=ft.margin.only(left=self.page.width - 300, top=0, right=10, bottom=10),
             show_close_icon=show_close_icon
         )
 
+        if not self.app.is_mobile:
+            snack_bar.margin = ft.margin.only(left=self.app.page.width - 300, top=0, right=10, bottom=10)
+
         snack_bar.open = True
-        self.page.snack_bar_area.content = snack_bar
-        self.page.update()
+        self.app.snack_bar_area.content = snack_bar
+        self.app.page.update()

@@ -37,9 +37,18 @@ class VideoPlayer:
             dialog.open = False
             self.app.dialog_area.update()
 
+        is_mobile = self.app.is_mobile
+
+        if is_mobile:
+            video_width = 320
+            video_height = 180
+        else:
+            video_width = 800
+            video_height = 450
+
         video = ft.Video(
-            width=800,
-            height=450,
+            width=video_width,
+            height=video_height,
             playlist=[ft.VideoMedia(video_source)],
             autoplay=True
         )
@@ -63,13 +72,46 @@ class VideoPlayer:
             else:
                 actions.insert(0, ft.TextButton(self._["copy_video_url"], on_click=copy_source))
 
-        dialog = ft.AlertDialog(
-            modal=True,
-            title=ft.Text(title),
-            content=video,
-            actions=actions,
-            actions_alignment=ft.MainAxisAlignment.END
-        )
+        if is_mobile:
+            actions_row = ft.Row(
+                controls=actions,
+                spacing=5,
+                alignment=ft.MainAxisAlignment.CENTER,
+                wrap=True,
+            )
+
+            video_container = ft.Container(
+                content=video,
+                alignment=ft.alignment.center,
+                width=video_width,
+                height=video_height,
+            )
+
+            dialog = ft.AlertDialog(
+                modal=True,
+                title=ft.Text(title, overflow=ft.TextOverflow.ELLIPSIS, max_lines=1, size=14),
+                content=ft.Column(
+                    [
+                        video_container,
+                        actions_row
+                    ],
+                    spacing=5,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    tight=True,
+                ),
+                actions=[],
+                inset_padding=ft.padding.only(left=10, right=10, top=5, bottom=5),
+                content_padding=ft.padding.only(left=5, right=5, top=5, bottom=0),
+            )
+        else:
+            dialog = ft.AlertDialog(
+                modal=True,
+                title=ft.Text(title),
+                content=video,
+                actions=actions,
+                actions_alignment=ft.MainAxisAlignment.END
+            )
         dialog.open = True
         self.app.dialog_area.content = dialog
         self.app.dialog_area.update()

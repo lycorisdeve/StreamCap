@@ -37,7 +37,9 @@
     "filter_offline": "Offline",
     "filter_stopped": "Not Monitored",
     "platform_filter": "Platform Filter",
-    "platform_sort": "Platform Sort"
+    "platform_sort": "Platform Sort",
+    "operations": "Operations",
+    "filter": "Filter"
   },
   "recording_dialog": {
     "input_live_link": "Enter Live Room URL",

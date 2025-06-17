@@ -63,12 +63,20 @@ class SettingsPage(PageBase):
             selected_index=0,
             animation_duration=300,
             tabs=tabs,
-        )
-
-        scrollable_content = ft.Container(
-            content=settings_tabs,
             expand=True,
         )
+
+        if self.app.is_mobile:
+            scrollable_content = ft.Container(
+                content=settings_tabs,
+                expand=True,
+                width=float("inf"),
+            )
+        else:
+            scrollable_content = ft.Container(
+                content=settings_tabs,
+                expand=True,
+            )
 
         settings_content = ft.Container(
             content=scrollable_content,
@@ -81,6 +89,7 @@ class SettingsPage(PageBase):
             ],
             spacing=0,
             expand=True,
+            width=float("inf") if self.app.is_mobile else None,
         )
 
         self.content_area.controls.append(column_layout)
@@ -211,6 +220,8 @@ class SettingsPage(PageBase):
 
     def create_recording_settings_tab(self):
         """Create UI elements for recording settings."""
+        is_mobile = self.app.is_mobile
+        
         return ft.Column(
             [
                 self.create_setting_group(
@@ -276,6 +287,7 @@ class SettingsPage(PageBase):
                         ),
                         self.create_folder_setting_row(self._["name_rules"]),
                     ],
+                    is_mobile,
                 ),
                 self.create_setting_group(
                     self._["proxy_settings"],
@@ -299,6 +311,7 @@ class SettingsPage(PageBase):
                             ),
                         ),
                     ],
+                    is_mobile,
                 ),
                 self.create_setting_group(
                     self._["recording_options"],
@@ -420,6 +433,7 @@ class SettingsPage(PageBase):
                             ),
                         ),
                     ],
+                    is_mobile,
                 ),
             ],
             spacing=10,
@@ -428,6 +442,8 @@ class SettingsPage(PageBase):
 
     def create_push_settings_tab(self):
         """Create UI elements for push configuration."""
+        is_mobile = self.app.is_mobile
+        
         return ft.Column(
             [
                 self.create_setting_group(
@@ -468,6 +484,7 @@ class SettingsPage(PageBase):
                             ),
                         ),
                     ],
+                    is_mobile,
                 ),
                 self.create_setting_group(
                     self._["custom_push_settings"],
@@ -501,11 +518,13 @@ class SettingsPage(PageBase):
                             ),
                         ),
                     ],
+                    is_mobile,
                 ),
                 self.create_setting_group(
                     self._["push_channels"],
                     self._["select_and_enable_channels"],
-                    [self.create_push_channels_layout()]
+                    [self.create_push_channels_layout()],
+                    is_mobile,
                 ),
                 self.create_setting_group(
                     self._["channel_configuration"],
@@ -749,6 +768,7 @@ class SettingsPage(PageBase):
                             ],
                         ),
                     ],
+                    is_mobile,
                 ),
             ],
             spacing=10,
@@ -779,7 +799,13 @@ class SettingsPage(PageBase):
                 self._["telegram"], ft.Icons.SMS, "telegram_enabled"
             ),
         ]
-        
+
+        if self.app.is_mobile:
+            return ft.Row(
+                controls=controls,
+                spacing=5,
+                wrap=True,
+            )
         if self.app.page.web:
             return ft.Row(
                 controls=controls,
@@ -798,9 +824,11 @@ class SettingsPage(PageBase):
                 ),
                 expand=True,
             )
-        
+
     def create_cookies_settings_tab(self):
         """Create UI elements for push configuration."""
+        is_mobile = self.app.is_mobile
+        
         platforms = [
             "douyin",
             "tiktok",
@@ -860,7 +888,7 @@ class SettingsPage(PageBase):
         return ft.Column(
             [
                 self.create_setting_group(
-                    self._["cookies_settings"], self._["configure_platform_cookies"], setting_rows
+                    self._["cookies_settings"], self._["configure_platform_cookies"], setting_rows, is_mobile
                 ),
             ],
             spacing=10,
@@ -869,6 +897,8 @@ class SettingsPage(PageBase):
 
     def create_accounts_settings_tab(self):
         """Create UI elements for platform accounts configuration."""
+        is_mobile = self.app.is_mobile
+        
         return ft.Column(
             [
                 self.create_setting_group(
@@ -959,6 +989,7 @@ class SettingsPage(PageBase):
                             ),
                         ),
                     ],
+                    is_mobile,
                 ),
             ],
             spacing=10,
@@ -966,37 +997,61 @@ class SettingsPage(PageBase):
         )
 
     def create_folder_setting_row(self, label):
-        return ft.Row(
-            [
-                ft.Text(label, width=200, text_align=ft.TextAlign.RIGHT),
-                ft.Checkbox(
-                    label=self._["platform"],
-                    value=self.get_config_value("folder_name_platform"),
-                    on_change=self.on_change,
-                    data="folder_name_platform",
-                ),
-                ft.Checkbox(
-                    label=self._["author"],
-                    value=self.get_config_value("folder_name_author"),
-                    on_change=self.on_change,
-                    data="folder_name_author",
-                ),
-                ft.Checkbox(
-                    label=self._["time"],
-                    value=self.get_config_value("folder_name_time"),
-                    on_change=self.on_change,
-                    data="folder_name_time",
-                ),
-                ft.Checkbox(
-                    label=self._["title"],
-                    value=self.get_config_value("folder_name_title"),
-                    on_change=self.on_change,
-                    data="folder_name_title",
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.START,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        )
+        checkboxes = [
+            ft.Checkbox(
+                label=self._["platform"],
+                value=self.get_config_value("folder_name_platform"),
+                on_change=self.on_change,
+                data="folder_name_platform",
+            ),
+            ft.Checkbox(
+                label=self._["author"],
+                value=self.get_config_value("folder_name_author"),
+                on_change=self.on_change,
+                data="folder_name_author",
+            ),
+            ft.Checkbox(
+                label=self._["time"],
+                value=self.get_config_value("folder_name_time"),
+                on_change=self.on_change,
+                data="folder_name_time",
+            ),
+            ft.Checkbox(
+                label=self._["title"],
+                value=self.get_config_value("folder_name_title"),
+                on_change=self.on_change,
+                data="folder_name_title",
+            ),
+        ]
+        
+        if self.app.is_mobile:
+            checkbox_grid = ft.Column(
+                [
+                    ft.Row([checkboxes[0], checkboxes[1]], spacing=10),
+                    ft.Row([checkboxes[2], checkboxes[3]], spacing=10),
+                ],
+                spacing=5,
+            )
+            
+            return ft.Column(
+                [
+                    ft.Text(label, text_align=ft.TextAlign.LEFT, weight=ft.FontWeight.BOLD),
+                    ft.Container(
+                        content=checkbox_grid,
+                        margin=ft.margin.only(top=5, bottom=10),
+                    )
+                ],
+                spacing=5,
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+                width=float("inf"),
+            )
+        else:
+            return ft.Row(
+                [ft.Text(label, width=200, text_align=ft.TextAlign.RIGHT), *checkboxes],
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            )
 
     def create_channel_switch_container(self, channel_name, icon, key):
         """Helper method to create a container with a switch and an icon for each channel."""
@@ -1025,9 +1080,12 @@ class SettingsPage(PageBase):
         )
 
     @staticmethod
-    def create_setting_group(title, description, settings):
+    def create_setting_group(title, description, settings, is_mobile=False):
         """Helper method to group settings under a title."""
-        return ft.Card(
+        padding = 5 if is_mobile else 10
+        margin = 5 if is_mobile else 10
+        
+        card = ft.Card(
             content=ft.Container(
                 content=ft.Column(
                     [
@@ -1037,11 +1095,20 @@ class SettingsPage(PageBase):
                     ],
                     spacing=5,
                 ),
-                padding=10,
+                padding=padding,
             ),
             elevation=5,
-            margin=10,
+            margin=margin,
         )
+        
+        if is_mobile:
+            return ft.Container(
+                content=card,
+                width=float("inf"),
+                expand=True,
+            )
+        else:
+            return card
 
     def set_focused_control(self, control):
         """Store the currently focused control."""
@@ -1051,11 +1118,48 @@ class SettingsPage(PageBase):
         """Helper method to create a row for each setting."""
         if hasattr(control, 'on_focus'):
             control.on_focus = lambda e: self.set_focused_control(e.control)
-        return ft.Row(
-            [ft.Text(label, width=200, text_align=ft.TextAlign.RIGHT), control],
-            alignment=ft.MainAxisAlignment.START,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        )
+            
+        if self.app.is_mobile:
+            if isinstance(control, (ft.Switch, ft.Checkbox, ft.IconButton)):
+                return ft.Row(
+                    [
+                        ft.Text(label),
+                        ft.Container(expand=True),
+                        control
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    width=float("inf"),
+                )
+            
+            if hasattr(control, 'width') and control.width and control.width > 250:
+                control.width = 250
+                
+            if isinstance(control, (ft.TextField, ft.Dropdown)):
+                control.width = float("inf")
+                control.expand = True
+                
+            return ft.Column(
+                [
+                    ft.Text(label, text_align=ft.TextAlign.LEFT),
+                    ft.Container(
+                        content=control,
+                        margin=ft.margin.only(top=5, bottom=10),
+                        expand=True,
+                        width=float("inf"),
+                    )
+                ],
+                spacing=0,
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+                width=float("inf"),
+            )
+        else:
+            return ft.Row(
+                [ft.Text(label, width=200, text_align=ft.TextAlign.RIGHT), control],
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            )
 
     def pick_folder(self, label, control):
         def picked_folder(e: ft.FilePickerResultEvent):
@@ -1079,11 +1183,40 @@ class SettingsPage(PageBase):
         btn_pick_folder = ft.ElevatedButton(
             text=self._["select"], icon=ft.Icons.FOLDER_OPEN, on_click=pick_folder, tooltip=self._["select_btn_tip"]
         )
-        return ft.Row(
-            [ft.Text(label, width=200, text_align=ft.TextAlign.RIGHT), control, btn_pick_folder],
-            alignment=ft.MainAxisAlignment.START,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        )
+        
+        if self.app.is_mobile:
+            if hasattr(control, 'width'):
+                control.width = float("inf")
+                control.expand = True
+                
+            return ft.Column(
+                [
+                    ft.Text(label, text_align=ft.TextAlign.LEFT),
+                    ft.Row(
+                        [
+                            ft.Container(
+                                content=control,
+                                expand=True,
+                            ),
+                            btn_pick_folder
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        expand=True,
+                        width=float("inf"),
+                    ),
+                ],
+                spacing=5,
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+                width=float("inf"),
+            )
+        else:
+            return ft.Row(
+                [ft.Text(label, width=200, text_align=ft.TextAlign.RIGHT), control, btn_pick_folder],
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            )
 
     async def is_changed(self):
         if self.app.current_page != self:
@@ -1118,6 +1251,7 @@ class SettingsPage(PageBase):
             self.page.run_task(self.is_changed)
 
     def create_security_settings_tab(self):
+        is_mobile = self.app.is_mobile
         
         async def change_password(_):
             old_password = old_password_field.value
@@ -1226,6 +1360,7 @@ class SettingsPage(PageBase):
                             change_password_button,
                         ),
                     ],
+                    is_mobile,
                 ),
             ],
             spacing=10,

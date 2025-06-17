@@ -48,7 +48,7 @@ class App:
         self.sidebar = NavigationSidebar(self)
         self.left_navigation_menu = LeftNavigationMenu(self)
 
-        self.page.snack_bar_area = ft.Container()
+        self.snack_bar_area = ft.Container()
         self.dialog_area = ft.Container()
         self.complete_page = ft.Row(
             expand=True,
@@ -57,10 +57,10 @@ class App:
                 ft.VerticalDivider(width=1),
                 self.content_area,
                 self.dialog_area,
-                self.page.snack_bar_area,
+                self.snack_bar_area,
             ]
         )
-        self.snack_bar = ShowSnackBar(self.page)
+        self.snack_bar = ShowSnackBar(self)
         self.subprocess_start_up_info = utils.get_startup_info()
         self.record_card_manager = RecordingCardManager(self)
         self.record_manager = RecordingManager(self)

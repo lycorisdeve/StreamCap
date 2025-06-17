@@ -30,7 +30,6 @@ class SearchDialog(ft.AlertDialog):
             border_radius=5,
             border_color=ft.Colors.GREY_400,
             focused_border_color=ft.Colors.BLUE,
-            cursor_color=ft.Colors.BLACK,
             hint_style=ft.TextStyle(color=ft.Colors.GREY_500, size=14),
         )
         self.actions = [

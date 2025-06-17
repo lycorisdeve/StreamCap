@@ -37,7 +37,8 @@ class StoragePage(BasePage):
         self.path_display = ft.Text(
             self._["storage_path"] + ": " + self.current_path,
             size=14,
-            color=ft.colors.GREY_600
+            color=ft.colors.GREY_600,
+            selectable=True,
         )
         self.file_list = ft.ListView(expand=True, spacing=2, padding=10)
         self.content = ft.Column(controls=[self.path_display, self.file_list])
@@ -64,6 +65,7 @@ class StoragePage(BasePage):
                 self.file_list.controls.append(
                     ft.ElevatedButton(
                         self._["go_back"],
+                        icon=ft.icons.ARROW_BACK,
                         on_click=lambda _: self.app.page.run_task(self.navigate_to_parent)
                     )
                 )
@@ -103,6 +105,7 @@ class StoragePage(BasePage):
         items = await asyncio.get_event_loop().run_in_executor(self.executor, _get_items)
         
         buttons = []
+        is_mobile = self.app.is_mobile
         for name, is_dir, full_path in items:
             if is_dir:
                 btn = ft.ElevatedButton(
@@ -114,7 +117,19 @@ class StoragePage(BasePage):
                     f"📄 {name}",
                     on_click=lambda e, path=full_path: self.app.page.run_task(self.preview_file, path)
                 )
-            buttons.append(btn)
+
+            if is_mobile:
+                card = ft.Card(
+                    content=ft.Container(
+                        content=btn,
+                        padding=ft.padding.only(left=0, right=0, top=2, bottom=2),
+                    ),
+                    elevation=2,
+                    margin=ft.margin.only(bottom=5),
+                )
+                buttons.append(card)
+            else:
+                buttons.append(btn)
 
         self.file_list.controls.extend(buttons)
 

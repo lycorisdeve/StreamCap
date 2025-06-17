@@ -11,6 +11,7 @@ from app.auth.auth_manager import AuthManager
 from app.lifecycle.app_close_handler import handle_app_close
 from app.lifecycle.tray_manager import TrayManager
 from app.ui.components.save_progress_overlay import SaveProgressOverlay
+from app.ui.layout.responsive_layout import setup_responsive_layout
 from app.ui.views.login_view import LoginPage
 from app.utils.logger import logger
 
@@ -81,6 +82,16 @@ def handle_disconnect(page: ft.Page) -> callable:
     return disconnect
 
 
+def handle_page_resize(page: ft.Page, app: App) -> callable:
+    """handle page resize"""
+    
+    def on_resize(_: ft.ControlEvent) -> None:
+        setup_responsive_layout(page, app)
+        page.update()
+    
+    return on_resize 
+
+
 async def main(page: ft.Page) -> None:
 
     page.title = "StreamCap"
@@ -93,6 +104,7 @@ async def main(page: ft.Page) -> None:
     app = App(page)
     page.data = app
     app.is_web_mode = is_web
+    app.is_mobile = False
     
     if not is_web:
         try:
@@ -111,6 +123,10 @@ async def main(page: ft.Page) -> None:
     page.overlay.append(save_progress_overlay.overlay)
     
     async def load_app():
+        if is_web:
+            setup_responsive_layout(page, app)
+            page.on_resize = handle_page_resize(page, app)
+
         page.add(app.complete_page)
         
         page.on_route_change = handle_route_change(page, app)

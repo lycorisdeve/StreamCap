@@ -21,6 +21,8 @@ class AboutPage(PageBase):
         """Load the about page content."""
         self.content_area.clean()
 
+        is_mobile = self.app.is_mobile
+
         # Dynamically set colors based on the current theme mode
         theme_mode = self.page.theme_mode
         if theme_mode == ft.ThemeMode.DARK:
@@ -40,9 +42,191 @@ class AboutPage(PageBase):
         version_updates = self._about_config["version_updates"][0]
         open_source_license = self._about_config["open_source_license"]
 
+        if is_mobile:
+            feature_highlights = ft.Column(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            ft.Column(
+                                controls=[
+                                    ft.Icon(ft.Icons.VIDEO_LIBRARY, color=ft.Colors.BLUE),
+                                    ft.Text(self._["support_platforms"],
+                                            size=12,
+                                            color=text_color_700,
+                                            text_align=ft.TextAlign.CENTER),
+                                ],
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=5,
+                                width=95,
+                            ),
+                            ft.Column(
+                                controls=[
+                                    ft.Icon(ft.Icons.SETTINGS, color=ft.Colors.GREEN),
+                                    ft.Text(self._["customize_recording"],
+                                            size=12,
+                                            color=text_color_700,
+                                            text_align=ft.TextAlign.CENTER),
+                                ],
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=5,
+                                width=95,
+                            ),
+                            ft.Column(
+                                controls=[
+                                    ft.Icon(ft.Icons.LIGHTBULB, color=ft.Colors.ORANGE),
+                                    ft.Text(self._["open_source"],
+                                            size=12,
+                                            color=text_color_700,
+                                            text_align=ft.TextAlign.CENTER),
+                                ],
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=5,
+                                width=95,
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_AROUND,
+                        spacing=5,
+                    ),
+                    ft.Row(
+                        controls=[
+                            ft.Column(
+                                controls=[
+                                    ft.Icon(ft.Icons.AUTORENEW, color=ft.Colors.PURPLE),
+                                    ft.Text(self._["automatic_transcoding"],
+                                            size=12,
+                                            color=text_color_700,
+                                            text_align=ft.TextAlign.CENTER),
+                                ],
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=5,
+                                width=140,
+                            ),
+                            ft.Column(
+                                controls=[
+                                    ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=ft.Colors.RED),
+                                    ft.Text(self._["status_push"],
+                                            size=12,
+                                            color=text_color_700,
+                                            text_align=ft.TextAlign.CENTER),
+                                ],
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=5,
+                                width=140,
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_AROUND,
+                        spacing=5,
+                    ),
+                ],
+                spacing=20,
+                alignment=ft.MainAxisAlignment.CENTER,
+            )
+        else:
+            feature_highlights = ft.Row(
+                controls=[
+                    ft.Column(
+                        controls=[
+                            ft.Icon(ft.Icons.VIDEO_LIBRARY, color=ft.Colors.BLUE),
+                            ft.Text(self._["support_platforms"], size=14, color=text_color_700),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    ft.Column(
+                        controls=[
+                            ft.Icon(ft.Icons.SETTINGS, color=ft.Colors.GREEN),
+                            ft.Text(self._["customize_recording"], size=14, color=text_color_700),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    ft.Column(
+                        controls=[
+                            ft.Icon(ft.Icons.LIGHTBULB, color=ft.Colors.ORANGE),
+                            ft.Text(self._["open_source"], size=14, color=text_color_700),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    ft.Column(
+                        controls=[
+                            ft.Icon(ft.Icons.AUTORENEW, color=ft.Colors.PURPLE),
+                            ft.Text(self._["automatic_transcoding"], size=14, color=text_color_700),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    ft.Column(
+                        controls=[
+                            ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=ft.Colors.RED),
+                            ft.Text(self._["status_push"], size=14, color=text_color_700),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=100,
+            )
+
+        if is_mobile:
+            developer_buttons = ft.Column(
+                controls=[
+                    ft.ElevatedButton(
+                        text=self._["view_update"],
+                        icon=ft.icons.CODE,
+                        on_click=self.open_update_page,
+                        width=float("inf"),
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                            padding=10,
+                        ),
+                    ),
+                    ft.ElevatedButton(
+                        text=self._["view_docs"],
+                        icon=ft.icons.DESCRIPTION,
+                        on_click=self.open_dos_page,
+                        width=float("inf"),
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                            padding=10,
+                        ),
+                    ),
+                    ft.ElevatedButton(
+                        text=self.app.language_manager.language.get("update", {}).get("check_update"),
+                        icon=ft.icons.UPDATE,
+                        on_click=self._check_for_updates,
+                        width=float("inf"),
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                            padding=10,
+                        ),
+                    ),
+                ],
+                spacing=10,
+                alignment=ft.MainAxisAlignment.CENTER,
+                width=float("inf"),
+            )
+        else:
+            developer_buttons = ft.Row(
+                controls=[
+                    ft.TextButton(
+                        self._["view_update"],
+                        icon=ft.icons.CODE,
+                        on_click=self.open_update_page,
+                    ),
+                    ft.TextButton(
+                        self._["view_docs"],
+                        icon=ft.icons.DESCRIPTION,
+                        on_click=self.open_dos_page,
+                    ),
+                    ft.TextButton(
+                        self.app.language_manager.language.get("update", {}).get("check_update"),
+                        icon=ft.icons.UPDATE,
+                        on_click=self._check_for_updates,
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.START,
+            )
+
         about_page_layout = ft.Container(
             content=ft.Column(
-                scroll=ft.ScrollMode.AUTO,
+                scroll=ft.ScrollMode.AUTO if not is_mobile else ft.ScrollMode.HIDDEN,
                 controls=[
                     # Title and version information
                     ft.Text(
@@ -56,7 +240,7 @@ class AboutPage(PageBase):
                         f"{self._['ui_version']}: {version_updates['version']} | "
                         f"{self._['kernel_version']}: {version_updates['kernel_version']} | "
                         f"{self._['license']}: {open_source_license}",
-                        size=14,
+                        size=14 if not is_mobile else 12,
                         text_align=ft.TextAlign.CENTER,
                         color=text_color_500,
                     ),
@@ -91,47 +275,7 @@ class AboutPage(PageBase):
                         content=ft.Column(
                             controls=[
                                 ft.Text(self._["feature"], size=20, weight=ft.FontWeight.W_600, color=text_color),
-                                ft.Row(
-                                    controls=[
-                                        ft.Column(
-                                            controls=[
-                                                ft.Icon(ft.Icons.VIDEO_LIBRARY, color=ft.Colors.BLUE),
-                                                ft.Text(self._["support_platforms"], size=14, color=text_color_700),
-                                            ],
-                                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                        ),
-                                        ft.Column(
-                                            controls=[
-                                                ft.Icon(ft.Icons.SETTINGS, color=ft.Colors.GREEN),
-                                                ft.Text(self._["customize_recording"], size=14, color=text_color_700),
-                                            ],
-                                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                        ),
-                                        ft.Column(
-                                            controls=[
-                                                ft.Icon(ft.Icons.LIGHTBULB, color=ft.Colors.ORANGE),
-                                                ft.Text(self._["open_source"], size=14, color=text_color_700),
-                                            ],
-                                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                        ),
-                                        ft.Column(
-                                            controls=[
-                                                ft.Icon(ft.Icons.AUTORENEW, color=ft.Colors.PURPLE),
-                                                ft.Text(self._["automatic_transcoding"], size=14, color=text_color_700),
-                                            ],
-                                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                        ),
-                                        ft.Column(
-                                            controls=[
-                                                ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=ft.Colors.RED),
-                                                ft.Text(self._["status_push"], size=14, color=text_color_700),
-                                            ],
-                                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                        ),
-                                    ],
-                                    alignment=ft.MainAxisAlignment.CENTER,
-                                    spacing=100,
-                                ),
+                                feature_highlights,
                             ],
                             spacing=15,
                             expand=True,
@@ -157,26 +301,7 @@ class AboutPage(PageBase):
                                     title=ft.Text("Hmily", size=18, weight=ft.FontWeight.W_500, color=text_color_700),
                                     subtitle=ft.Text(self._["author"], size=14, color=text_color_500),
                                 ),
-                                ft.Row(
-                                    controls=[
-                                        ft.TextButton(
-                                            self._["view_update"],
-                                            icon=ft.icons.CODE,
-                                            on_click=self.open_update_page,
-                                        ),
-                                        ft.TextButton(
-                                            self._["view_docs"],
-                                            icon=ft.icons.DESCRIPTION,
-                                            on_click=self.open_dos_page,
-                                        ),
-                                        ft.TextButton(
-                                            self.app.language_manager.language.get("update", {}).get("check_update"),
-                                            icon=ft.icons.UPDATE,
-                                            on_click=self._check_for_updates,
-                                        ),
-                                    ],
-                                    alignment=ft.MainAxisAlignment.START,
-                                ),
+                                developer_buttons,
                             ],
                             spacing=10,
                             expand=True,
