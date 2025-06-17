@@ -60,7 +60,7 @@
     "single_input": "单个录入",
     "batch_input": "批量录入",
     "live_room": "直播间",
-    "platform_not_supported_tip": "⚠️ 暂不支持该平台录制",
+    "platform_not_supported_tip": "暂不支持该平台录制 ⚠️",
     "pick_time": "选择时间",
     "pick_time_tip": "配置定时时间",
     "time_out_of_range": "选择时间超出范围",
@@ -93,11 +93,11 @@
     "RECORDING_ERROR": "直播录制失败, 等待重试",
     "NOT_RECORDING_SPACE": "磁盘空间不足, 无法录制",
     "LIVE_STATUS_CHECK_ERROR": "直播状态检测错误, 请检查地址是否可正常访问",
-    "not_disk_space_tip": "⚠️ 磁盘存储空间不足, 停止录制"
+    "not_disk_space_tip": "磁盘存储空间不足, 停止录制 ⚠️"
   },
   "stream_manager": {
     "record_stream_error": "直播源录制出错",
-    "no_ffmpeg_tip": "⚠️ 未安装FFmpeg，请先安装FFmpeg"
+    "no_ffmpeg_tip": "未安装FFmpeg，请先安装FFmpeg ⚠️"
   },
   "recording_card": {
     "stop_monitor_tip": "提示：已停止直播监控👁️",
@@ -135,7 +135,7 @@
     "none": "无",
     "recording_card_tip": "点击选中",
     "use_proxy": "使用代理",
-    "no_support_open_dir": "⚠️ Web端不支持打开文件夹",
+    "no_support_open_dir": "Web端不支持打开文件夹 ⚠️",
     "message_push": "消息推送",
     "all": "全部",
     "recording": "录制中",
@@ -386,20 +386,20 @@
     "empty_recording_folder": "录制文件夹为空，暂无录制的直播视频",
     "go_back": "返回上一级",
     "previewing": "正在预览",
-    "unsupported_file_type":"⚠️ 不支持的文件类型",
-    "no_video_file":"⚠️ 未找到视频文件",
-    "no_recording_folder":"⚠️ 录制目录不存在",
+    "unsupported_file_type":"未找到视频文件 ⚠️",
+    "no_video_file":"未找到视频文件 ⚠️",
+    "no_recording_folder":"录制目录不存在 ⚠️",
     "copy_stream_url": "复制直播源地址",
     "copy_video_url": "复制视频地址",
     "copy_success": "复制成功",
-    "video_api_server_not_set": "⚠️ 未设置视频播放服务器地址"
+    "video_api_server_not_set": "未设置视频播放服务器地址 ⚠️"
   },
   "video_player": {
     "open_live_room_page": "打开直播间页面",
     "stream_source": "直播源",
     "previewing":"正在预览",
     "view_stream_source_now": "正在访问直播源",
-    "unsupported_play_on_web": "⚠️ Web端只支持预览MP4文件"
+    "unsupported_play_on_web": "Web端只支持预览MP4文件 ⚠️"
   },
   "update": {
     "new_version": "发现新版本 {version}",

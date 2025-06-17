@@ -60,7 +60,7 @@
     "single_input": "Single Input",
     "batch_input": "Batch Input",
     "live_room": "Live Room",
-    "platform_not_supported_tip": "⚠️ This platform does not support recording",
+    "platform_not_supported_tip": "This platform does not support recording ⚠️",
     "pick_time": "Pick time",
     "pick_time_tip": "Configure scheduled time",
     "time_out_of_range": "Time out of range",
@@ -92,11 +92,11 @@
     "RECORDING_ERROR": "Recording the live stream has failed",
     "NOT_RECORDING_SPACE": "Insufficient disk space to record",
     "LIVE_STATUS_CHECK_ERROR": "Live status error, check address accessibility",
-    "not_disk_space_tip": "⚠️ Insufficient disk storage space, stop recording"
+    "not_disk_space_tip": "Insufficient disk storage space, stop recording ⚠️"
   },
     "stream_manager": {
     "record_stream_error": "Live streaming source recording error",
-    "no_ffmpeg_tip": "⚠️ FFmpeg is not installed, please install FFmpeg first"
+    "no_ffmpeg_tip": "FFmpeg is not installed, please install FFmpeg first ⚠️"
   },
   "recording_card": {
     "stop_monitor_tip": "Tip: Live monitoring has been stopped",
@@ -134,7 +134,7 @@
     "none": "None",
     "recording_card_tip": "Click to select",
     "use_proxy": "Use Proxy",
-    "no_support_open_dir": "⚠️ Web version does not support opening folder",
+    "no_support_open_dir": "Web version does not support opening folder ⚠️",
     "message_push": "Message Push",
     "all": "All",
     "recording": "Recording",
@@ -385,20 +385,20 @@
     "empty_recording_folder": "Empty Recording Folder",
     "go_back": "Go Back",
     "previewing": "Previewing",
-    "unsupported_file_type":"⚠️ Unsupported file type",
-    "no_video_file":"⚠️ No video file found",
-    "no_recording_folder":"⚠️ No recording folder found",
+    "unsupported_file_type":"Unsupported file type ⚠️",
+    "no_video_file":"No video file found ⚠️",
+    "no_recording_folder":"No recording folder found ⚠️",
     "copy_stream_url": "Copy Stream URL",
     "copy_video_url": "Copy Video URL",
     "copy_success": "Copy Success",
-    "video_api_server_not_set": "⚠️ Video play server address not set"
+    "video_api_server_not_set": "Video play server address not set ⚠️"
   },
   "video_player": {
     "open_live_room_page": "Open Live Room Page",
     "stream_source": "Stream Source",
     "previewing": "Previewing",
     "view_stream_source_now": "Accessing live stream source",
-    "unsupported_play_on_web": "⚠️ Only MP4 files can be previewed on the web."
+    "unsupported_play_on_web": "Only MP4 files can be previewed on the web ⚠️ "
   },
   "update": {
     "new_version": "New Version {version} Available",
