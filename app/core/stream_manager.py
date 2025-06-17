@@ -234,17 +234,20 @@ class LiveStreamRecorder:
                         if process.stdin:
                             process.stdin.write(b"q")
                             await process.stdin.drain()
+                            await asyncio.sleep(5)
                     else:
-                        # import signal
-                        # process.send_signal(signal.SIGINT)
-                        process.terminate()
+                        import signal
+                        process.send_signal(signal.SIGINT)
+                        # process.terminate()
+                        await asyncio.sleep(5)
 
                     if process.stdin:
                         process.stdin.close()
 
                     try:
-                        await asyncio.wait_for(process.wait(), timeout=10.0)
+                        await asyncio.wait_for(process.wait(), timeout=15.0)
                     except asyncio.TimeoutError:
+                        logger.warning(f"FFmpeg process did not exit gracefully, forcing termination: {live_url}")
                         process.kill()
                         await process.wait()
 

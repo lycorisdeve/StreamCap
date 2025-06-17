@@ -13,6 +13,9 @@ class TSCommandBuilder(FFmpegCommandBuilder):
                 "-segment_time", str(self.segment_time),
                 "-segment_format", "mpegts",
                 "-reset_timestamps", "1",
+                "-mpegts_flags", "+resend_headers",
+                "-muxdelay", "0",
+                "-muxpreload", "0",
                 self.full_path,
             ]
         else:
@@ -21,6 +24,9 @@ class TSCommandBuilder(FFmpegCommandBuilder):
                 "-c:a", "copy",
                 "-map", "0",
                 "-f", "mpegts",
+                "-mpegts_flags", "+resend_headers",
+                "-muxdelay", "0",
+                "-muxpreload", "0",
                 self.full_path,
             ]
 

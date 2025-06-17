@@ -13,7 +13,7 @@ class MP4CommandBuilder(FFmpegCommandBuilder):
                 "-segment_time", str(self.segment_time),
                 "-segment_format", "mp4",
                 "-reset_timestamps", "1",
-                "-movflags", "+frag_keyframe+empty_moov",
+                "-movflags", "+frag_keyframe+empty_moov+faststart+delay_moov",
                 "-flags", "global_header",
                 self.full_path,
             ]
@@ -23,6 +23,7 @@ class MP4CommandBuilder(FFmpegCommandBuilder):
                 "-c:v", "copy",
                 "-c:a", "copy",
                 "-f", "mp4",
+                "-movflags", "+faststart+frag_keyframe+empty_moov+delay_moov",
                 self.full_path,
             ]
 

@@ -79,7 +79,7 @@ class FFmpegCommandBuilder(abc.ABC):
             "-thread_queue_size", "1024",
             "-analyzeduration", config["analyzeduration"],
             "-probesize", config["probesize"],
-            "-fflags", "+discardcorrupt",
+            "-fflags", "+discardcorrupt+igndts",
             "-re",
             "-i", self.record_url,
             "-bufsize", config["bufsize"],
@@ -91,6 +91,7 @@ class FFmpegCommandBuilder(abc.ABC):
             "-max_muxing_queue_size", config["max_muxing_queue_size"],
             "-correct_ts_overflow", "1",
             "-avoid_negative_ts", "1",
+            "-flush_packets", "1"
         ]
 
         if self.headers:
