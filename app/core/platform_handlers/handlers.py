@@ -972,6 +972,27 @@ class FaceitHandler(PlatformHandler):
         return await self.live_stream.fetch_stream_url(json_data, self.record_quality)
 
 
+class LianJieHandler(PlatformHandler):
+    platform = "lianjie"
+
+    def __init__(
+        self,
+        proxy: str | None = None,
+        cookies: str | None = None,
+        record_quality: str | None = None,
+        platform: str | None = None,
+    ) -> None:
+        super().__init__(proxy, cookies, record_quality, platform)
+        self.live_stream: streamget.LianJieLiveStream | None = None
+
+    @trace_error_decorator
+    async def get_stream_info(self, live_url: str) -> StreamData:
+        if not self.live_stream:
+            self.live_stream = streamget.LianJieLiveStream(proxy_addr=self.proxy, cookies=self.cookies)
+        json_data = await self.live_stream.fetch_web_stream_data(url=live_url)
+        return await self.live_stream.fetch_stream_url(json_data, self.record_quality)
+
+
 DouyinHandler.register(r"https://.*\.douyin\.com/")
 TikTokHandler.register(r"https://.*\.tiktok\.com/")
 KuaishouHandler.register(r"https://live\.kuaishou\.com/")
@@ -1017,3 +1038,4 @@ YoutubeHandler.register(r".*\.youtube\.com/")
 TaobaoHandler.register(r".*\.tb\.cn/")
 JDHandler.register(r"3\.cn/")
 FaceitHandler.register(r"https://.*\.faceit\.com/")
+LianJieHandler.register(r"https://.*\.lailianjie\.com/")

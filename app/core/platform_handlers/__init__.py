@@ -21,6 +21,7 @@ from .handlers import (
     KugouHandler,
     LangLiveHandler,
     LehaiHandler,
+    LianJieHandler,
     LivemeHandler,
     LookHandler,
     MaoerFMHandler,
@@ -119,6 +120,7 @@ def get_platform_info(record_url: str) -> tuple:
         "tb.cn": ("淘宝直播", "taobao"),
         "3.cn": ("京东直播", "jd"),
         "faceit.com": ("faceit", "faceit"),
+        "lailianjie.com": ("连接直播", "lianjie"),
         ".m3u8": ("自定义录制直播", "custom"),
         ".flv": ("自定义录制直播", "custom"),
     }
@@ -151,6 +153,7 @@ __all__ = [
     "KugouHandler",
     "LangLiveHandler",
     "LehaiHandler",
+    "LianJieHandler",
     "LivemeHandler",
     "LookHandler",
     "MaoerFMHandler",
