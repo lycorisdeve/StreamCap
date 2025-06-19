@@ -169,7 +169,7 @@ class AboutPage(PageBase):
                 controls=[
                     ft.ElevatedButton(
                         text=self._["view_update"],
-                        icon=ft.icons.CODE,
+                        icon=ft.Icons.CODE,
                         on_click=self.open_update_page,
                         width=float("inf"),
                         style=ft.ButtonStyle(
@@ -179,7 +179,7 @@ class AboutPage(PageBase):
                     ),
                     ft.ElevatedButton(
                         text=self._["view_docs"],
-                        icon=ft.icons.DESCRIPTION,
+                        icon=ft.Icons.DESCRIPTION,
                         on_click=self.open_dos_page,
                         width=float("inf"),
                         style=ft.ButtonStyle(
@@ -189,7 +189,7 @@ class AboutPage(PageBase):
                     ),
                     ft.ElevatedButton(
                         text=self.app.language_manager.language.get("update", {}).get("check_update"),
-                        icon=ft.icons.UPDATE,
+                        icon=ft.Icons.UPDATE,
                         on_click=self._check_for_updates,
                         width=float("inf"),
                         style=ft.ButtonStyle(
@@ -207,17 +207,17 @@ class AboutPage(PageBase):
                 controls=[
                     ft.TextButton(
                         self._["view_update"],
-                        icon=ft.icons.CODE,
+                        icon=ft.Icons.CODE,
                         on_click=self.open_update_page,
                     ),
                     ft.TextButton(
                         self._["view_docs"],
-                        icon=ft.icons.DESCRIPTION,
+                        icon=ft.Icons.DESCRIPTION,
                         on_click=self.open_dos_page,
                     ),
                     ft.TextButton(
                         self.app.language_manager.language.get("update", {}).get("check_update"),
-                        icon=ft.icons.UPDATE,
+                        icon=ft.Icons.UPDATE,
                         on_click=self._check_for_updates,
                     ),
                 ],

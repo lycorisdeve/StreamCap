@@ -134,7 +134,8 @@ class RecordingCardManager:
                             monitor_button
                         ],
                         spacing=3,
-                        alignment=ft.MainAxisAlignment.START
+                        alignment=ft.MainAxisAlignment.START,
+                        scroll=ft.ScrollMode.HIDDEN
                     ),
                 ],
                 spacing=3,
@@ -164,30 +165,30 @@ class RecordingCardManager:
     def get_card_background_color(self, recording: Recording):
         is_dark_mode = self.app.page.theme_mode == ft.ThemeMode.DARK
         if recording.selected:
-            return ft.colors.GREY_800 if is_dark_mode else ft.colors.GREY_400
+            return ft.Colors.GREY_800 if is_dark_mode else ft.Colors.GREY_400
         return None
 
     @staticmethod
     def get_card_border_color(recording: Recording):
         """Get the border color of the card."""
         if recording.is_recording:
-            return ft.colors.GREEN
+            return ft.Colors.GREEN
         elif recording.status_info in [
             RecordingStatus.RECORDING_ERROR,
             RecordingStatus.LIVE_STATUS_CHECK_ERROR
         ]:
-            return ft.colors.RED
+            return ft.Colors.RED
         elif not recording.is_live and recording.monitor_status:
-            return ft.colors.AMBER
+            return ft.Colors.AMBER
         elif not recording.monitor_status:
-            return ft.colors.GREY
-        return ft.colors.TRANSPARENT
+            return ft.Colors.GREY
+        return ft.Colors.TRANSPARENT
 
     def create_status_label(self, recording: Recording):
         if recording.is_recording:
             return ft.Container(
-                content=ft.Text(self._["recording"], color=ft.colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
-                bgcolor=ft.colors.GREEN,
+                content=ft.Text(self._["recording"], color=ft.Colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
+                bgcolor=ft.Colors.GREEN,
                 border_radius=5,
                 padding=5,
                 width=60,
@@ -196,8 +197,8 @@ class RecordingCardManager:
             )
         elif recording.status_info in [RecordingStatus.RECORDING_ERROR, RecordingStatus.LIVE_STATUS_CHECK_ERROR]:
             return ft.Container(
-                content=ft.Text(self._["recording_error"], color=ft.colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
-                bgcolor=ft.colors.RED,
+                content=ft.Text(self._["recording_error"], color=ft.Colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
+                bgcolor=ft.Colors.RED,
                 border_radius=5,
                 padding=5,
                 width=60,
@@ -206,8 +207,8 @@ class RecordingCardManager:
             )
         elif not recording.is_live and recording.monitor_status:
             return ft.Container(
-                content=ft.Text(self._["offline"], color=ft.colors.BLACK, size=12, weight=ft.FontWeight.BOLD),
-                bgcolor=ft.colors.AMBER,
+                content=ft.Text(self._["offline"], color=ft.Colors.BLACK, size=12, weight=ft.FontWeight.BOLD),
+                bgcolor=ft.Colors.AMBER,
                 border_radius=5,
                 padding=5,
                 width=60,
@@ -216,8 +217,8 @@ class RecordingCardManager:
             )
         elif not recording.monitor_status:
             return ft.Container(
-                content=ft.Text(self._["no_monitor"], color=ft.colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
-                bgcolor=ft.colors.GREY,
+                content=ft.Text(self._["no_monitor"], color=ft.Colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
+                bgcolor=ft.Colors.GREY,
                 border_radius=5,
                 padding=5,
                 width=60,

@@ -37,7 +37,7 @@ class StoragePage(BasePage):
         self.path_display = ft.Text(
             self._["storage_path"] + ": " + self.current_path,
             size=14,
-            color=ft.colors.GREY_600,
+            color=ft.Colors.GREY_600,
             selectable=True,
         )
         self.file_list = ft.ListView(expand=True, spacing=2, padding=10)

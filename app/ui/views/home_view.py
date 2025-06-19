@@ -177,6 +177,8 @@ class HomePage(PageBase):
                     *batch_controls,
                 ],
                 alignment=ft.MainAxisAlignment.START,
+                spacing=2,
+                scroll=ft.ScrollMode.HIDDEN
             )
             
             return ft.Column(
@@ -193,12 +195,12 @@ class HomePage(PageBase):
         """Create the filter area"""
 
         filter_buttons = [
-            ft.Text(self._["status_filter"] if not self.app.is_mobile else self._["filter"], size=14),
+            ft.Text(self._["status_filter"] + ":" if not self.app.is_mobile else self._["filter"]  + ":", size=14),
             ft.ElevatedButton(
                 self._["filter_all"],
                 on_click=self.filter_all_on_click,
-                bgcolor=ft.colors.BLUE if self.current_filter == "all" else None,
-                color=ft.colors.WHITE if self.current_filter == "all" else None,
+                bgcolor=ft.Colors.BLUE if self.current_filter == "all" else None,
+                color=ft.Colors.WHITE if self.current_filter == "all" else None,
                 style=ft.ButtonStyle(
                     shape=ft.RoundedRectangleBorder(radius=5),
                 ),
@@ -206,8 +208,8 @@ class HomePage(PageBase):
             ft.ElevatedButton(
                 self._["filter_recording"],
                 on_click=self.filter_recording_on_click,
-                bgcolor=ft.colors.GREEN if self.current_filter == "recording" else None,
-                color=ft.colors.WHITE if self.current_filter == "recording" else None,
+                bgcolor=ft.Colors.GREEN if self.current_filter == "recording" else None,
+                color=ft.Colors.WHITE if self.current_filter == "recording" else None,
                 style=ft.ButtonStyle(
                     shape=ft.RoundedRectangleBorder(radius=5),
                 ),
@@ -215,8 +217,8 @@ class HomePage(PageBase):
             ft.ElevatedButton(
                 self._["filter_offline"],
                 on_click=self.filter_offline_on_click,
-                bgcolor=ft.colors.AMBER if self.current_filter == "offline" else None,
-                color=ft.colors.WHITE if self.current_filter == "offline" else None,
+                bgcolor=ft.Colors.AMBER if self.current_filter == "offline" else None,
+                color=ft.Colors.WHITE if self.current_filter == "offline" else None,
                 style=ft.ButtonStyle(
                     shape=ft.RoundedRectangleBorder(radius=5),
                 ),
@@ -224,8 +226,8 @@ class HomePage(PageBase):
             ft.ElevatedButton(
                 self._["filter_error"],
                 on_click=self.filter_error_on_click,
-                bgcolor=ft.colors.RED if self.current_filter == "error" else None,
-                color=ft.colors.WHITE if self.current_filter == "error" else None,
+                bgcolor=ft.Colors.RED if self.current_filter == "error" else None,
+                color=ft.Colors.WHITE if self.current_filter == "error" else None,
                 style=ft.ButtonStyle(
                     shape=ft.RoundedRectangleBorder(radius=5),
                 ),
@@ -233,8 +235,8 @@ class HomePage(PageBase):
             ft.ElevatedButton(
                 self._["filter_stopped"],
                 on_click=self.filter_stopped_on_click,
-                bgcolor=ft.colors.GREY if self.current_filter == "stopped" else None,
-                color=ft.colors.WHITE if self.current_filter == "stopped" else None,
+                bgcolor=ft.Colors.GREY if self.current_filter == "stopped" else None,
+                color=ft.Colors.WHITE if self.current_filter == "stopped" else None,
                 style=ft.ButtonStyle(
                     shape=ft.RoundedRectangleBorder(radius=5),
                 ),
@@ -265,9 +267,8 @@ class HomePage(PageBase):
             text_size=14,
             content_padding=ft.padding.only(top=8, bottom=8, left=10, right=10),
             border_radius=5,
-            border_color=ft.colors.OUTLINE,
+            border_color=ft.Colors.OUTLINE,
             focused_border_color=ft.colors.PRIMARY,
-            focused_bgcolor=ft.colors.SURFACE_VARIANT,
             dense=True,
         )
         if len(current_platform_keys) > 8:
@@ -288,7 +289,7 @@ class HomePage(PageBase):
                 alignment=ft.MainAxisAlignment.START,
                 spacing=3,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                wrap=True,
+                scroll=ft.ScrollMode.HIDDEN
             )
             
             platform_filter_row = ft.Row(
