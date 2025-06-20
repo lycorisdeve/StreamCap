@@ -1,0 +1,15 @@
+name: Sync Upstream Releases
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 每天凌晨 2 点自动同步
+  workflow_dispatch:
+
+jobs:
+  release-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: WeiChiaChang/release-sync-action@v1.1.0
+        with:
+          upstream: ihmily/StreamCap            # 原始仓库地址
+          token: ${{ secrets.GITHUB_TOKEN }}    # 使用默认 token 推送到当前 fork 仓库
