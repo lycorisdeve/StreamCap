@@ -1,15 +1,21 @@
-name: Sync Upstream Releases
-
 on:
   schedule:
-    - cron: '0 2 * * *'  # 每天凌晨 2 点自动同步
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 jobs:
-  release-sync:
+  sync_releases:
     runs-on: ubuntu-latest
     steps:
-      - uses: WeiChiaChang/release-sync-action@v1.1.0
-        with:
-          upstream: ihmily/StreamCap            # 原始仓库地址
-          token: ${{ secrets.GITHUB_TOKEN }}    # 使用默认 token 推送到当前 fork 仓库
+      - name: Setup GH CLI
+        uses: cli/cli-action@v2
+      - name: Fetch upstream releases
+        run: |
+          gh release list --repo upstream-owner/upstream-repo > latest_upstream.txt
+          gh release list --repo ${{ github.repository }} > latest_fork.txt
+      - name: Compare and sync
+        run: |
+          for tag in $(grep -vFf latest_fork.txt latest_upstream.txt); do
+            gh release download "$tag" --repo upstream-owner/upstream-repo
+            gh release create "$tag" <*.zip> --repo ${{ github.repository }}
+          done
