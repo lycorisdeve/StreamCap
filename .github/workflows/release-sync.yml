@@ -3,7 +3,7 @@ name: Sync Upstream Releases Only
 on:
   schedule:
     - cron: '0 3 * * *'   # 每天凌晨3点自动执行
-  workflow_dispatch:       # 支持手动手动触发
+  workflow_dispatch:       # 支持手动触发
 
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -23,7 +23,9 @@ jobs:
       - name: Find new releases
         id: find_new
         run: |
-          comm -23 <(cut -f1 -d$'\t' upstream.txt | sort) <(cut -f1 -d$'\t' my.txt | sort) | grep -vE '^\s*$|^-$' > new_releases.txt
+          cut -f1 -d$'\t' upstream.txt | sort > upstream_tags.txt
+          cut -f1 -d$'\t' my.txt | sort > my_tags.txt
+          comm -23 upstream_tags.txt my_tags.txt | grep -vE '^\s*$|^-$' > new_releases.txt
           echo "new_releases=$(paste -sd ',' new_releases.txt)" >> $GITHUB_OUTPUT
           echo "New releases to sync:"
           cat new_releases.txt || echo "(none)"
