@@ -1,70 +1,56 @@
-name: Sync Upstream Releases
+name: Sync Upstream Releases Only
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # 每天凌晨 3 点自动运行
-  workflow_dispatch:       # 支持手动触发
+    - cron: '0 3 * * *'   # 每天凌晨3点自动执行
+  workflow_dispatch:       # 支持手动手动触发
 
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  sync-release:
-    name: Sync releases from upstream
+  sync-releases:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Fetch upstream releases list
+      - name: List upstream releases
         run: |
-          echo "📥 获取 upstream releases"
           gh release list --repo ihmily/StreamCap --limit 100 > upstream.txt
           gh release list --limit 100 > my.txt
-          echo "✅ 列出 upstream release 完成"
 
-      - name: Find new tags
-        id: find_tags
+      - name: Find new releases
+        id: find_new
         run: |
-          comm -23 <(cut -f1 -d$'\t' upstream.txt | sort) <(cut -f1 -d$'\t' my.txt | sort) | grep -vE '^\s*$|^-$' > new_tags.txt
-          echo "🧩 以下是未同步的 tag："
-          cat new_tags.txt || echo "(无新 tag)"
-          echo "new_tags=$(cat new_tags.txt | paste -sd ',' -)" >> "$GITHUB_OUTPUT"
+          comm -23 <(cut -f1 -d$'\t' upstream.txt | sort) <(cut -f1 -d$'\t' my.txt | sort) | grep -vE '^\s*$|^-$' > new_releases.txt
+          echo "new_releases=$(paste -sd ',' new_releases.txt)" >> $GITHUB_OUTPUT
+          echo "New releases to sync:"
+          cat new_releases.txt || echo "(none)"
 
-      - name: Sync releases
-        if: steps.find_tags.outputs.new_tags != ''
+      - name: Sync new releases
+        if: steps.find_new.outputs.new_releases != ''
         run: |
-          echo "🚀 开始同步新 releases"
-          for tag in $(cat new_tags.txt); do
-            echo "🔄 同步 release: $tag"
-
-            release_json=$(gh release view "$tag" --repo ihmily/StreamCap --json tagName,name,body,isDraft,isPrerelease)
+          for tag in $(cat new_releases.txt); do
+            echo "Sync release $tag"
+            release_json=$(gh release view "$tag" --repo ihmily/StreamCap --json name,body,isDraft,isPrerelease)
             name=$(echo "$release_json" | jq -r '.name')
             body=$(echo "$release_json" | jq -r '.body')
             draft=$(echo "$release_json" | jq -r '.isDraft')
             prerelease=$(echo "$release_json" | jq -r '.isPrerelease')
 
             mkdir -p downloads
-            gh release download "$tag" --repo ihmily/StreamCap --dir ./downloads || echo "⚠️ 无附件"
+            gh release download "$tag" --repo ihmily/StreamCap --dir downloads || echo "No assets"
 
-            if [ -n "$(ls -A ./downloads)" ]; then
-              gh release create "$tag" ./downloads/* \
-                --title "$name" \
-                --notes "$body" \
-                $( [ "$draft" == "true" ] && echo "--draft" ) \
-                $( [ "$prerelease" == "true" ] && echo "--prerelease" )
+            if [ "$(ls -A downloads)" ]; then
+              gh release create "$tag" downloads/* --title "$name" --notes "$body" $( [ "$draft" == "true" ] && echo "--draft" ) $( [ "$prerelease" == "true" ] && echo "--prerelease" )
             else
-              gh release create "$tag" \
-                --title "$name" \
-                --notes "$body" \
-                $( [ "$draft" == "true" ] && echo "--draft" ) \
-                $( [ "$prerelease" == "true" ] && echo "--prerelease" )
+              gh release create "$tag" --title "$name" --notes "$body" $( [ "$draft" == "true" ] && echo "--draft" ) $( [ "$prerelease" == "true" ] && echo "--prerelease" )
             fi
 
-            echo "✅ Release [$tag] 同步完成"
-            rm -rf ./downloads
+            rm -rf downloads
+            echo "Release $tag synced"
           done
 
-      - name: 完成提示
-        run: echo "🎉 Release 同步流程执行完毕"
+      - name: Finish
+        run: echo "Releases sync complete"
