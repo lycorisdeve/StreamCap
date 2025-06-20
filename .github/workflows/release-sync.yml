@@ -2,11 +2,11 @@ name: Sync Upstream Releases
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # 每天凌晨 3 点执行
+    - cron: '0 3 * * *'   # 每天凌晨 3 点自动运行
   workflow_dispatch:       # 支持手动触发
 
 env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 用于 gh 命令的认证
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   sync-release:
@@ -29,7 +29,7 @@ jobs:
         run: |
           comm -23 <(cut -f1 -d$'\t' upstream.txt | sort) <(cut -f1 -d$'\t' my.txt | sort) > new_tags.txt
           echo "🧩 以下是未同步的 tag："
-          cat new_tags.txt
+          cat new_tags.txt || echo "(无新 tag)"
           echo "new_tags=$(cat new_tags.txt | paste -sd ',' -)" >> "$GITHUB_OUTPUT"
 
       - name: Sync releases
@@ -39,23 +39,32 @@ jobs:
           for tag in $(cat new_tags.txt); do
             echo "🔄 同步 release: $tag"
 
-            # 获取 release 的元信息
-            release_json=$(gh release view "$tag" --repo ihmily/StreamCap --json tagName,name,body,draft,prerelease)
+            # 获取 release 元信息
+            release_json=$(gh release view "$tag" --repo ihmily/StreamCap --json tagName,name,body,isDraft,isPrerelease)
 
             name=$(echo "$release_json" | jq -r '.name')
             body=$(echo "$release_json" | jq -r '.body')
-            draft=$(echo "$release_json" | jq -r '.draft')
-            prerelease=$(echo "$release_json" | jq -r '.prerelease')
+            draft=$(echo "$release_json" | jq -r '.isDraft')
+            prerelease=$(echo "$release_json" | jq -r '.isPrerelease')
 
-            # 下载附件
+            # 下载附件（如果有）
+            mkdir -p downloads
             gh release download "$tag" --repo ihmily/StreamCap --dir ./downloads || echo "⚠️ 无附件"
 
-            # 创建 release
-            gh release create "$tag" ./downloads/* \
-              --title "$name" \
-              --notes "$body" \
-              $( [ "$draft" == "true" ] && echo "--draft" ) \
-              $( [ "$prerelease" == "true" ] && echo "--prerelease" )
+            # 创建新 release
+            if [ -n "$(ls -A ./downloads)" ]; then
+              gh release create "$tag" ./downloads/* \
+                --title "$name" \
+                --notes "$body" \
+                $( [ "$draft" == "true" ] && echo "--draft" ) \
+                $( [ "$prerelease" == "true" ] && echo "--prerelease" )
+            else
+              gh release create "$tag" \
+                --title "$name" \
+                --notes "$body" \
+                $( [ "$draft" == "true" ] && echo "--draft" ) \
+                $( [ "$prerelease" == "true" ] && echo "--prerelease" )
+            fi
 
             echo "✅ Release [$tag] 同步完成"
             rm -rf ./downloads
