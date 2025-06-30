@@ -16,7 +16,8 @@ class Recording:
         scheduled_start_time,
         monitor_hours,
         recording_dir,
-        enabled_message_push
+        enabled_message_push,
+        only_notify_no_record
     ):
         """
         Initialize a recording object.
@@ -34,6 +35,7 @@ class Recording:
         :param monitor_hours: Number of hours to monitor from the scheduled recording start time, e.g., 3.
         :param recording_dir: Directory path where the recorded files will be saved.
         :param enabled_message_push: Whether to enable message push.
+        :param only_notify_no_record: Whether to only notify when no record is made.
         """
 
         self.rec_id = rec_id
@@ -49,6 +51,7 @@ class Recording:
         self.monitor_hours = monitor_hours
         self.recording_dir = recording_dir
         self.enabled_message_push = enabled_message_push
+        self.only_notify_no_record = only_notify_no_record
         self.scheduled_time_range = None
         self.title = f"{streamer_name} - {self.quality}"
         self.speed = "X KB/s"
@@ -89,6 +92,7 @@ class Recording:
             "enabled_message_push": self.enabled_message_push,
             "platform": self.platform,
             "platform_key": self.platform_key,
+            "only_notify_no_record": self.only_notify_no_record
         }
 
     @classmethod
@@ -108,6 +112,7 @@ class Recording:
             data.get("monitor_hours"),
             data.get("recording_dir"),
             data.get("enabled_message_push"),
+            data.get("only_notify_no_record")
         )
         recording.title = data.get("title", recording.title)
         recording.display_title = data.get("display_title", recording.title)

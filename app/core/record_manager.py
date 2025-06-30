@@ -272,7 +272,9 @@ class RecordingManager:
 
                 msg_manager = MessagePusher(self.settings)
                 user_config = self.settings.user_config
-                if MessagePusher.should_push_message(self.settings, recording, message_type='start'):
+                
+                if (MessagePusher.should_push_message(self.settings, recording, message_type='start')
+                        and not recording.notified_live_start):
                     push_content = self._["push_content"]
                     begin_push_message_text = user_config.get("custom_stream_start_content")
                     if begin_push_message_text:
@@ -286,20 +288,28 @@ class RecordingManager:
                     msg_title = msg_title or self._["status_notify"]
 
                     self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
-
-                if not user_config.get("only_notify_no_record"):
+                    recording.notified_live_start = True
+  
+                if not recording.only_notify_no_record:
                     recording.loop_time_seconds = self.loop_time_seconds
                     self.start_update(recording)
                     self.app.page.run_task(recorder.start_recording, stream_info)
                 else:
-                    notify_loop_time = user_config.get("notify_loop_time")
-                    recording.loop_time_seconds = int(notify_loop_time or 3600)
+                    if recording.notified_live_start:
+                        notify_loop_time = user_config.get("notify_loop_time")
+                        recording.loop_time_seconds = int(notify_loop_time or 3600)
+                    else:
+                        recording.loop_time_seconds = self.loop_time_seconds
                     recording.status_info = RecordingStatus.NOT_RECORDING
                     recording.is_checking = False
 
                 self.app.page.run_task(self.app.record_card_manager.update_card, recording)
                 self.app.page.pubsub.send_others_on_topic("update", recording)
             else:
+                if not recording.is_live and recording.notified_live_start:
+                    recording.notified_live_start = False
+                    recording.notified_live_end = False
+                
                 recording.is_checking = False
                 recording.status_info = RecordingStatus.MONITORING
                 title = f"{stream_info.anchor_name or recording.streamer_name} - {self._[recording.quality]}"

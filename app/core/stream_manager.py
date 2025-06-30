@@ -292,7 +292,7 @@ class LiveStreamRecorder:
                     user_config = self.settings.user_config
                     
                     if self.app.recording_enabled and MessagePusher.should_push_message(
-                            self.settings, self.recording, check_manually_stopped=True, message_type='end'):
+                            self.settings, self.recording, check_manually_stopped=True, message_type='end') and not self.recording.notified_live_end:
                         push_content = self._["push_content_end"]
                         end_push_message_text = user_config.get("custom_stream_end_content")
                         if end_push_message_text:
@@ -306,6 +306,7 @@ class LiveStreamRecorder:
                         msg_title = msg_title or self._["status_notify"]
 
                         self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
+                        self.recording.notified_live_end = True
 
                     self.recording.is_recording = False
                 try:

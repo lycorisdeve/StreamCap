@@ -18,7 +18,7 @@ class CardDialog(ft.AlertDialog):
 
     def load(self):
         language = self.app.language_manager.language
-        for key in ("recording_card", "recording_manager", "base", "video_quality"):
+        for key in ("recording_card", "recording_manager", "base", "video_quality", "recording_dialog"):
             self._.update(language.get(key, {}))
 
     def get_content(self, recording):
@@ -40,6 +40,7 @@ class CardDialog(ft.AlertDialog):
         from ...messages.message_pusher import MessagePusher
         should_push_message = MessagePusher.should_push_message(self.app.settings, recording)
         message_push = self._["enabled"] if should_push_message else self._["disabled"]
+        only_notify_no_record = self._["enabled"] if recording.only_notify_no_record else self._["disabled"]
 
         dialog_content = ft.Column(
             [
@@ -56,6 +57,7 @@ class CardDialog(ft.AlertDialog):
                 ft.Text(f"{self._['scheduled_recording']}: {scheduled_recording_status}", size=14),
                 ft.Text(f"{self._['scheduled_time_range']}: {scheduled_time_range}", size=14),
                 ft.Text(f"{self._['message_push']}: {message_push}", size=14),
+                ft.Text(f"{self._['only_notify_no_record']}: {only_notify_no_record}", size=14),
                 ft.Text(f"{self._['save_path']}: {save_path}", size=14, selectable=True),
                 ft.Text(f"{self._['recording_status']}: {recording_status_info}", size=14),
             ],
