@@ -61,6 +61,8 @@ class Recording:
         self.manually_stopped = False
         self.platform = None
         self.platform_key = None
+        self.notified_live_start = False
+        self.notified_live_end = False
 
         self.cumulative_duration = timedelta()  # Accumulated recording time
         self.last_duration = timedelta()  # Save the total time of the last recording
