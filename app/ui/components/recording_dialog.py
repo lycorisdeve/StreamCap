@@ -35,6 +35,7 @@ class RecordingDialog:
         video_segment_time = user_config.get('video_segment_time', 1800)
         segment_record = initial_values.get("segment_record", segmented_recording_enabled)
         segment_time = initial_values.get("segment_time", video_segment_time)
+        only_notify_no_record = user_config.get("only_notify_no_record", False)
 
         async def on_url_change(_):
             """Enable or disable the submit button based on whether the URL field is filled."""
@@ -221,6 +222,18 @@ class RecordingDialog:
             width=500,
         )
 
+        no_record_dropdown = ft.Dropdown(
+            label=self._["only_notify_no_record"],
+            options=[
+                ft.dropdown.Option("true", self._["yes"]),
+                ft.dropdown.Option("false", self._["no"]),
+            ],
+            border_radius=5,
+            filled=False,
+            value="true" if only_notify_no_record else "false",
+            width=500,
+        )
+
         hint_text_dict = {
             "en": "Example:\n0，https://v.douyin.com/AbcdE，nickname1\n0，https://v.douyin.com/EfghI，nickname2\n\nPS: "
             "0=original image or Blu ray, 1=ultra clear, 2=high-definition, 3=standard definition, 4=smooth\n",
@@ -268,7 +281,8 @@ class RecordingDialog:
                                 scheduled_setting_dropdown,
                                 schedule_and_monitor_row,
                                 monitor_hours_input,
-                                message_push_dropdown
+                                message_push_dropdown,
+                                no_record_dropdown
                             ],
                             tight=True,
                             spacing=10,
@@ -324,7 +338,8 @@ class RecordingDialog:
                         "scheduled_start_time": str(scheduled_start_time_input.value),
                         "monitor_hours": monitor_hours_input.value,
                         "recording_dir": recording_dir_field.value,
-                        "enabled_message_push": message_push_dropdown.value == "true"
+                        "enabled_message_push": message_push_dropdown.value == "true",
+                        "only_notify_no_record": no_record_dropdown.value == "true"
                     }
                 ]
                 await self.on_confirm_callback(recordings_info)

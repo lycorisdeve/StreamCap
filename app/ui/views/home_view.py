@@ -491,7 +491,8 @@ class HomePage(PageBase):
                     scheduled_start_time=recording_info["scheduled_start_time"],
                     monitor_hours=recording_info["monitor_hours"],
                     recording_dir=recording_info["recording_dir"],
-                    enabled_message_push=recording_info["enabled_message_push"]
+                    enabled_message_push=recording_info["enabled_message_push"],
+                    only_notify_no_record=recording_info["only_notify_no_record"]
                 )
             else:
                 recording = Recording(
@@ -507,7 +508,8 @@ class HomePage(PageBase):
                     scheduled_start_time=user_config.get("scheduled_start_time"),
                     monitor_hours=user_config.get("monitor_hours"),
                     recording_dir=None,
-                    enabled_message_push=False
+                    enabled_message_push=False,
+                    only_notify_no_record=user_config.get("only_notify_no_record"),
                 )
 
             platform, platform_key = get_platform_info(recording.url)
