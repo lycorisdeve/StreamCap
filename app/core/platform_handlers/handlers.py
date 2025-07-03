@@ -657,6 +657,27 @@ class YinboHandler(PlatformHandler):
         return await self.live_stream.fetch_stream_url(json_data, self.record_quality)
 
 
+class ChangliaoHandler(PlatformHandler):
+    platform = "changliao"
+
+    def __init__(
+        self,
+        proxy: str | None = None,
+        cookies: str | None = None,
+        record_quality: str | None = None,
+        platform: str | None = None,
+    ) -> None:
+        super().__init__(proxy, cookies, record_quality, platform)
+        self.live_stream: streamget.ChangliaoLiveStream | None = None
+
+    @trace_error_decorator
+    async def get_stream_info(self, live_url: str) -> StreamData:
+        if not self.live_stream:
+            self.live_stream = streamget.ChangliaoLiveStream(proxy_addr=self.proxy, cookies=self.cookies)
+        json_data = await self.live_stream.fetch_web_stream_data(url=live_url)
+        return await self.live_stream.fetch_stream_url(json_data, self.record_quality)
+
+
 class ZhihuHandler(PlatformHandler):
     platform = "zhihu"
 
@@ -1023,6 +1044,7 @@ ShowRoomHandlerHandler.register(r".*\.showroom-live\.com")
 AcfunHandler.register(r"live.acfun.cn/")
 InkeHandler.register(r"https://.*\.inke\.cn/")
 YinboHandler.register(r"live.ybw1666.com")
+ChangliaoHandler.register(r".*\.tlclw\.com")
 ZhihuHandler.register(r"https://.*\.zhihu\.com/")
 ChzzkHandler.register(r"chzzk\.naver\.com/")
 HaixiuHandler.register(r"https://.*\.haixiutv\.com/")
