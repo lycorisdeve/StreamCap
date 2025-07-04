@@ -200,13 +200,13 @@ class LiveStreamRecorder:
         )
 
     async def start_ffmpeg(
-            self,
-            record_name: str,
-            live_url: str,
-            record_url: str,
-            ffmpeg_command: list,
-            save_type: str,
-            script_command: str | None = None
+        self,
+        record_name: str,
+        live_url: str,
+        record_url: str,
+        ffmpeg_command: list,
+        save_type: str,
+        script_command: str | None = None
     ) -> bool:
         """
         The child process executes ffmpeg for recording
@@ -455,13 +455,13 @@ class LiveStreamRecorder:
             logger.error(f"An unknown error occurred: {e}")
 
     async def custom_script_execute(
-            self,
-            script_command: str,
-            record_name: str,
-            save_file_path: str,
-            save_type: str,
-            split_video_by_time: bool,
-            converts_to_mp4: bool
+        self,
+        script_command: str,
+        record_name: str,
+        save_file_path: str,
+        save_type: str,
+        split_video_by_time: bool,
+        converts_to_mp4: bool
     ):
         from ..process_manager import BackgroundService
 
@@ -544,4 +544,3 @@ class LiveStreamRecorder:
             "blued": "referer:https://app.blued.cn",
         }
         return record_headers.get(platform_key)
-    
