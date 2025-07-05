@@ -74,7 +74,7 @@ class LiveStreamRecorder:
             stream_info.anchor_name = utils.clean_name(stream_info.anchor_name, self._["live_room"])
 
         now = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-        
+
         custom_template = self.user_config.get("custom_filename_template")
         if custom_template:
             filename = custom_template
@@ -82,19 +82,19 @@ class LiveStreamRecorder:
             filename = filename.replace("{title}", live_title or "")
             filename = filename.replace("{time}", now)
             filename = filename.replace("{platform}", stream_info.platform or "")
-            
+
             while "__" in filename:
                 filename = filename.replace("__", "_")
-                
+
             filename = filename.strip("_")
-            
+
             if not filename:
                 full_filename = "_".join([i for i in (stream_info.anchor_name, live_title, now) if i])
             else:
                 full_filename = filename
         else:
             full_filename = "_".join([i for i in (stream_info.anchor_name, live_title, now) if i])
-            
+
         return full_filename
 
     def _get_output_dir(self, stream_info: StreamData) -> str:
@@ -139,11 +139,13 @@ class LiveStreamRecorder:
         return cleaned_title
 
     def _get_record_url(self, url: str):
-        http_record_list = ["shopee"]
-        if self.platform_key in http_record_list:
-            url = url.replace("https://", "http://")
+        http_record_list = ["shopee", "migu"]
+
         if self.user_config.get("force_https_recording") and url.startswith("http://"):
             url = url.replace("http://", "https://")
+
+        if self.platform_key in http_record_list:
+            url = url.replace("https://", "http://")
         return url
 
     async def fetch_stream(self) -> StreamData:
@@ -286,11 +288,11 @@ class LiveStreamRecorder:
                 if not self.recording.is_recording:
                     logger.success(f"Live recording has stopped: {record_name}")
                 else:
-                    
+
                     logger.success(f"Live recording completed: {record_name}")
                     msg_manager = MessagePusher(self.settings)
                     user_config = self.settings.user_config
-                    
+
                     if (self.app.recording_enabled and MessagePusher.should_push_message(
                             self.settings, self.recording, check_manually_stopped=True, message_type='end') and
                             not self.recording.notified_live_end):
