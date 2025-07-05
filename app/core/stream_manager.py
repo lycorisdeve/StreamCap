@@ -13,6 +13,7 @@ from ..process_manager import BackgroundService
 from ..utils import utils
 from ..utils.logger import logger
 from . import ffmpeg_builders, platform_handlers
+from .direct_downloader import DirectStreamDownloader
 from .platform_handlers import StreamData
 
 
@@ -41,6 +42,7 @@ class LiveStreamRecorder:
         self.quality = self._get_info("quality", default=self.DEFAULT_QUALITY)
         self.save_format = self._get_info("save_format", default=self.DEFAULT_SAVE_FORMAT).lower()
         self.proxy = self.is_use_proxy()
+        self.direct_downloader = None
         os.makedirs(self.output_dir, exist_ok=True)
         self.app.language_manager.add_observer(self)
         self._ = {}
@@ -148,6 +150,15 @@ class LiveStreamRecorder:
             url = url.replace("https://", "http://")
         return url
 
+    def _get_record_format(self):
+        use_flv_record = ["shopee"]
+        if self.platform_key in use_flv_record:
+            self.save_format = "flv"
+            self.recording.record_format = self.save_format
+            self.recording.segment_record = False
+            return self.save_format, True
+        return self.save_format, False
+
     async def fetch_stream(self) -> StreamData:
         logger.info(f"Live URL: {self.live_url}")
         logger.info(f"Use Proxy: {self.proxy or None}")
@@ -171,6 +182,7 @@ class LiveStreamRecorder:
         Construct ffmpeg recording parameters and start recording
         """
 
+        self.save_format, use_direct_download = self._get_record_format()
         filename = self._get_filename(stream_info)
         self.output_dir = self._get_output_dir(stream_info)
         save_path = self._get_save_path(filename)
@@ -179,25 +191,50 @@ class LiveStreamRecorder:
         os.makedirs(self.recording.recording_dir, exist_ok=True)
         record_url = self._get_record_url(stream_info.record_url)
 
-        ffmpeg_builder = ffmpeg_builders.create_builder(
-            self.save_format,
-            record_url=record_url,
-            proxy=self.proxy,
-            segment_record=self.segment_record,
-            segment_time=self.segment_time,
-            full_path=save_path,
-            headers=self.get_headers_params(record_url, self.platform_key)
-        )
-        ffmpeg_command = ffmpeg_builder.build_command()
-        self.app.page.run_task(
-            self.start_ffmpeg,
-            stream_info.anchor_name,
-            self.live_url,
-            stream_info.record_url,
-            ffmpeg_command,
-            self.save_format,
-            self.user_config.get("custom_script_command")
-        )
+        if use_direct_download:
+            logger.info(f"Use Direct Downloader to Download FLV Stream: {record_url}")
+            headers = {}
+            header_params = self.get_headers_params(record_url, self.platform_key)
+            if header_params:
+                key, value = header_params.split(":", 1)
+                headers[key] = value
+                
+            self.direct_downloader = DirectStreamDownloader(
+                record_url=record_url,
+                save_path=save_path,
+                headers=headers,
+                proxy=self.proxy
+            )
+            
+            self.app.page.run_task(
+                self.start_direct_download,
+                stream_info.anchor_name,
+                self.live_url,
+                record_url,
+                save_path,
+                self.save_format,
+                self.user_config.get("custom_script_command")
+            )
+        else:
+            ffmpeg_builder = ffmpeg_builders.create_builder(
+                self.save_format,
+                record_url=record_url,
+                proxy=self.proxy,
+                segment_record=self.segment_record,
+                segment_time=self.segment_time,
+                full_path=save_path,
+                headers=self.get_headers_params(record_url, self.platform_key)
+            )
+            ffmpeg_command = ffmpeg_builder.build_command()
+            self.app.page.run_task(
+                self.start_ffmpeg,
+                stream_info.anchor_name,
+                self.live_url,
+                stream_info.record_url,
+                ffmpeg_command,
+                self.save_format,
+                self.user_config.get("custom_script_command")
+            )
 
     async def start_ffmpeg(
         self,
@@ -544,3 +581,123 @@ class LiveStreamRecorder:
             "blued": "referer:https://app.blued.cn",
         }
         return record_headers.get(platform_key)
+
+    async def start_direct_download(
+        self,
+        record_name: str,
+        live_url: str,
+        record_url: str,
+        save_file_path: str,
+        save_type: str,
+        script_command: str | None = None
+    ) -> bool:
+        """
+        Use the direct downloader to download the live stream
+        """
+        try:
+            await self.direct_downloader.start_download()
+            
+            self.recording.status_info = RecordingStatus.RECORDING
+            self.recording.record_url = record_url
+            logger.info(f"Direct Downloading: {live_url}")
+            logger.log("STREAM", f"Direct Download Stream URL: {record_url}")
+            
+            while True:
+                if not self.recording.is_recording or not self.app.recording_enabled:
+                    logger.info(f"Prepare to end direct download: {live_url}")
+                    await self.direct_downloader.stop_download()
+                    break
+                
+                await asyncio.sleep(1)
+                
+                if self.direct_downloader.download_task and self.direct_downloader.download_task.done():
+                    break
+            
+            if self.recording.monitor_status:
+                self.recording.status_info = RecordingStatus.MONITORING
+                display_title = self.recording.title
+            else:
+                self.recording.status_info = RecordingStatus.STOPPED_MONITORING
+                display_title = self.recording.display_title
+
+            self.recording.live_title = None
+            if not self.recording.is_recording:
+                logger.success(f"Direct Downloading Stopped: {record_name}")
+            else:
+                logger.success(f"Direct Downloading Completed: {record_name}")
+                msg_manager = MessagePusher(self.settings)
+                user_config = self.settings.user_config
+
+                if (self.app.recording_enabled and MessagePusher.should_push_message(
+                        self.settings, self.recording, check_manually_stopped=True, message_type='end') and
+                        not self.recording.notified_live_end):
+                    push_content = self._["push_content_end"]
+                    end_push_message_text = user_config.get("custom_stream_end_content")
+                    if end_push_message_text:
+                        push_content = end_push_message_text
+
+                    push_at = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+                    push_content = push_content.replace("[room_name]", self.recording.streamer_name).replace(
+                        "[time]", push_at
+                    )
+                    msg_title = user_config.get("custom_notification_title").strip()
+                    msg_title = msg_title or self._["status_notify"]
+
+                    self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
+                    self.recording.notified_live_end = True
+
+                self.recording.is_recording = False
+            
+            try:
+                self.recording.update({"display_title": display_title})
+                await self.app.record_card_manager.update_card(self.recording)
+                self.app.page.pubsub.send_others_on_topic("update", self.recording)
+                if self.app.recording_enabled:
+                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
+                else:
+                    self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
+            except Exception as e:
+                logger.debug(f"Failed to update UI: {e}")
+
+            if self.user_config.get("execute_custom_script") and script_command:
+                logger.info("Prepare to execute custom script in the background")
+                try:
+                    self.app.page.run_task(
+                        self.custom_script_execute,
+                        script_command,
+                        record_name,
+                        save_file_path,
+                        save_type,
+                        False,
+                        False
+                    )
+                    logger.success("Successfully added script execution")
+                except Exception as e:
+                    logger.error(f"Failed to execute custom script: {e}")
+                    await self.custom_script_execute(
+                        script_command,
+                        record_name,
+                        save_file_path,
+                        save_type,
+                        False,
+                        False
+                    )
+
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error occurred during direct download: {e}")
+            self.recording.status_info = RecordingStatus.RECORDING_ERROR
+
+            try:
+                self.app.record_manager.stop_recording(self.recording)
+                await self.app.record_card_manager.update_card(self.recording)
+                self.app.page.pubsub.send_others_on_topic("update", self.recording)
+                await self.app.snack_bar.show_snack_bar(
+                    record_name + " " + self._["record_stream_error"], duration=2000
+                )
+            except Exception as e:
+                logger.debug(f"Failed to update UI: {e}")
+            return False
+        finally:
+            self.recording.record_url = None
