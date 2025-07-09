@@ -280,7 +280,7 @@ class RecordingCardManager:
                     recording_card["card"].content.bgcolor = self.get_card_background_color(recording)
                     recording_card["card"].content.border = ft.border.all(2, self.get_card_border_color(recording))
                     try:
-                        recording_card["card"].update()
+                        self.app.page.update()
                     except (ft.core.page.PageDisconnectedException, AssertionError) as e:
                         logger.debug(f"Update card failed: {e}")
                         return
