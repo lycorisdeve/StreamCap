@@ -173,8 +173,38 @@ class UpdateChecker:
     @staticmethod
     def _compare_versions(version1: str, version2: str) -> int:
         """Compare version numbers, returns 1 if version1 > version2, 0 if equal, -1 if less"""
-        v1_parts = [int(x) for x in version1.split(".")]
-        v2_parts = [int(x) for x in version2.split(".")]
+ 
+        def parse_version(version):
+            if "-" in version:
+                v_parts, pre_release = version.split("-", 1)
+                pre_release_value = 0
+                if pre_release == "alpha":
+                    pre_release_value = -3
+                elif pre_release == "beta":
+                    pre_release_value = -2
+                elif pre_release == "rc":
+                    pre_release_value = -1
+            else:
+                v_parts = version
+                pre_release_value = 0
+            
+            v_nums = []
+            for part in v_parts.split("."):
+                try:
+                    v_nums.append(int(part))
+                except ValueError:
+                    for ii, c in enumerate(part):
+                        if not c.isdigit():
+                            try:
+                                v_nums.append(int(part[:ii]))
+                            except ValueError:
+                                v_nums.append(0)
+                            break
+            
+            return v_nums, pre_release_value
+        
+        v1_parts, v1_pre = parse_version(version1)
+        v2_parts, v2_pre = parse_version(version2)
         
         for i in range(max(len(v1_parts), len(v2_parts))):
             v1 = v1_parts[i] if i < len(v1_parts) else 0
@@ -183,6 +213,12 @@ class UpdateChecker:
                 return 1
             elif v1 < v2:
                 return -1
+        
+        if v1_pre > v2_pre:
+            return 1
+        elif v1_pre < v2_pre:
+            return -1
+        
         return 0
     
     async def show_update_dialog(self, update_info: dict[str, Any]) -> None:
