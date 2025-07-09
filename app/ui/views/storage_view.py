@@ -55,20 +55,27 @@ class StoragePage(BasePage):
             self.path_display.value = self._["current_path"] + ":" + self.current_path
             self.file_list.controls.clear()
 
+            if self.current_path != self.root_path:
+                back_button = ft.ElevatedButton(
+                    self._["go_back"],
+                    icon=ft.icons.ARROW_BACK,
+                    on_click=lambda _: self.app.page.run_task(self.navigate_to_parent)
+                )
+                if self.app.is_mobile:
+                    back_item = ft.ListTile(
+                        leading=ft.Icon(ft.icons.ARROW_BACK, color=ft.colors.BLUE),
+                        title=ft.Text(self._["go_back"]),
+                        on_click=lambda _: self.app.page.run_task(self.navigate_to_parent),
+                    )
+                    self.file_list.controls.append(back_item)
+                else:
+                    self.file_list.controls.append(back_button)
+
             exists, is_empty = await self.check_directory()
             if not exists or is_empty:
                 self.show_empty_folder_message()
                 self.file_list.update()
                 return
-
-            if self.current_path != self.root_path:
-                self.file_list.controls.append(
-                    ft.ElevatedButton(
-                        self._["go_back"],
-                        icon=ft.icons.ARROW_BACK,
-                        on_click=lambda _: self.app.page.run_task(self.navigate_to_parent)
-                    )
-                )
 
             await self.create_file_buttons()
             
@@ -107,28 +114,28 @@ class StoragePage(BasePage):
         buttons = []
         is_mobile = self.app.is_mobile
         for name, is_dir, full_path in items:
-            if is_dir:
-                btn = ft.ElevatedButton(
-                    f"📁 {name}",
-                    on_click=lambda e, path=full_path: self.app.page.run_task(self.navigate_to, path)
-                )
-            else:
-                btn = ft.ElevatedButton(
-                    f"📄 {name}",
-                    on_click=lambda e, path=full_path: self.app.page.run_task(self.preview_file, path)
-                )
-
             if is_mobile:
-                card = ft.Card(
-                    content=ft.Container(
-                        content=btn,
-                        padding=ft.padding.only(left=0, right=0, top=2, bottom=2),
+                icon = ft.Icon(ft.icons.FOLDER, color=ft.colors.BLUE) if is_dir else ft.Icon(ft.icons.INSERT_DRIVE_FILE)
+                item = ft.ListTile(
+                    leading=icon,
+                    title=ft.Text(name),
+                    on_click=lambda e, path=full_path, is_directory=is_dir: self.app.page.run_task(
+                        self.navigate_to if is_directory else self.preview_file, 
+                        path
                     ),
-                    elevation=2,
-                    margin=ft.margin.only(bottom=5),
                 )
-                buttons.append(card)
+                buttons.append(item)
             else:
+                if is_dir:
+                    btn = ft.ElevatedButton(
+                        f"📁 {name}",
+                        on_click=lambda e, path=full_path: self.app.page.run_task(self.navigate_to, path)
+                    )
+                else:
+                    btn = ft.ElevatedButton(
+                        f"📄 {name}",
+                        on_click=lambda e, path=full_path: self.app.page.run_task(self.preview_file, path)
+                    )
                 buttons.append(btn)
 
         self.file_list.controls.extend(buttons)
