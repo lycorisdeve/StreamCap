@@ -9,6 +9,8 @@ def is_mobile_device(page: ft.Page) -> bool:
 
 
 def setup_responsive_layout(page: ft.Page, app: App) -> None:
+    _ = app.language_manager.language.get("sidebar", {})
+    
     if is_mobile_device(page):
         logger.info("mobile device detected, enable mobile layout")
         app.is_mobile = True
@@ -17,12 +19,14 @@ def setup_responsive_layout(page: ft.Page, app: App) -> None:
         
         app.bottom_navigation = ft.NavigationBar(
             destinations=[
-                ft.NavigationBarDestination(icon=ft.Icons.HOME, label="首页"),
-                ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="设置"),
-                ft.NavigationBarDestination(icon=ft.Icons.DRIVE_FILE_MOVE, label="存储"),
-                ft.NavigationBarDestination(icon=ft.Icons.INFO, label="关于"),
+                ft.NavigationBarDestination(icon=ft.Icons.HOME, label=_["home"]),
+                ft.NavigationBarDestination(icon=ft.Icons.DASHBOARD_ROUNDED, label=_["recordings"]),
+                ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label=_["settings"]),
+                ft.NavigationBarDestination(icon=ft.Icons.DRIVE_FILE_MOVE, label=_["storage"]),
+                ft.NavigationBarDestination(icon=ft.Icons.INFO, label=_["about"]),
             ],
-            on_change=lambda e: page.go(f"/{['home', 'settings', 'storage', 'about'][e.control.selected_index]}"),
+            on_change=lambda e: page.go(
+                f"/{['home', 'recordings', 'settings', 'storage', 'about'][e.control.selected_index]}"),
         )
         
         app.content_area.expand = True

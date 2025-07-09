@@ -43,6 +43,7 @@ def get_route_handler() -> dict[str, str]:
     return {
         "/": "home",
         "/home": "home",
+        "/recordings": "recordings",
         "/settings": "settings",
         "/storage": "storage",
         "/about": "about",
@@ -197,6 +198,7 @@ if __name__ == "__main__":
             port=args.port,
             assets_dir=ASSETS_DIR,
             use_color_emoji=True,
+            web_renderer=ft.WebRenderer.CANVAS_KIT
         )
 
     else:

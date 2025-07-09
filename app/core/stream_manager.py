@@ -173,6 +173,7 @@ class LiveStreamRecorder:
             password=self.account_config.get(self.platform_key, {}).get("password"),
             account_type=self.account_config.get(self.platform_key, {}).get("account_type")
         )
+
         stream_info = await handler.get_stream_info(self.live_url)
         self.recording.is_checking = False
         return stream_info
@@ -265,6 +266,7 @@ class LiveStreamRecorder:
             self.recording.record_url = record_url
             logger.info(f"Recording in Progress: {live_url}")
             logger.log("STREAM", f"Recording Stream URL: {record_url}")
+
             while True:
                 if not self.recording.is_recording or not self.app.recording_enabled:
                     logger.info(f"Preparing to End Recording: {live_url}")
@@ -351,7 +353,7 @@ class LiveStreamRecorder:
                     self.recording.is_recording = False
                 try:
                     self.recording.update({"display_title": display_title})
-                    await self.app.record_card_manager.update_card(self.recording)
+                    self.app.page.run_task(self.app.record_card_manager.update_card, self.recording)
                     self.app.page.pubsub.send_others_on_topic("update", self.recording)
                     if self.app.recording_enabled and process in self.app.process_manager.ffmpeg_processes:
                         self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)

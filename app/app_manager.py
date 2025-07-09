@@ -14,6 +14,7 @@ from .ui.components.show_snackbar import ShowSnackBar
 from .ui.navigation.sidebar import LeftNavigationMenu, NavigationSidebar
 from .ui.views.about_view import AboutPage
 from .ui.views.home_view import HomePage
+from .ui.views.recordings_view import RecordingsPage
 from .ui.views.settings_view import SettingsPage
 from .ui.views.storage_view import StoragePage
 from .utils import utils
@@ -40,11 +41,12 @@ class App:
 
         self.settings = SettingsPage(self)
         self.language_manager = LanguageManager(self)
+        self.language_code = self.settings.language_code
         self.about = AboutPage(self)
+        self.recordings = RecordingsPage(self)
         self.home = HomePage(self)
         self.storage = StoragePage(self)
         self.pages = self.initialize_pages()
-        self.language_code = self.settings.language_code
         self.sidebar = NavigationSidebar(self)
         self.left_navigation_menu = LeftNavigationMenu(self)
 
@@ -77,6 +79,7 @@ class App:
         return {
             "settings": self.settings,
             "home": self.home,
+            "recordings": self.recordings,
             "storage": self.storage,
             "about": self.about,
         }

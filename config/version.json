@@ -6,7 +6,7 @@
   "open_source_license": "Apache License 2.0",
   "version_updates": [
     {
-      "version": "1.0.1",
+      "version": "1.0.2-alpha",
       "kernel_version": "4.0.5",
       "updates": {
         "en": [
@@ -14,6 +14,37 @@
         ],
         "zh_CN": [
           "无"
+        ]
+      },
+      "release_date": "",
+      "announcement": {
+        "en": [
+          {
+            "title": "StreamCap v1.0.2 will be released soon",
+            "content": "New multi-platform support, web adaptation for mobile, bug fixes, and stability improvements"
+          },
+          {
+            "title": "Usage tips",
+            "content": "Press Alt + H on Windows or Option + H on Mac to quickly access the shortcut help document, improve your work efficiency."
+          },
+          {
+            "title": "Coming soon",
+            "content": "The next version will support classification by live room status and platform, and minimize to tray"
+          }
+        ],
+        "zh_CN": [
+          {
+            "title": "StreamCap v1.0.2 即将发布",
+            "content": "新增平台支持，进行移动端web适配，修复已知问题，提升稳定性"
+          },
+          {
+            "title": "使用技巧",
+            "content": "在Windows上按 Alt + H 或在Mac上按 Option + H，以快速访问快捷键帮助文档，提升您的工作效率。"
+          },
+          {
+            "title": "即将推出",
+            "content": "下个版本将支持按直播间状态和平台进行分类以及程序最小化至托盘"
+          }
         ]
       }
     }
