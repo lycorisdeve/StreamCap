@@ -1,15 +1,22 @@
 from asyncio import create_task
+from typing import Optional
 
+from ..models.recording_model import Recording
+from ..ui.views.settings_view import SettingsPage
 from ..utils.logger import logger
 from .notification_service import NotificationService
 
 
 class MessagePusher:
-    def __init__(self, settings):
+    def __init__(self, settings: SettingsPage):
         self.settings = settings
         self.notifier = NotificationService()
 
-    def is_any_push_channel_enabled(self):
+    def _get_proxy(self) -> str | None:
+        if self.settings.user_config.get("enable_proxy"):
+            return self.settings.user_config.get("proxy_address")
+
+    def is_any_push_channel_enabled(self) -> bool:
         """Check if any push channel is enabled"""
         push_channels = [
             "dingtalk_enabled",
@@ -24,7 +31,12 @@ class MessagePusher:
         return any(self.settings.user_config.get(channel) for channel in push_channels)
 
     @staticmethod
-    def should_push_message(settings, recording, check_manually_stopped=False, message_type=None):
+    def should_push_message(
+        settings: SettingsPage,
+        recording: Recording,
+        check_manually_stopped: bool = False,
+        message_type: Optional[str] = None
+    ) -> bool:
         """
         Check if message should be pushed
         """
@@ -70,7 +82,7 @@ class MessagePusher:
             return False
         return True
 
-    async def push_messages(self, msg_title: str, push_content: str):
+    async def push_messages(self, msg_title: str, push_content: str) -> None:
         """Push messages to all enabled notification services"""
         if self.settings.user_config.get("dingtalk_enabled"):
             create_task(
@@ -122,6 +134,7 @@ class MessagePusher:
                     chat_id=self.settings.user_config.get("telegram_chat_id"),
                     token=self.settings.user_config.get("telegram_api_token"),
                     content=push_content,
+                    proxy=self._get_proxy(),
                 )
             )
             logger.info("Push Telegram message successfully")
