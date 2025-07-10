@@ -26,7 +26,7 @@ class RecordingCardManager:
 
     def load(self):
         language = self.app.language_manager.language
-        for key in ("recording_card", "recording_manager", "base", "home_page", "video_quality", "storage_page"):
+        for key in ("recording_card", "recording_manager", "base", "recordings_page", "video_quality", "storage_page"):
             self._.update(language.get(key, {}))
 
     def pubsub_subscribe(self):
@@ -280,7 +280,7 @@ class RecordingCardManager:
                     recording_card["card"].content.bgcolor = self.get_card_background_color(recording)
                     recording_card["card"].content.border = ft.border.all(2, self.get_card_border_color(recording))
                     try:
-                        recording_card["card"].update()
+                        self.app.page.update()
                     except (ft.core.page.PageDisconnectedException, AssertionError) as e:
                         logger.debug(f"Update card failed: {e}")
                         return
@@ -382,7 +382,7 @@ class RecordingCardManager:
 
     async def remove_recording_card(self, recordings: list[Recording]):
         try:
-            home_page = self.app.current_page
+            recordings_page = self.app.current_page
 
             existing_ids = {rec.rec_id for rec in self.app.record_manager.recordings}
             remove_ids = {rec.rec_id for rec in recordings}
@@ -394,9 +394,9 @@ class RecordingCardManager:
                 if rec_id not in keep_ids
             ]
 
-            home_page.recording_card_area.content.controls = [
+            recordings_page.recording_card_area.content.controls = [
                 control
-                for control in home_page.recording_card_area.content.controls
+                for control in recordings_page.recording_card_area.content.controls
                 if control not in cards_to_remove
             ]
 
@@ -406,7 +406,7 @@ class RecordingCardManager:
             }
             
             try:
-                home_page.recording_card_area.update()
+                recordings_page.recording_card_area.update()
             except (ft.core.page.PageDisconnectedException, AssertionError) as e:
                 logger.debug(f"Update recording card area failed: {e}")
                 
@@ -438,7 +438,8 @@ class RecordingCardManager:
     async def update_duration(self, recording: Recording):
         """Update the duration text periodically."""
         while True:
-            await asyncio.sleep(1)  # Update every second
+            update_interval = 1
+            await asyncio.sleep(update_interval)
             if not recording or recording.rec_id not in self.cards_obj:  # Stop task if card is removed
                 break
 

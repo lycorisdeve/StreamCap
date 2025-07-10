@@ -165,7 +165,8 @@ class LeftNavigationMenu(ft.Column):
 
     async def on_theme_change(self):
         """When the theme changes, recreate the content and update the page"""
-        if self.app.current_page.page_name == "about":
+        page_list = ["home", "about"]
+        if self.app.current_page.page_name in page_list:
             await self.app.current_page.load()
 
 
@@ -181,21 +182,40 @@ class NavigationSidebar:
     def load(self):
         self._ = self.app.language_manager.language.get("sidebar")
         self.control_groups = [
-            ControlGroup(icon=ft.Icons.HOME, label=self._["home"], index=0, name="home", selected_icon=ft.Icons.HOME),
+            ControlGroup(
+                icon=ft.Icons.HOME,
+                label=self._["home"],
+                index=0,
+                name="home",
+                selected_icon=ft.Icons.HOME
+            ),
+            ControlGroup(
+                icon=ft.Icons.DASHBOARD,
+                label=self._["recordings"],
+                index=1,
+                name="recordings",
+                selected_icon=ft.Icons.DASHBOARD_ROUNDED
+            ),
             ControlGroup(
                 icon=ft.Icons.SETTINGS,
                 label=self._["settings"],
-                index=1,
+                index=2,
                 name="settings",
                 selected_icon=ft.Icons.SETTINGS,
             ),
             ControlGroup(
                 icon=ft.Icons.DRIVE_FILE_MOVE,
                 label=self._["storage"],
-                index=2,
+                index=3,
                 name="storage",
                 selected_icon=ft.Icons.DRIVE_FILE_MOVE_OUTLINE
             ),
-            ControlGroup(icon=ft.Icons.INFO, label=self._["about"], index=3, name="about", selected_icon=ft.Icons.INFO),
+            ControlGroup(
+                icon=ft.Icons.INFO,
+                label=self._["about"],
+                index=4,
+                name="about",
+                selected_icon=ft.Icons.INFO
+            ),
         ]
         self.selected_control_group = self.control_groups[0]

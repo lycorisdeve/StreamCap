@@ -8,14 +8,14 @@ class AboutPage(PageBase):
     def __init__(self, app):
         super().__init__(app)
         self.page_name = "about"
-        self._about_config = {}
+        self.about_config = {}
         self.app.language_manager.add_observer(self)
         self.load_language()
         self.page.on_keyboard_event = self.on_keyboard
 
     def load_language(self):
         self._ = self.app.language_manager.language.get("about_page")
-        self._about_config = self.app.config_manager.load_about_config()
+        self.about_config = self.app.config_manager.load_about_config()
 
     async def load(self):
         """Load the about page content."""
@@ -39,8 +39,8 @@ class AboutPage(PageBase):
             text_color_700 = ft.Colors.GREY_700
 
         language_code = self.app.language_code
-        version_updates = self._about_config["version_updates"][0]
-        open_source_license = self._about_config["open_source_license"]
+        version_updates = self.about_config["version_updates"][0]
+        open_source_license = self.about_config["open_source_license"]
 
         if is_mobile:
             feature_highlights = ft.Column(
@@ -250,7 +250,7 @@ class AboutPage(PageBase):
                             controls=[
                                 ft.Text(self._["introduction"], size=20, weight=ft.FontWeight.W_600, color=text_color),
                                 ft.Text(
-                                    self._about_config["introduction"].get(language_code),
+                                    self.about_config["introduction"].get(language_code),
                                     size=16,
                                     text_align=ft.TextAlign.JUSTIFY,
                                     color=text_color_600,

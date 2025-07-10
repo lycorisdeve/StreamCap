@@ -2,20 +2,20 @@ import flet as ft
 
 
 class SearchDialog(ft.AlertDialog):
-    def __init__(self, home_page, on_close=None):
-        self.home_page = home_page
+    def __init__(self, recordings_page, on_close=None):
+        self.recordings_page = recordings_page
         self._ = {}
         self.load()
 
         # Get the name of the current filter condition
         filter_name = self._["filter_all"]
-        if self.home_page.current_filter == "recording":
+        if self.recordings_page.current_filter == "recording":
             filter_name = self._["filter_recording"]
-        elif self.home_page.current_filter == "error":
+        elif self.recordings_page.current_filter == "error":
             filter_name = self._["filter_error"]
-        elif self.home_page.current_filter == "offline":
+        elif self.recordings_page.current_filter == "offline":
             filter_name = self._["filter_offline"]
-        elif self.home_page.current_filter == "stopped":
+        elif self.recordings_page.current_filter == "stopped":
             filter_name = self._["filter_stopped"]
 
         search_title = f"{self._['search']} ({filter_name})"
@@ -54,11 +54,11 @@ class SearchDialog(ft.AlertDialog):
         )
         self.actions_alignment = ft.MainAxisAlignment.END
         self.on_close = on_close
-        self.home_page.app.language_manager.add_observer(self)
+        self.recordings_page.app.language_manager.add_observer(self)
 
     def load(self):
-        language = self.home_page.app.language_manager.language
-        for key in ("search_dialog", "home_page", "base"):
+        language = self.recordings_page.app.language_manager.language
+        for key in ("search_dialog", "recordings_page", "base"):
             self._.update(language.get(key, {}))
         
         # Ensure the language items related to filtering exist
@@ -75,5 +75,5 @@ class SearchDialog(ft.AlertDialog):
 
     async def submit_query(self, e):
         query = self.query.value.strip()
-        await self.home_page.filter_recordings(query)
+        await self.recordings_page.filter_recordings(query)
         await self.close_dlg(e)

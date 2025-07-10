@@ -20,7 +20,7 @@ class RecordingDialog:
 
     def load(self):
         language = self.app.language_manager.language
-        for key in ("recording_dialog", "home_page", "base", "video_quality"):
+        for key in ("recording_dialog", "recordings_page", "base", "video_quality"):
             self._.update(language.get(key, {}))
 
     async def show_dialog(self):
