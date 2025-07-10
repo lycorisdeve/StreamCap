@@ -42,7 +42,7 @@
       "total_rooms": "总房间数",
       "active_recordings": "正在录制",
       "stop_monitoring": "停止监控",
-      "recent_recordings": "最近录制",
+      "recent_added_recordings": "最近添加",
       "no_recordings": "暂无录制记录",
       "greeting_morning": "早上好",
       "greeting_afternoon": "下午好",
