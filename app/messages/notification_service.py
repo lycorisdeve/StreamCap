@@ -15,9 +15,10 @@ class NotificationService:
     def __init__(self):
         self.headers = {"Content-Type": "application/json"}
 
-    async def _async_post(self, url: str, json_data: dict[str, Any]) -> dict[str, Any]:
+    async def _async_post(self, url: str, json_data: dict[str, Any], proxy: str | None = None) -> dict[str, Any]:
         try:
-            async with httpx.AsyncClient() as client:
+
+            async with httpx.AsyncClient(proxy=proxy) as client:
                 response = await client.post(url, json=json_data, headers=self.headers)
                 response.raise_for_status()
                 return response.json()
@@ -95,11 +96,12 @@ class NotificationService:
             logger.info(f"Email push failed, push email: {to_email},  Error message: {e}")
             return {"success": [], "error": receivers}
 
-    async def send_to_telegram(self, chat_id: int, token: str, content: str) -> dict[str, Any]:
+    async def send_to_telegram(
+            self, chat_id: int, token: str, content: str, proxy: Optional[str] = None) -> dict[str, Any]:
         try:
             json_data = {"chat_id": chat_id, "text": content}
             url = "https://api.telegram.org/bot" + token + "/sendMessage"
-            _resp = await self._async_post(url, json_data)
+            _resp = await self._async_post(url, json_data, proxy or None)
             return {"success": [1], "error": []}
         except Exception as e:
             logger.info(f"Telegram push failed, chat ID: {chat_id},  Error message: {e}")

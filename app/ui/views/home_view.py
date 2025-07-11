@@ -418,7 +418,7 @@ class HomePage(PageBase):
             content=ft.Column(
                 controls=[
                     ft.Text(
-                        self._["recent_recordings"],
+                        self._["recent_added_recordings"],
                         size=16,
                         weight=ft.FontWeight.BOLD,
                     ),
