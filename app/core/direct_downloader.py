@@ -3,7 +3,7 @@ import os
 import time
 from typing import Optional
 
-import aiohttp
+import httpx
 
 from ..utils.logger import logger
 
@@ -22,7 +22,7 @@ class DirectStreamDownloader:
         self.record_url = record_url
         self.save_path = save_path
         self.headers = headers or {}
-        self.proxy = proxy
+        self.proxy = proxy or None
         self.chunk_size = chunk_size
         self.stop_event = asyncio.Event()
         self.process = None
@@ -50,22 +50,15 @@ class DirectStreamDownloader:
         try:
             os.makedirs(os.path.dirname(self.save_path), exist_ok=True)
 
-            async with aiohttp.ClientSession() as session:
-                proxy_settings = {}
-                if self.proxy:
-                    proxy_settings['proxy'] = self.proxy
-
-                async with session.get(self.record_url, headers=self.headers,
-                                       timeout=aiohttp.ClientTimeout(total=None),
-                                       **proxy_settings) as response:
-                    if response.status != 200:
-                        logger.error(f"Request Stream Failed, Status Code: {response.status}")
+            async with httpx.AsyncClient(headers=self.headers, proxy=self.proxy, timeout=None) as client:
+                async with client.stream("GET", self.record_url) as response:
+                    if response.status_code != 200:
+                        logger.error(f"Request Stream Failed, Status Code: {response.status_code}")
                         return
 
                     with open(self.save_path, 'wb') as f:
-                        while not self.stop_event.is_set():
-                            chunk = await response.content.read(self.chunk_size)
-                            if not chunk:
+                        async for chunk in response.aiter_bytes(self.chunk_size):
+                            if self.stop_event.is_set():
                                 break
 
                             f.write(chunk)
