@@ -86,7 +86,7 @@ class RecordingDialog:
         )
         record_format_field = ft.Dropdown(
             label=self._["select_record_format"],
-            options=[ft.dropdown.Option(i) for i in self.app.settings.get_supported_record_format()],
+            options=[ft.dropdown.Option(i) for i in VideoFormat.get_formats()],
             border_radius=5,
             filled=False,
             value=default_record_format,
