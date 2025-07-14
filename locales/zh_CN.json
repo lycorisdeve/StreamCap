@@ -219,6 +219,8 @@
     "loop_time": "循环时间(秒)",
     "is_segmented_recording_enabled": "分段录制是否开启",
     "force_https": "强制启用https录制",
+    "default_live_source": "默认直播源",
+    "default_live_source_tip": "该设置只对抖音和TikTok平台有效",
     "space_threshold": "录制空间剩余阈值(gb)",
     "segment_time": "视频分段时间(秒)",
     "convert_mp4": "录制完成后转为mp4格式",
