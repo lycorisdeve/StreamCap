@@ -148,9 +148,11 @@ class LiveStreamRecorder:
         if (
             self.user_config.get("default_live_source") != "HLS"
             and self.is_flv_preferred_platform
-            and self.quality not in {"OD", 0}
         ):
-            return stream_info.flv_url
+            if stream_info.flv_url.rsplit("&codec=", maxsplit=1)[-1] == 'h264':
+                return stream_info.flv_url
+            else:
+                logger.warning("FLV is not supported for h265 codec, use HLS source instead")
         return stream_info.record_url
 
     def _get_record_url(self, stream_info: StreamData):
@@ -164,13 +166,18 @@ class LiveStreamRecorder:
             url = url.replace("https://", "http://")
         return url
 
-    def _get_record_format(self):
+    def _get_record_format(self, stream_info: StreamData):
         use_flv_record = ["shopee"]
         if self.platform_key in use_flv_record:
             self.save_format = "flv"
             self.recording.record_format = self.save_format
             self.recording.segment_record = False
             return self.save_format, True
+
+        elif self.save_format == "flv" and stream_info.flv_url.rsplit("&codec=", maxsplit=1)[-1] == 'h265':
+            logger.warning("FLV is not supported for h265 codec, use TS format instead")
+            self.save_format = "ts"
+
         return self.save_format, False
 
     async def fetch_stream(self) -> StreamData:
@@ -197,7 +204,7 @@ class LiveStreamRecorder:
         Construct ffmpeg recording parameters and start recording
         """
 
-        self.save_format, use_direct_download = self._get_record_format()
+        self.save_format, use_direct_download = self._get_record_format(stream_info)
         filename = self._get_filename(stream_info)
         self.output_dir = self._get_output_dir(stream_info)
         save_path = self._get_save_path(filename)
