@@ -1,5 +1,6 @@
 import asyncio
 import threading
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 from ..messages.message_pusher import MessagePusher
@@ -27,6 +28,7 @@ class RecordingManager:
         self._ = {}
         self.load()
         self.initialize_dynamic_state()
+        self.platform_semaphores = defaultdict(lambda: asyncio.Semaphore(3))
 
     @property
     def recordings(self):
@@ -248,9 +250,11 @@ class RecordingManager:
                 "quality": recording.quality,
             }
 
+            semaphore = self.platform_semaphores[platform_key]
             recorder = LiveStreamRecorder(self.app, recording, recording_info)
-            stream_info = await recorder.fetch_stream()
-            logger.info(f"Stream Data: {stream_info}")
+            async with semaphore:
+                stream_info = await recorder.fetch_stream()
+                logger.info(f"Stream Data: {stream_info}")
             if not stream_info or not stream_info.anchor_name:
                 logger.error(f"Fetch stream data failed: {recording.url}")
                 recording.is_checking = False
