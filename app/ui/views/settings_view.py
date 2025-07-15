@@ -365,6 +365,17 @@ class SettingsPage(PageBase):
                             ),
                         ),
                         self.create_setting_row(
+                            self._["default_live_source"],
+                            ft.Dropdown(
+                                options=[ft.dropdown.Option(i) for i in ['HLS', 'FLV']],
+                                value=self.get_config_value("default_live_source", 'FLV'),
+                                width=200,
+                                data="default_live_source",
+                                on_change=self.on_change,
+                                tooltip=self._["default_live_source_tip"],
+                            ),
+                        ),
+                        self.create_setting_row(
                             self._["space_threshold"],
                             ft.TextField(
                                 value=self.get_config_value("recording_space_threshold"),

@@ -140,9 +140,25 @@ class LiveStreamRecorder:
         cleaned_title = title[:30].replace("，", ",").replace(" ", "")
         return cleaned_title
 
-    def _get_record_url(self, url: str):
-        http_record_list = ["shopee", "migu"]
+    @property
+    def is_flv_preferred_platform(self):
+        return self.platform_key in {"douyin", "tiktok"}
 
+    def _select_source_url(self, stream_info: StreamData):
+        if (
+            self.user_config.get("default_live_source") != "HLS"
+            and self.is_flv_preferred_platform
+        ):
+            if stream_info.flv_url.rsplit("&codec=", maxsplit=1)[-1] == 'h264':
+                return stream_info.flv_url
+            else:
+                logger.warning("FLV is not supported for h265 codec, use HLS source instead")
+        return stream_info.record_url
+
+    def _get_record_url(self, stream_info: StreamData):
+        url = self._select_source_url(stream_info)
+
+        http_record_list = ["shopee", "migu"]
         if self.user_config.get("force_https_recording") and url.startswith("http://"):
             url = url.replace("http://", "https://")
 
@@ -150,13 +166,18 @@ class LiveStreamRecorder:
             url = url.replace("https://", "http://")
         return url
 
-    def _get_record_format(self):
+    def _get_record_format(self, stream_info: StreamData):
         use_flv_record = ["shopee"]
         if self.platform_key in use_flv_record:
             self.save_format = "flv"
             self.recording.record_format = self.save_format
             self.recording.segment_record = False
             return self.save_format, True
+
+        elif self.save_format == "flv" and stream_info.flv_url.rsplit("&codec=", maxsplit=1)[-1] == 'h265':
+            logger.warning("FLV is not supported for h265 codec, use TS format instead")
+            self.save_format = "ts"
+
         return self.save_format, False
 
     async def fetch_stream(self) -> StreamData:
@@ -183,14 +204,14 @@ class LiveStreamRecorder:
         Construct ffmpeg recording parameters and start recording
         """
 
-        self.save_format, use_direct_download = self._get_record_format()
+        self.save_format, use_direct_download = self._get_record_format(stream_info)
         filename = self._get_filename(stream_info)
         self.output_dir = self._get_output_dir(stream_info)
         save_path = self._get_save_path(filename)
         logger.info(f"Save Path: {save_path}")
         self.recording.recording_dir = os.path.dirname(save_path)
         os.makedirs(self.recording.recording_dir, exist_ok=True)
-        record_url = self._get_record_url(stream_info.record_url)
+        record_url = self._get_record_url(stream_info)
 
         if use_direct_download:
             logger.info(f"Use Direct Downloader to Download FLV Stream: {record_url}")
@@ -199,14 +220,14 @@ class LiveStreamRecorder:
             if header_params:
                 key, value = header_params.split(":", 1)
                 headers[key] = value
-                
+
             self.direct_downloader = DirectStreamDownloader(
                 record_url=record_url,
                 save_path=save_path,
                 headers=headers,
                 proxy=self.proxy
             )
-            
+
             self.app.page.run_task(
                 self.start_direct_download,
                 stream_info.anchor_name,
@@ -231,20 +252,20 @@ class LiveStreamRecorder:
                 self.start_ffmpeg,
                 stream_info.anchor_name,
                 self.live_url,
-                stream_info.record_url,
+                record_url,
                 ffmpeg_command,
                 self.save_format,
                 self.user_config.get("custom_script_command")
             )
 
     async def start_ffmpeg(
-        self,
-        record_name: str,
-        live_url: str,
-        record_url: str,
-        ffmpeg_command: list,
-        save_type: str,
-        script_command: str | None = None
+            self,
+            record_name: str,
+            live_url: str,
+            record_url: str,
+            ffmpeg_command: list,
+            save_type: str,
+            script_command: str | None = None
     ) -> bool:
         """
         The child process executes ffmpeg for recording
@@ -494,13 +515,13 @@ class LiveStreamRecorder:
             logger.error(f"An unknown error occurred: {e}")
 
     async def custom_script_execute(
-        self,
-        script_command: str,
-        record_name: str,
-        save_file_path: str,
-        save_type: str,
-        split_video_by_time: bool,
-        converts_to_mp4: bool
+            self,
+            script_command: str,
+            record_name: str,
+            save_file_path: str,
+            save_type: str,
+            split_video_by_time: bool,
+            converts_to_mp4: bool
     ):
         from ..process_manager import BackgroundService
 
@@ -585,36 +606,36 @@ class LiveStreamRecorder:
         return record_headers.get(platform_key)
 
     async def start_direct_download(
-        self,
-        record_name: str,
-        live_url: str,
-        record_url: str,
-        save_file_path: str,
-        save_type: str,
-        script_command: str | None = None
+            self,
+            record_name: str,
+            live_url: str,
+            record_url: str,
+            save_file_path: str,
+            save_type: str,
+            script_command: str | None = None
     ) -> bool:
         """
         Use the direct downloader to download the live stream
         """
         try:
             await self.direct_downloader.start_download()
-            
+
             self.recording.status_info = RecordingStatus.RECORDING
             self.recording.record_url = record_url
             logger.info(f"Direct Downloading: {live_url}")
             logger.log("STREAM", f"Direct Download Stream URL: {record_url}")
-            
+
             while True:
                 if not self.recording.is_recording or not self.app.recording_enabled:
                     logger.info(f"Prepare to end direct download: {live_url}")
                     await self.direct_downloader.stop_download()
                     break
-                
+
                 await asyncio.sleep(1)
-                
+
                 if self.direct_downloader.download_task and self.direct_downloader.download_task.done():
                     break
-            
+
             if self.recording.monitor_status:
                 self.recording.status_info = RecordingStatus.MONITORING
                 display_title = self.recording.title
@@ -649,7 +670,7 @@ class LiveStreamRecorder:
                     self.recording.notified_live_end = True
 
                 self.recording.is_recording = False
-            
+
             try:
                 self.recording.update({"display_title": display_title})
                 await self.app.record_card_manager.update_card(self.recording)
@@ -686,7 +707,7 @@ class LiveStreamRecorder:
                     )
 
             return True
-            
+
         except Exception as e:
             logger.error(f"Error occurred during direct download: {e}")
             self.recording.status_info = RecordingStatus.RECORDING_ERROR

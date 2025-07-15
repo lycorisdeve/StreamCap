@@ -217,6 +217,8 @@
     "loop_time": "Loop Time (Seconds)",
     "is_segmented_recording_enabled": "Enable Segmented Recording",
     "force_https": "Force HTTPS Recording",
+    "default_live_source": "Default Live Source",
+    "default_live_source_tip": "This setting only works for Douyin and TikTok platforms",
     "space_threshold": "Remaining Space Threshold (GB) for Recording",
     "segment_time": "Video Segment Time (Seconds)",
     "convert_mp4": "Convert to MP4 After Recording",
