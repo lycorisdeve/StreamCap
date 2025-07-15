@@ -127,9 +127,9 @@ class LiveStreamRecorder:
         self.app.page.run_task(self.app.record_manager.persist_recordings)
         return output_dir
 
-    def _get_save_path(self, filename: str) -> str:
+    def _get_save_path(self, filename: str, use_direct_download: bool = False) -> str:
         suffix = self.save_format
-        suffix = "_%03d." + suffix if self.segment_record and self.save_format != "flv" else "." + suffix
+        suffix = "_%03d." + suffix if self.segment_record and not use_direct_download else "." + suffix
         save_file_path = os.path.join(self.output_dir, filename + suffix).replace(" ", "_")
         return save_file_path.replace("\\", "/")
 
@@ -207,7 +207,7 @@ class LiveStreamRecorder:
         self.save_format, use_direct_download = self._get_record_format(stream_info)
         filename = self._get_filename(stream_info)
         self.output_dir = self._get_output_dir(stream_info)
-        save_path = self._get_save_path(filename)
+        save_path = self._get_save_path(filename, use_direct_download)
         logger.info(f"Save Path: {save_path}")
         self.recording.recording_dir = os.path.dirname(save_path)
         os.makedirs(self.recording.recording_dir, exist_ok=True)
