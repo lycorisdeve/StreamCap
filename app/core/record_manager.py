@@ -28,7 +28,8 @@ class RecordingManager:
         self._ = {}
         self.load()
         self.initialize_dynamic_state()
-        self.platform_semaphores = defaultdict(lambda: asyncio.Semaphore(3))
+        max_concurrent = int(self.settings.user_config.get("platform_max_concurrent_requests", 3))
+        self.platform_semaphores = defaultdict(lambda: asyncio.Semaphore(max_concurrent))
 
     @property
     def recordings(self):

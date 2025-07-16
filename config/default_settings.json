@@ -60,5 +60,6 @@
     "recipient_email": "",
     "theme_color": "blue",
     "is_grid_view": true,
-    "theme_mode": "light"
+    "theme_mode": "light",
+    "platform_max_concurrent_requests": "3"
 }

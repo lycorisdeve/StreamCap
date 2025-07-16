@@ -443,6 +443,16 @@ class SettingsPage(PageBase):
                                 on_change=self.on_change,
                             ),
                         ),
+                        self.create_setting_row(
+                            self._["platform_max_concurrent_requests"],
+                            ft.TextField(
+                                value=str(self.get_config_value("platform_max_concurrent_requests", 3)),
+                                width=100,
+                                data="platform_max_concurrent_requests",
+                                on_change=self.on_change,
+                                hint_text=self._["platform_max_concurrent_requests_tip"]
+                            ),
+                        ),
                     ],
                     is_mobile,
                 ),
