@@ -353,7 +353,9 @@
     "switch_video_format": "Switch video recording format",
     "switch_recording_quality": "Switch video recording quality",
     "switch_account_type": "Switch account type",
-    "switch_language_tip": "Tip: It is recommended to restart the program after switching languages"
+    "switch_language_tip": "Tip: It is recommended to restart the program after switching languages",
+    "platform_max_concurrent_requests": "Max concurrent recordings per platform",
+    "platform_max_concurrent_requests_tip": "The maximum number of concurrent requests allowed per platform. Default is 3."
   },
   "about_page": {
     "about_project": "About This Application",
