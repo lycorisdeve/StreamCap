@@ -220,10 +220,13 @@ class RecordingManager:
                 in_scheduled = utils.is_current_time_within_range(scheduled_time_range)
                 if not in_scheduled:
                     recording.status_info = RecordingStatus.NOT_IN_SCHEDULED_CHECK
+                    recording.is_live = False
                     logger.info(f"Skip Detection: {recording.url} not in scheduled check range {scheduled_time_range}")
+                    self.app.page.run_task(self.app.record_card_manager.update_card, recording)
                     return
 
             recording.is_checking = True
+            recording.status_info = RecordingStatus.MONITORING
             platform, platform_key = get_platform_info(recording.url)
             
             if platform and platform_key and (recording.platform is None or recording.platform_key is None):
@@ -268,7 +271,6 @@ class RecordingManager:
 
             recording.is_live = stream_info.is_live
             if recording.is_live and not recording.is_recording:
-                recording.status_info = RecordingStatus.PREPARING_RECORDING
                 recording.live_title = stream_info.title
                 if recording.streamer_name.strip() == self._["live_room"]:
                     recording.streamer_name = stream_info.anchor_name
@@ -296,6 +298,7 @@ class RecordingManager:
                     recording.notified_live_start = True
   
                 if not recording.only_notify_no_record:
+                    recording.status_info = RecordingStatus.PREPARING_RECORDING
                     recording.loop_time_seconds = self.loop_time_seconds
                     self.start_update(recording)
                     self.app.page.run_task(recorder.start_recording, stream_info)
@@ -305,11 +308,12 @@ class RecordingManager:
                         recording.loop_time_seconds = int(notify_loop_time or 3600)
                     else:
                         recording.loop_time_seconds = self.loop_time_seconds
-                    recording.status_info = RecordingStatus.NOT_RECORDING
+                    
+                    recording.cumulative_duration = timedelta()
+                    recording.last_duration = timedelta()
+                    recording.status_info = RecordingStatus.LIVE_BROADCASTING
                     recording.is_checking = False
 
-                self.app.page.run_task(self.app.record_card_manager.update_card, recording)
-                self.app.page.pubsub.send_others_on_topic("update", recording)
             else:
                 if not recording.is_live and recording.notified_live_start:
                     recording.notified_live_start = False
@@ -327,9 +331,10 @@ class RecordingManager:
                             "display_title": title,
                         }
                     )
-                    self.app.page.run_task(self.app.record_card_manager.update_card, recording)
-                    self.app.page.pubsub.send_others_on_topic("update", recording)
                     self.app.page.run_task(self.persist_recordings)
+
+            self.app.page.run_task(self.app.record_card_manager.update_card, recording)
+            self.app.page.pubsub.send_others_on_topic("update", recording)
 
     @staticmethod
     def start_update(recording: Recording):

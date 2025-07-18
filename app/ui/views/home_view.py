@@ -384,6 +384,9 @@ class HomePage(PageBase):
                     if rec.status == "recording":
                         status_icon = ft.Icons.CIRCLE
                         status_color = ft.Colors.GREEN
+                    elif rec.status == "living":
+                        status_icon = ft.Icons.LIVE_TV
+                        status_color = ft.Colors.BLUE
                     elif rec.status == "error":
                         status_icon = ft.Icons.ERROR_OUTLINE
                         status_color = ft.Colors.RED

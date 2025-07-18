@@ -215,6 +215,15 @@ class RecordingsPage(PageBase):
                 ),
             ),
             ft.ElevatedButton(
+                self._["filter_living"],
+                on_click=self.filter_living_on_click,
+                bgcolor=ft.Colors.BLUE if self.current_filter == "living" else None,
+                color=ft.Colors.WHITE if self.current_filter == "living" else None,
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=5),
+                ),
+            ),
+            ft.ElevatedButton(
                 self._["filter_offline"],
                 on_click=self.filter_offline_on_click,
                 bgcolor=ft.Colors.AMBER if self.current_filter == "offline" else None,
@@ -326,6 +335,10 @@ class RecordingsPage(PageBase):
     
     async def filter_recording_on_click(self, _):
         self.current_filter = "recording"
+        await self.apply_filter()
+    
+    async def filter_living_on_click(self, _):
+        self.current_filter = "living"
         await self.apply_filter()
     
     async def filter_error_on_click(self, _):

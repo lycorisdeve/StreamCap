@@ -71,6 +71,7 @@
     "status_filter": "状态筛选",
     "filter_all": "全部",
     "filter_recording": "录制中",
+    "filter_living": "直播中",
     "filter_error": "录制错误",
     "filter_offline": "未开播",
     "filter_stopped": "未监控",
@@ -132,6 +133,7 @@
     "RECORDING_ERROR": "直播录制失败, 等待重试",
     "NOT_RECORDING_SPACE": "磁盘空间不足, 无法录制",
     "LIVE_STATUS_CHECK_ERROR": "直播状态检测错误, 请检查地址是否可正常访问",
+    "LIVE_BROADCASTING": "正在直播中",
     "not_disk_space_tip": "磁盘存储空间不足, 停止录制 ⚠️"
   },
   "stream_manager": {
@@ -179,6 +181,7 @@
     "all": "全部",
     "recording": "录制中",
     "recording_error": "录制错误",
+    "live_broadcasting": "正在直播中",
     "not_live": "未开播",
     "stopped": "已停止",
     "filter": "筛选",
