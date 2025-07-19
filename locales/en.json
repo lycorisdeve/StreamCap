@@ -70,6 +70,7 @@
     "status_filter": "Status Filter",
     "filter_all": "All",
     "filter_recording": "Recording",
+    "filter_living": "Living",
     "filter_error": "Error",
     "filter_offline": "Offline",
     "filter_stopped": "Not Monitored",
@@ -130,6 +131,7 @@
     "RECORDING_ERROR": "Recording the live stream has failed",
     "NOT_RECORDING_SPACE": "Insufficient disk space to record",
     "LIVE_STATUS_CHECK_ERROR": "Live status error, check address accessibility",
+    "LIVE_BROADCASTING": "Live Broadcasting",
     "not_disk_space_tip": "Insufficient disk storage space, stop recording ⚠️"
   },
     "stream_manager": {
@@ -177,6 +179,7 @@
     "all": "All",
     "recording": "Recording",
     "recording_error": "Recording Error",
+    "live_broadcasting": "Live Broadcasting",
     "not_live": "Not Live",
     "stopped": "Stopped",
     "filter": "Filter",

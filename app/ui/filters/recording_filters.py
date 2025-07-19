@@ -1,29 +1,45 @@
 from ...models.recording_status_model import RecordingStatus
+from ..components.recording_card_state import RecordingCardState
 
 
 class RecordingFilters:
 
-    ERROR_STATUSES = [RecordingStatus.RECORDING_ERROR, RecordingStatus.LIVE_STATUS_CHECK_ERROR]
+    @staticmethod
+    def _is_error_status(recording) -> bool:
+        return recording.status_info in RecordingCardState.ERROR_STATUSES
+    
+    @staticmethod
+    def _is_live_status(recording) -> bool:
+        return (recording.is_live 
+                and recording.monitor_status 
+                and not recording.is_recording
+                and recording.status_info not in RecordingCardState.ERROR_STATUSES
+                and recording.status_info != RecordingStatus.NOT_IN_SCHEDULED_CHECK)
+    
+    @staticmethod
+    def _is_offline_status(recording) -> bool:
+        return (not recording.is_live
+                and recording.monitor_status
+                and recording.status_info not in RecordingCardState.ERROR_STATUSES
+                and recording.status_info != RecordingStatus.NOT_IN_SCHEDULED_CHECK)
+    
+    @staticmethod
+    def _is_stopped_status(recording) -> bool:
+        return (not recording.monitor_status
+                or recording.status_info == RecordingStatus.NOT_IN_SCHEDULED_CHECK)
 
     STATUS_FILTER_MAP = {
         "all": lambda rec: True,
         "recording": lambda rec: rec.is_recording,
-        "error": lambda rec: rec.status_info in RecordingFilters.ERROR_STATUSES,
-        "offline": lambda rec: (
-            not rec.is_live
-            and rec.monitor_status
-            and rec.status_info not in RecordingFilters.ERROR_STATUSES
-        ),
-        "stopped": lambda rec: not rec.monitor_status,
+        "living": lambda rec: RecordingFilters._is_live_status(rec),
+        "error": lambda rec: RecordingFilters._is_error_status(rec),
+        "offline": lambda rec: RecordingFilters._is_offline_status(rec),
+        "stopped": lambda rec: RecordingFilters._is_stopped_status(rec)
     }
 
     @classmethod
     def get_status_filter_result(cls, recording, filter_type) -> bool:
-
-        filter_func = cls.STATUS_FILTER_MAP.get(
-            filter_type,
-            lambda _: False
-        )
+        filter_func = cls.STATUS_FILTER_MAP.get(filter_type, lambda _: False)
         return filter_func(recording)
 
     @classmethod

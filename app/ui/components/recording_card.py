@@ -9,6 +9,7 @@ from ...utils import utils
 from ...utils.logger import logger
 from ..views.storage_view import StoragePage
 from .card_dialog import CardDialog
+from .recording_card_state import RecordingCardState
 from .recording_dialog import RecordingDialog
 from .video_player import VideoPlayer
 
@@ -81,11 +82,7 @@ class RecordingCardManager:
             on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_delete_button_click, e, rec),
         )
 
-        status_prefix = ""
-        if not recording.monitor_status:
-            status_prefix = f"[{self._['monitor_stopped']}] "
-        
-        display_title = f"{status_prefix}{recording.title}"
+        display_title = RecordingCardState.get_display_title(recording, self._)
         display_title_label = ft.Text(
             display_title, 
             size=14, 
@@ -94,7 +91,7 @@ class RecordingCardManager:
             no_wrap=True,
             overflow=ft.TextOverflow.ELLIPSIS,
             expand=True,
-            weight=ft.FontWeight.BOLD if recording.is_recording or recording.is_live else None,
+            weight=RecordingCardState.get_title_weight(recording),
         )
         
         open_folder_button = ft.IconButton(
@@ -172,61 +169,27 @@ class RecordingCardManager:
     @staticmethod
     def get_card_border_color(recording: Recording):
         """Get the border color of the card."""
-        if recording.is_recording:
-            return ft.Colors.GREEN
-        elif recording.status_info in [
-            RecordingStatus.RECORDING_ERROR,
-            RecordingStatus.LIVE_STATUS_CHECK_ERROR
-        ]:
-            return ft.Colors.RED
-        elif not recording.is_live and recording.monitor_status:
-            return ft.Colors.AMBER
-        elif not recording.monitor_status:
-            return ft.Colors.GREY
-        return ft.Colors.TRANSPARENT
+        return RecordingCardState.get_border_color(recording)
 
     def create_status_label(self, recording: Recording):
-        if recording.is_recording:
-            return ft.Container(
-                content=ft.Text(self._["recording"], color=ft.Colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
-                bgcolor=ft.Colors.GREEN,
-                border_radius=5,
-                padding=5,
-                width=60,
-                height=26,
-                alignment=ft.alignment.center,
-            )
-        elif recording.status_info in [RecordingStatus.RECORDING_ERROR, RecordingStatus.LIVE_STATUS_CHECK_ERROR]:
-            return ft.Container(
-                content=ft.Text(self._["recording_error"], color=ft.Colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
-                bgcolor=ft.Colors.RED,
-                border_radius=5,
-                padding=5,
-                width=60,
-                height=26,
-                alignment=ft.alignment.center,
-            )
-        elif not recording.is_live and recording.monitor_status:
-            return ft.Container(
-                content=ft.Text(self._["offline"], color=ft.Colors.BLACK, size=12, weight=ft.FontWeight.BOLD),
-                bgcolor=ft.Colors.AMBER,
-                border_radius=5,
-                padding=5,
-                width=60,
-                height=26,
-                alignment=ft.alignment.center,
-            )
-        elif not recording.monitor_status:
-            return ft.Container(
-                content=ft.Text(self._["no_monitor"], color=ft.Colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
-                bgcolor=ft.Colors.GREY,
-                border_radius=5,
-                padding=5,
-                width=60,
-                height=26,
-                alignment=ft.alignment.center,
-            )
-        return None
+        config = RecordingCardState.get_status_label_config(recording, self._)
+        if not config:
+            return None
+            
+        return ft.Container(
+            content=ft.Text(
+                config["text"], 
+                color=config["text_color"], 
+                size=12, 
+                weight=ft.FontWeight.BOLD
+            ),
+            bgcolor=config["bgcolor"],
+            border_radius=5,
+            padding=5,
+            width=60,
+            height=26,
+            alignment=ft.alignment.center,
+        )
 
     async def update_card(self, recording):
         """Update only the recordings cards in the scrollable content area."""
@@ -234,15 +197,10 @@ class RecordingCardManager:
             try:
                 recording_card = self.cards_obj[recording.rec_id]
                 
-                status_prefix = ""
-                if not recording.monitor_status:
-                    status_prefix = f"[{self._['monitor_stopped']}] "
-                
-                display_title = f"{status_prefix}{recording.title}"
+                display_title = RecordingCardState.get_display_title(recording, self._)
                 if recording_card.get("display_title_label"):
                     recording_card["display_title_label"].value = display_title
-                    title_label_weight = ft.FontWeight.BOLD if recording.is_recording or recording.is_live else None
-                    recording_card["display_title_label"].weight = title_label_weight
+                    recording_card["display_title_label"].weight = RecordingCardState.get_title_weight(recording)
                 
                 new_status_label = self.create_status_label(recording)
                 
@@ -422,7 +380,7 @@ class RecordingCardManager:
     @staticmethod
     def get_icon_for_recording_state(recording: Recording):
         """Return the appropriate icon based on the recording's state."""
-        return ft.Icons.PLAY_CIRCLE if not recording.is_recording else ft.Icons.STOP_CIRCLE
+        return RecordingCardState.get_recording_icon(recording)
 
     def get_tip_for_recording_state(self, recording: Recording):
         return self._["stop_record"] if recording.is_recording else self._["start_record"]
@@ -430,7 +388,7 @@ class RecordingCardManager:
     @staticmethod
     def get_icon_for_monitor_state(recording: Recording):
         """Return the appropriate icon based on the monitor's state."""
-        return ft.Icons.VISIBILITY if recording.monitor_status else ft.Icons.VISIBILITY_OFF
+        return RecordingCardState.get_monitor_icon(recording)
 
     def get_tip_for_monitor_state(self, recording: Recording):
         return self._["stop_monitor"] if recording.monitor_status else self._["start_monitor"]

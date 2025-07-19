@@ -1,3 +1,15 @@
+from enum import Enum
+
+
+class CardStateType(Enum):
+    RECORDING = "recording"
+    ERROR = "error"
+    LIVE = "live"
+    OFFLINE = "offline"
+    STOPPED = "stopped"
+    UNKNOWN = "unknown"
+
+
 class RecordingStatus:
     STOPPED_MONITORING = "STOPPED_MONITORING"
     MONITORING = "MONITORING"
@@ -9,6 +21,7 @@ class RecordingStatus:
     RECORDING_ERROR = "RECORDING_ERROR"
     NOT_RECORDING_SPACE = "NOT_RECORDING_SPACE"
     LIVE_STATUS_CHECK_ERROR = "LIVE_STATUS_CHECK_ERROR"
+    LIVE_BROADCASTING = "LIVE_BROADCASTING"
 
     @classmethod
     def get_status(cls):

@@ -11,6 +11,8 @@ class SearchDialog(ft.AlertDialog):
         filter_name = self._["filter_all"]
         if self.recordings_page.current_filter == "recording":
             filter_name = self._["filter_recording"]
+        elif self.recordings_page.current_filter == "living":
+            filter_name = self._["filter_living"]
         elif self.recordings_page.current_filter == "error":
             filter_name = self._["filter_error"]
         elif self.recordings_page.current_filter == "offline":

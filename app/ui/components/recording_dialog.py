@@ -35,7 +35,7 @@ class RecordingDialog:
         video_segment_time = user_config.get('video_segment_time', 1800)
         segment_record = initial_values.get("segment_record", segmented_recording_enabled)
         segment_time = initial_values.get("segment_time", video_segment_time)
-        only_notify_no_record = user_config.get("only_notify_no_record", False)
+        only_notify_no_record = initial_values.get("only_notify_no_record", False)
 
         async def on_url_change(_):
             """Enable or disable the submit button based on whether the URL field is filled."""
