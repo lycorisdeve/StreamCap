@@ -31,6 +31,7 @@ from .handlers import (
     NeteaseHandler,
     PamdaTVHandler,
     PiaopiaoHandler,
+    PicartoHandler,
     PopkonTVHandler,
     QiandureboHandler,
     RedNoteHandler,
@@ -126,6 +127,7 @@ def get_platform_info(record_url: str) -> tuple:
         "lailianjie.com": ("连接直播", "lianjie"),
         "miguvideo.com": ("咪咕直播", "migu"),
         "imkktv.com": ("来秀直播", "laixiu"),
+        "picarto.tv": ("Picarto", "picarto"),
         ".m3u8": ("自定义录制直播", "custom"),
         ".flv": ("自定义录制直播", "custom"),
     }
@@ -168,6 +170,7 @@ __all__ = [
     "NeteaseHandler",
     "PamdaTVHandler",
     "PiaopiaoHandler",
+    "PicartoHandler",
     "PlatformHandler",
     "PopkonTVHandler",
     "QiandureboHandler",
