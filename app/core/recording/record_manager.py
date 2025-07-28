@@ -3,7 +3,7 @@ import threading
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from ...messages.message_pusher import MessagePusher
+from ...messages import desktop_notify, message_pusher
 from ...models.recording.recording_model import Recording
 from ...models.recording.recording_status_model import RecordingStatus
 from ...utils import utils
@@ -277,10 +277,17 @@ class RecordingManager:
                 recording.title = f"{recording.streamer_name} - {self._[recording.quality]}"
                 recording.display_title = f"[{self._['is_live']}] {recording.title}"
 
-                msg_manager = MessagePusher(self.settings)
+                msg_manager = message_pusher.MessagePusher(self.settings)
                 user_config = self.settings.user_config
+
+                if desktop_notify.should_push_notification(self.app):
+                    desktop_notify.send_notification(
+                        title=self._["notify"],
+                        message=recording.streamer_name + ' | ' + self._["live_recording_started_message"],
+                        app_icon=self.app.tray_manager.icon_path
+                    )
                 
-                if (MessagePusher.should_push_message(self.settings, recording, message_type='start')
+                if (message_pusher.MessagePusher.should_push_message(self.settings, recording, message_type='start')
                         and not recording.notified_live_start):
                     push_content = self._["push_content"]
                     begin_push_message_text = user_config.get("custom_stream_start_content")

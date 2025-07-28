@@ -6,3 +6,4 @@ aiofiles>=24.1.0
 streamget>=4.0.5
 python-dotenv>=1.0.1
 pystray>=0.19.5
+plyer>=2.1.0

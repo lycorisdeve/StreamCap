@@ -481,6 +481,14 @@ class SettingsPage(PageBase):
                     self._["stream_start_notification_enabled"],
                     [
                         self.create_setting_row(
+                            self._["system_status_bar_notification_enabled"],
+                            ft.Switch(
+                                value=self.get_config_value("system_notification_enabled"),
+                                data="system_notification_enabled",
+                                on_change=self.on_change,
+                            ),
+                        ),
+                        self.create_setting_row(
                             self._["open_broadcast_push_enabled"],
                             ft.Switch(
                                 value=self.get_config_value("stream_start_notification_enabled"),

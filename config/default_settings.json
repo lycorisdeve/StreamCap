@@ -24,6 +24,7 @@
     "execute_custom_script": false,
     "custom_script_command": "",
     "default_platform_with_proxy": "tiktok, sooplive, pandalive, winktv, flextv, popkontv, twitch, liveme, showroom, chzzk, shopee, shp, youtu, youtube, lang",
+    "system_notification_enabled": true,
     "stream_start_notification_enabled": false,
     "stream_end_notification_enabled": false,
     "only_notify_no_record": false,

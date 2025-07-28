@@ -11,6 +11,7 @@ class TrayManager:
     def __init__(self, app):
         self.app = app
         self.icon = None
+        self.icon_path = None
         self.tray_thread = None
         self.is_running = False
         self.execute_dir = getattr(app, "run_path", os.getcwd())
@@ -20,9 +21,9 @@ class TrayManager:
         try:
             from PIL import Image
             
-            icon_path = os.path.join(self.execute_dir, self.assets_dir, "icons", "tray_icon.ico")
-            if os.path.exists(icon_path):
-                return Image.open(icon_path)
+            self.icon_path = os.path.join(self.execute_dir, self.assets_dir, "icons", "tray_icon.ico")
+            if os.path.exists(self.icon_path):
+                return Image.open(self.icon_path)
         except Exception as e:
             logger.error(f"Failed to load icon file: {e}")
             try:

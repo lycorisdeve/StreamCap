@@ -136,7 +136,10 @@
     "NOT_RECORDING_SPACE": "磁盘空间不足, 无法录制",
     "LIVE_STATUS_CHECK_ERROR": "直播状态检测错误, 请检查地址是否可正常访问",
     "LIVE_BROADCASTING": "正在直播中",
-    "not_disk_space_tip": "磁盘存储空间不足, 停止录制 ⚠️"
+    "not_disk_space_tip": "磁盘存储空间不足, 停止录制 ⚠️",
+    "notify": "通知",
+    "live_recording_stopped_message": "直播录制已结束！",
+    "live_recording_started_message": "直播正在进行中"
   },
   "stream_manager": {
     "record_stream_error": "直播源录制出错",
@@ -253,6 +256,7 @@
     "not_logged_in": "您尚未登录",
     "push_notifications": "推送通知",
     "stream_start_notification_enabled": "直播状态推送开关",
+    "system_status_bar_notification_enabled": "系统栏通知开启",
     "open_broadcast_push_enabled": "开播推送开启",
     "close_broadcast_push_enabled": "关播推送开启",
     "only_notify_no_record": "仅通知不录制",
