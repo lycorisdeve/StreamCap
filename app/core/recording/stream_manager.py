@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from ...messages.message_pusher import MessagePusher
+from ...messages import desktop_notify, message_pusher
 from ...models.media.video_quality_model import VideoQuality
 from ...models.recording.recording_status_model import RecordingStatus
 from ...utils import utils
@@ -352,10 +352,10 @@ class LiveStreamRecorder:
                 else:
 
                     logger.success(f"Live recording completed: {record_name}")
-                    msg_manager = MessagePusher(self.settings)
+                    msg_manager = message_pusher.MessagePusher(self.settings)
                     user_config = self.settings.user_config
 
-                    if (self.app.recording_enabled and MessagePusher.should_push_message(
+                    if (self.app.recording_enabled and message_pusher.MessagePusher.should_push_message(
                             self.settings, self.recording, check_manually_stopped=True, message_type='end') and
                             not self.recording.notified_live_end):
                         push_content = self._["push_content_end"]
@@ -382,6 +382,7 @@ class LiveStreamRecorder:
                         self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
                     else:
                         self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
+                        self.app.page.run_task(self.stop_recording_notify)
                 except Exception as e:
                     logger.debug(f"Failed to update UI: {e}")
 
@@ -650,10 +651,10 @@ class LiveStreamRecorder:
                 logger.success(f"Direct Downloading Stopped: {record_name}")
             else:
                 logger.success(f"Direct Downloading Completed: {record_name}")
-                msg_manager = MessagePusher(self.settings)
+                msg_manager = message_pusher.MessagePusher(self.settings)
                 user_config = self.settings.user_config
 
-                if (self.app.recording_enabled and MessagePusher.should_push_message(
+                if (self.app.recording_enabled and message_pusher.MessagePusher.should_push_message(
                         self.settings, self.recording, check_manually_stopped=True, message_type='end') and
                         not self.recording.notified_live_end):
                     push_content = self._["push_content_end"]
@@ -681,6 +682,7 @@ class LiveStreamRecorder:
                     self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
                 else:
                     self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
+                    self.app.page.run_task(self.stop_recording_notify)
             except Exception as e:
                 logger.debug(f"Failed to update UI: {e}")
 
@@ -726,3 +728,11 @@ class LiveStreamRecorder:
             return False
         finally:
             self.recording.record_url = None
+
+    async def stop_recording_notify(self):
+        if desktop_notify.should_push_notification(self.app):
+            desktop_notify.send_notification(
+                title=self._["notify"],
+                message=self.recording.streamer_name + ' | ' + self._["live_recording_stopped_message"],
+                app_icon=self.app.tray_manager.icon_path
+            )

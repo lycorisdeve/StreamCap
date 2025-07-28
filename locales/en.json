@@ -134,7 +134,10 @@
     "NOT_RECORDING_SPACE": "Insufficient disk space to record",
     "LIVE_STATUS_CHECK_ERROR": "Live status error, check address accessibility",
     "LIVE_BROADCASTING": "Live Broadcasting",
-    "not_disk_space_tip": "Insufficient disk storage space, stop recording ⚠️"
+    "not_disk_space_tip": "Insufficient disk storage space, stop recording ⚠️",
+    "notify": "Notify",
+    "live_recording_stopped_message": "Live room recording has been stopped",
+    "live_recording_started_message": "Live room recording has been started"
   },
     "stream_manager": {
     "record_stream_error": "Live streaming source recording error",
@@ -251,6 +254,7 @@
     "not_logged_in": "You are not logged in",
     "push_notifications": "Push Notifications",
     "stream_start_notification_enabled": "Live Status Notification",
+    "system_status_bar_notification_enabled": "System Bar Notification",
     "open_broadcast_push_enabled": "Broadcast Start Push",
     "close_broadcast_push_enabled": "Broadcast End Push",
     "only_notify_no_record": "Only notify without recording",

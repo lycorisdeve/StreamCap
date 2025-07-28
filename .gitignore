@@ -86,6 +86,7 @@ ipython_config.py
 /config/user_settings.json
 /config/recordings.json
 /config/cookies.json
+/config/web_auth.json
 .ruff_cache/
 logs/
 storage/
