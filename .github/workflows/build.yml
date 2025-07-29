@@ -200,6 +200,65 @@ jobs:
         path: StreamCap-macOS.dmg
         retention-days: 30
 
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-web.txt
+        
+    - name: Create .env file
+      run: |
+        echo "PLATFORM=web" > .env
+        echo "HOST=0.0.0.0" >> .env
+        echo "PORT=6006" >> .env
+        
+    - name: Test web application
+      run: |
+        timeout 30s python main.py --web --host 0.0.0.0 --port 6006 || true
+        
+    - name: Package Linux build
+      run: |
+        mkdir -p ../package
+        rsync -av --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' --exclude='*.log' --exclude='.pytest_cache' --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='*.egg-info' . ../package/StreamCap/
+        cd ../package
+        tar -czf StreamCap-Linux.tar.gz StreamCap/
+        mv StreamCap-Linux.tar.gz $GITHUB_WORKSPACE/
+        
+    - name: Upload Linux artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: StreamCap-Linux
+        path: StreamCap-Linux.tar.gz
+        retention-days: 30
+
+    # 这里提供一个输出
+    outputs:
+      linux-artifact-path: ${{ steps.upload-linux-artifact.outputs.artifact-path }}
+
   prerelease:
     needs: [ build-windows, build-macos, build-linux ]
     if: github.event_name != 'pull_request' && github.repository == 'lycorisdeve/streamcap'
