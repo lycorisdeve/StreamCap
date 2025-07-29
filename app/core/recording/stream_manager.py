@@ -150,10 +150,11 @@ class LiveStreamRecorder:
             self.user_config.get("default_live_source") != "HLS"
             and self.is_flv_preferred_platform
         ):
-            if stream_info.flv_url.rsplit("&codec=", maxsplit=1)[-1] == 'h264':
-                return stream_info.flv_url
-            else:
+            codec = utils.get_query_params(stream_info.flv_url, "codec")
+            if codec and codec[0] == 'h265':
                 logger.warning("FLV is not supported for h265 codec, use HLS source instead")
+            else:
+                return stream_info.flv_url
 
         return stream_info.record_url
 
@@ -181,9 +182,11 @@ class LiveStreamRecorder:
                 self.recording.segment_record = False
                 return self.save_format, True
 
-            elif self.save_format == "flv" and stream_info.flv_url.rsplit("&codec=", maxsplit=1)[-1] == 'h265':
-                logger.warning("FLV is not supported for h265 codec, use TS format instead")
-                self.save_format = "ts"
+            elif self.save_format == "flv":
+                codec = utils.get_query_params(stream_info.flv_url, "codec")
+                if codec and codec[0] == 'h265':
+                    logger.warning("FLV is not supported for h265 codec, use TS format instead")
+                    self.save_format = "ts"
 
         return self.save_format, False
 
