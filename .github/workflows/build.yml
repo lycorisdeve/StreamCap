@@ -284,7 +284,8 @@ jobs:
       with:
         name: StreamCap-Linux
         path: releases/
-
+    - name: List downloaded files
+      run: ls -l releases/
     - name: Check and rename files
       run: |
         # 检查 Windows 文件是否存在并重命名
