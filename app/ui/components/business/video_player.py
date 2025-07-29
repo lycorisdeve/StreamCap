@@ -3,6 +3,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import flet as ft
+import flet_video as ftv
 
 from ....utils import utils
 from ....utils.logger import logger
@@ -46,10 +47,10 @@ class VideoPlayer:
             video_width = 800
             video_height = 450
 
-        video = ft.Video(
+        video = ftv.Video(
             width=video_width,
             height=video_height,
-            playlist=[ft.VideoMedia(video_source)],
+            playlist=[ftv.VideoMedia(video_source)],
             autoplay=True
         )
 
@@ -142,4 +143,4 @@ class VideoPlayer:
                     return
             else:
                 title = self._["view_stream_source_now"]
-        await self.create_video_dialog(title, source, is_file_path, room_url) 
+        await self.create_video_dialog(title, source, is_file_path, room_url)
