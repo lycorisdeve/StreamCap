@@ -285,11 +285,28 @@ jobs:
         name: StreamCap-Linux
         path: releases/
 
-    - name: Rename and prepare files
+    - name: Check and rename files
       run: |
-        mv releases/StreamCap-Windows.zip "StreamCap-Windows-${{ env.VERSION }}.zip"
-        mv releases/StreamCap-macOS.zip "StreamCap-macOS-${{ env.VERSION }}.zip"
-        mv releases/StreamCap-Linux.zip "StreamCap-Linux-${{ env.VERSION }}.zip"
+        # 检查 Windows 文件是否存在并重命名
+        if [ -f "releases/StreamCap-Windows.zip" ]; then
+          mv releases/StreamCap-Windows.zip "StreamCap-Windows-${{ env.VERSION }}.zip"
+              else
+                echo "StreamCap-Windows.zip not found!"
+              fi
+
+              # 检查 macOS 文件是否存在并重命名
+              if [ -f "releases/StreamCap-macOS.zip" ]; then
+                mv releases/StreamCap-macOS.zip "StreamCap-macOS-${{ env.VERSION }}.zip"
+              else
+                echo "StreamCap-macOS.zip not found!"
+              fi
+
+              # 检查 Linux 文件是否存在并重命名
+              if [ -f "releases/StreamCap-Linux.zip" ]; then
+                mv releases/StreamCap-Linux.zip "StreamCap-Linux-${{ env.VERSION }}.zip"
+              else
+                echo "StreamCap-Linux.zip not found!"
+              fi
         
     - name: Delete Pre-Release (if exists)
       run: |
