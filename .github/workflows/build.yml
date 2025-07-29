@@ -1,4 +1,4 @@
-name: Build Prereleases
+name: Build Application
 
 on:
   push:
@@ -70,9 +70,137 @@ jobs:
         name: StreamCap-Windows
         path: StreamCap-Windows.zip
         retention-days: 30
+	build-macos:
+	  runs-on: macos-latest
 
-  build-macos:
-    runs-on: macos-latest
+	  steps:
+	  - name: Checkout code
+		uses: actions/checkout@v4
+
+	  - name: Set up Python
+		uses: actions/setup-python@v4
+		with:
+		  python-version: ${{ env.PYTHON_VERSION }}
+
+	  - name: Install system dependencies
+		run: |
+		  brew install ffmpeg
+		  # 安装 iconutil 工具
+		  brew install iconutil
+
+	  - name: Cache pip dependencies
+		uses: actions/cache@v3
+		with:
+		  path: ~/Library/Caches/pip
+		  key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+		  restore-keys: |
+			${{ runner.os }}-pip-
+
+	  - name: Install Python dependencies
+		run: |
+		  python -m pip install --upgrade pip
+		  pip install -r requirements.txt
+		  pip install pyinstaller
+		  pip install dmgbuild
+
+	  - name: Create .env file
+		run: |
+		  echo "PLATFORM=desktop" > .env
+		  echo "HOST=127.0.0.1" >> .env
+		  echo "PORT=6006" >> .env
+
+	  - name: Convert .ico to .icns
+		run: |
+		  # 假设你有一个 icon.png 文件
+		  iconutil -c icns assets/icon.png
+
+	  - name: Build macOS executable
+		run: |
+		  pyinstaller --noconfirm --onedir --windowed --icon "assets/icon.icns" --name "StreamCap" --add-data "assets:assets/" --add-data "config:config/" --add-data "locales:locales/" --hidden-import "flet.matplotlib_chart" --hidden-import "flet.plotly_chart" --hidden-import "flet.video" --collect-all "streamget" main.py
+
+	  - name: Create macOS app bundle
+		run: |
+		  mkdir -p "StreamCap.app/Contents/MacOS"
+		  mkdir -p "StreamCap.app/Contents/Resources"
+		  
+		  cat > "StreamCap.app/Contents/Info.plist" << EOF
+		  <?xml version="1.0" encoding="UTF-8"?>
+		  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+		  <plist version="1.0">
+		  <dict>
+			  <key>CFBundleExecutable</key>
+			  <string>StreamCap</string>
+			  <key>CFBundleIdentifier</key>
+			  <string>io.github.ihmily.streamcap</string>
+			  <key>CFBundleName</key>
+			  <string>StreamCap</string>
+			  <key>CFBundleVersion</key>
+			  <string>1.0.1</string>
+			  <key>CFBundleShortVersionString</key>
+			  <string>1.0.1</string>
+			  <key>CFBundleInfoDictionaryVersion</key>
+			  <string>6.0</string>
+			  <key>CFBundlePackageType</key>
+			  <string>APPL</string>
+			  <key>CFBundleIconFile</key>
+			  <string>icon</string>
+			  <key>LSMinimumSystemVersion</key>
+			  <string>10.14</string>
+			  <key>NSHighResolutionCapable</key>
+			  <true/>
+		  </dict>
+		  </plist>
+		  EOF
+		  
+		  cp -r dist/StreamCap/* "StreamCap.app/Contents/MacOS/"
+		  cp assets/icon.icns "StreamCap.app/Contents/Resources/icon.icns"
+		  chmod +x "StreamCap.app/Contents/MacOS/StreamCap"
+		  
+	  - name: Create DMG settings file
+		run: |
+		  cat > dmg_settings.py << EOF
+		  import os
+
+		  # DMG settings
+		  format = 'UDZO'
+		  size = '500M'
+		  files = ['StreamCap.app']
+		  symlinks = {'Applications': '/Applications'}
+		  badge_icon = 'assets/icon.icns'  # Ensure the file exists
+		  icon_locations = {
+			  'StreamCap.app': (150, 120)
+		  }
+		  background = None
+		  window_rect = ((100, 100), (500, 300))
+		  default_view = 'icon-view'
+		  show_status_bar = False
+		  show_tab_view = False
+		  show_toolbar = False
+		  show_pathbar = False
+		  show_sidebar = False
+		  sidebar_width = 180
+		  arrange_by = None
+		  grid_offset = (0, 0)
+		  grid_spacing = 100
+		  scroll_position = (0, 0)
+		  label_pos = 'bottom'
+		  text_size = 16
+		  icon_size = 128
+		  EOF
+
+	  - name: Create DMG
+		run: |
+		  dmgbuild -s dmg_settings.py "StreamCap" "StreamCap-macOS.dmg"
+		  
+	  - name: Upload macOS artifact
+		uses: actions/upload-artifact@v4
+		with:
+		  name: StreamCap-macOS
+		  path: StreamCap-macOS.dmg
+		  retention-days: 30
+
+  build-linux:
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
@@ -85,12 +213,13 @@ jobs:
         
     - name: Install system dependencies
       run: |
-        brew install ffmpeg
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
         
     - name: Cache pip dependencies
       uses: actions/cache@v3
       with:
-        path: ~/Library/Caches/pip
+        path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
@@ -98,102 +227,35 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
-        pip install dmgbuild
+        pip install -r requirements-web.txt
         
     - name: Create .env file
       run: |
-        echo "PLATFORM=desktop" > .env
-        echo "HOST=127.0.0.1" >> .env
+        echo "PLATFORM=web" > .env
+        echo "HOST=0.0.0.0" >> .env
         echo "PORT=6006" >> .env
         
-    - name: Build macOS executable
+    - name: Test web application
       run: |
-        pyinstaller --noconfirm --onedir --windowed --icon "assets/icon.ico" --name "StreamCap" --add-data "assets:assets/" --add-data "config:config/" --add-data "locales:locales/" --hidden-import "flet.matplotlib_chart" --hidden-import "flet.plotly_chart" --hidden-import "flet.video" --collect-all "streamget" main.py
+        timeout 30s python main.py --web --host 0.0.0.0 --port 6006 || true
         
-    - name: Create macOS app bundle
+    - name: Package Linux build
       run: |
-        mkdir -p "StreamCap.app/Contents/MacOS"
-        mkdir -p "StreamCap.app/Contents/Resources"
+        mkdir -p ../package
+        rsync -av --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' --exclude='*.log' --exclude='.pytest_cache' --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='*.egg-info' . ../package/StreamCap/
+        cd ../package
+        tar -czf StreamCap-Linux.tar.gz StreamCap/
+        mv StreamCap-Linux.tar.gz $GITHUB_WORKSPACE/
         
-        cat > "StreamCap.app/Contents/Info.plist" << EOF
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>CFBundleExecutable</key>
-            <string>StreamCap</string>
-            <key>CFBundleIdentifier</key>
-            <string>io.github.ihmily.streamcap</string>
-            <key>CFBundleName</key>
-            <string>StreamCap</string>
-            <key>CFBundleVersion</key>
-            <string>1.0.1</string>
-            <key>CFBundleShortVersionString</key>
-            <string>1.0.1</string>
-            <key>CFBundleInfoDictionaryVersion</key>
-            <string>6.0</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-            <key>CFBundleIconFile</key>
-            <string>icon</string>
-            <key>LSMinimumSystemVersion</key>
-            <string>10.14</string>
-            <key>NSHighResolutionCapable</key>
-            <true/>
-        </dict>
-        </plist>
-        EOF
-        
-        cp -r dist/StreamCap/* "StreamCap.app/Contents/MacOS/"
-        cp assets/icon.ico "StreamCap.app/Contents/Resources/icon.ico"
-        chmod +x "StreamCap.app/Contents/MacOS/StreamCap"
-        
-    - name: Create DMG settings file
-      run: |
-        cat > dmg_settings.py << EOF
-        import os
-        
-        format = 'UDZO'
-        size = '500M'
-        files = ['StreamCap.app']
-        symlinks = {'Applications': '/Applications'}
-        badge_icon = 'assets/icon.ico'  # Ensure the file exists
-        icon_locations = {
-            'StreamCap.app': (150, 120)  # Adjusted for simplicity
-        }
-        background = None
-        window_rect = ((100, 100), (500, 300))
-        default_view = 'icon-view'
-        show_status_bar = False
-        show_tab_view = False
-        show_toolbar = False
-        show_pathbar = False
-        show_sidebar = False
-        sidebar_width = 180
-        arrange_by = None
-        grid_offset = (0, 0)
-        grid_spacing = 100
-        scroll_position = (0, 0)
-        label_pos = 'bottom'
-        text_size = 16
-        icon_size = 128
-        EOF
-        
-    - name: Create DMG
-      run: |
-        dmgbuild -s dmg_settings.py "StreamCap" "StreamCap-macOS.dmg"
-        
-    - name: Upload macOS artifact
+    - name: Upload Linux artifact
       uses: actions/upload-artifact@v4
       with:
-        name: StreamCap-macOS
-        path: StreamCap-macOS.dmg
+        name: StreamCap-Linux
+        path: StreamCap-Linux.tar.gz
         retention-days: 30
 
   prerelease:
-    needs: [ build-windows, build-macos ]
+    needs: [ build-windows, build-macos, build-linux ]
     if: github.event_name != 'pull_request' && github.repository == 'lycorisdeve/streamcap'
     runs-on: ubuntu-latest
     env:
@@ -205,12 +267,28 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: StreamCap-Windows
-        path: apk/
+        path: releases/
+
+    - name: Download macOS artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: StreamCap-macOS
+        path: releases/
+
+    - name: Download Linux artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: StreamCap-Linux
+        path: releases/
 
     - name: Rename and prepare files
       run: |
-        mv apk/*.exe .
+        mv releases/*.exe .
+        mv releases/*.dmg .
+        mv releases/*.tar.gz .
         mv *.exe "StreamCap-Windows-${{ env.VERSION }}.exe"
+        mv *.dmg "StreamCap-macOS-${{ env.VERSION }}.dmg"
+        mv *.tar.gz "StreamCap-Linux-${{ env.VERSION }}.tar.gz"
         
     - name: Delete Pre-Release (if exists)
       run: |
@@ -234,4 +312,4 @@ jobs:
         tag: "beta"
         body: "此版本为测试版，签名与正式版不同，可能存在不稳定情况，升级前请务必备份好数据。"
         prerelease: true
-        artifacts: ${{ github.workspace }}/*.exe
+        artifacts: ${{ github.workspace }}/*.exe,${{ github.workspace }}/*.dmg,${{ github.workspace }}/*.tar.gz
