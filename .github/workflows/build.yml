@@ -85,10 +85,9 @@ jobs:
         
     - name: Install system dependencies
       run: |
+        # Install FFmpeg
         brew install ffmpeg
-        # 安装 iconutil 工具
-        brew install iconutil
-
+        
     - name: Cache pip dependencies
       uses: actions/cache@v3
       with:
@@ -109,21 +108,17 @@ jobs:
         echo "PLATFORM=desktop" > .env
         echo "HOST=127.0.0.1" >> .env
         echo "PORT=6006" >> .env
-
-    - name: Convert .ico to .icns
-      run: |
-        # 假设你有一个 icon.png 文件
-        iconutil -c icns assets/icon.png
-
+        
     - name: Build macOS executable
       run: |
-        pyinstaller --noconfirm --onedir --windowed --icon "assets/icon.icns" --name "StreamCap" --add-data "assets:assets/" --add-data "config:config/" --add-data "locales:locales/" --hidden-import "flet.matplotlib_chart" --hidden-import "flet.plotly_chart" --hidden-import "flet.video" --collect-all "streamget" main.py
+        pyinstaller --noconfirm --onedir --windowed --icon "assets/icon.ico" --name "StreamCap" --add-data "assets:assets/" --add-data "config:config/" --add-data "locales:locales/" --hidden-import "flet.matplotlib_chart" --hidden-import "flet.plotly_chart" --hidden-import "flet.video" --collect-all "streamget" main.py
         
     - name: Create macOS app bundle
       run: |
         mkdir -p "StreamCap.app/Contents/MacOS"
         mkdir -p "StreamCap.app/Contents/Resources"
         
+        # Create Info.plist
         cat > "StreamCap.app/Contents/Info.plist" << EOF
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -153,23 +148,27 @@ jobs:
         </plist>
         EOF
         
+        # Copy executable and resources
         cp -r dist/StreamCap/* "StreamCap.app/Contents/MacOS/"
-        cp assets/icon.icns "StreamCap.app/Contents/Resources/icon.icns"
+        cp assets/icon.ico "StreamCap.app/Contents/Resources/icon.ico"
+        
+        # Make executable
         chmod +x "StreamCap.app/Contents/MacOS/StreamCap"
         
     - name: Create DMG settings file
       run: |
         cat > dmg_settings.py << EOF
         import os
-
+        
         # DMG settings
         format = 'UDZO'
         size = '500M'
         files = ['StreamCap.app']
         symlinks = {'Applications': '/Applications'}
-        badge_icon = 'assets/icon.icns'  # Ensure the file exists
+        badge_icon = 'assets/icons/Appicon.icns'
         icon_locations = {
-            'StreamCap.app': (150, 120)
+            'StreamCap.app': (150, 120),
+            'Applications': (350, 120)
         }
         background = None
         window_rect = ((100, 100), (500, 300))
@@ -188,11 +187,11 @@ jobs:
         text_size = 16
         icon_size = 128
         EOF
-
+        
     - name: Create DMG
       run: |
         dmgbuild -s dmg_settings.py "StreamCap" "StreamCap-macOS.dmg"
-      
+        
     - name: Upload macOS artifact
       uses: actions/upload-artifact@v4
       with:
