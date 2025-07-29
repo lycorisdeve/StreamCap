@@ -364,7 +364,7 @@ class LiveStreamRecorder:
                     msg_manager = message_pusher.MessagePusher(self.settings)
                     user_config = self.settings.user_config
 
-                    if (self.app.recording_enabled and message_pusher.MessagePusher.should_push_message(
+                    if (self.app.recording_enabled and msg_manager.should_push_message(
                             self.settings, self.recording, check_manually_stopped=True, message_type='end') and
                             not self.recording.notified_live_end):
                         push_content = self._["push_content_end"]
@@ -663,7 +663,7 @@ class LiveStreamRecorder:
                 msg_manager = message_pusher.MessagePusher(self.settings)
                 user_config = self.settings.user_config
 
-                if (self.app.recording_enabled and message_pusher.MessagePusher.should_push_message(
+                if (self.app.recording_enabled and msg_manager.should_push_message(
                         self.settings, self.recording, check_manually_stopped=True, message_type='end') and
                         not self.recording.notified_live_end):
                     push_content = self._["push_content_end"]
