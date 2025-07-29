@@ -287,12 +287,9 @@ jobs:
 
     - name: Rename and prepare files
       run: |
-        mv releases/*.exe .
-        mv releases/*.dmg .
-        mv releases/*.tar.gz .
-        mv *.exe "StreamCap-Windows-${{ env.VERSION }}.exe"
-        mv *.dmg "StreamCap-macOS-${{ env.VERSION }}.dmg"
-        mv *.tar.gz "StreamCap-Linux-${{ env.VERSION }}.tar.gz"
+        mv releases/StreamCap-Windows.zip "StreamCap-Windows-${{ env.VERSION }}.zip"
+        mv releases/StreamCap-macOS.zip "StreamCap-macOS-${{ env.VERSION }}.zip"
+        mv releases/StreamCap-Linux.zip "StreamCap-Linux-${{ env.VERSION }}.zip"
         
     - name: Delete Pre-Release (if exists)
       run: |
@@ -316,4 +313,4 @@ jobs:
         tag: "beta"
         body: "此版本为测试版，签名与正式版不同，可能存在不稳定情况，升级前请务必备份好数据。"
         prerelease: true
-        artifacts: ${{ github.workspace }}/*.exe,${{ github.workspace }}/*.dmg,${{ github.workspace }}/*.tar.gz
+        artifacts: ${{ github.workspace }}/*.zip
