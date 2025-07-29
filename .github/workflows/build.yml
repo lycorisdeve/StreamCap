@@ -53,15 +53,37 @@ jobs:
         
     - name: Create Windows installer
       run: |
-        echo '@echo off' > dist/StreamCap/install.bat
-        echo 'echo Installing StreamCap...' >> dist/StreamCap/install.bat
-        echo 'if not exist "%USERPROFILE%\StreamCap" mkdir "%USERPROFILE%\StreamCap"' >> dist/StreamCap/install.bat
-        echo 'xcopy /E /I /Y . "%USERPROFILE%\StreamCap"' >> dist/StreamCap/install.bat
-        echo 'echo Installation completed!' >> dist/StreamCap/install.bat
-        echo 'pause' >> dist/StreamCap/install.bat
+        echo @echo off > dist/StreamCap/install.bat
+        echo chcp 65001 >> dist/StreamCap/install.bat
+        echo set SCRIPT_DIR=%~dp0 >> dist/StreamCap/install.bat
+        echo echo Moving folders from _internal... >> dist/StreamCap/install.bat
+        echo rem Move folders, overwrite if they already exist >> dist/StreamCap/install.bat
+        echo if exist "%SCRIPT_DIR%\_internal\config" ( >> dist/StreamCap/install.bat
+        echo     echo Moving config folder... >> dist/StreamCap/install.bat
+        echo     rmdir /s /q "%SCRIPT_DIR%\config" >nul 2>&1 >> dist/StreamCap/install.bat
+        echo     move "%SCRIPT_DIR%\_internal\config" "%SCRIPT_DIR%" >> dist/StreamCap/install.bat
+        echo ) >> dist/StreamCap/install.bat
+        echo echo 安装完成...............................百分之30 >> dist/StreamCap/install.bat
+        echo if exist "%SCRIPT_DIR%\_internal\locales" ( >> dist/StreamCap/install.bat
+        echo     echo Moving locales folder... >> dist/StreamCap/install.bat
+        echo     rmdir /s /q "%SCRIPT_DIR%\locales" >nul 2>&1 >> dist/StreamCap/install.bat
+        echo     move "%SCRIPT_DIR%\_internal\locales" "%SCRIPT_DIR%" >> dist/StreamCap/install.bat
+        echo ) >> dist/StreamCap/install.bat
+        echo echo 安装完成...............................百分之60 >> dist/StreamCap/install.bat
+        echo if exist "%SCRIPT_DIR%\_internal\assets" ( >> dist/StreamCap/install.bat
+        echo     echo Moving assets folder... >> dist/StreamCap/install.bat
+        echo     rmdir /s /q "%SCRIPT_DIR%\assets" >nul 2>&1 >> dist/StreamCap/install.bat
+        echo     move "%SCRIPT_DIR%\_internal\assets" "%SCRIPT_DIR%" >> dist/StreamCap/install.bat
+        echo ) >> dist/StreamCap/install.bat
+        echo echo 安装完成!请运行.exe文件开始使用 >> dist/StreamCap/install.bat
+        echo pause >> dist/StreamCap/install.bat
         
     - name: Package Windows build
       run: |
+        mv dist/StreamCap/_internal/config dist/StreamCap/
+        mv dist/StreamCap/_internal/locales dist/StreamCap/
+        mv dist/StreamCap/_internal/assets dist/StreamCap/
+        echo "Folders moved successfully."
         Compress-Archive -Path "dist/StreamCap/*" -DestinationPath "StreamCap-Windows.zip"
         
     - name: Upload Windows artifact
