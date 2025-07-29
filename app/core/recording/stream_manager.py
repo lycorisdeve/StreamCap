@@ -154,9 +154,11 @@ class LiveStreamRecorder:
                 return stream_info.flv_url
             else:
                 logger.warning("FLV is not supported for h265 codec, use HLS source instead")
+
         return stream_info.record_url
 
     def _get_record_url(self, stream_info: StreamData):
+
         url = self._select_source_url(stream_info)
 
         http_record_list = ["shopee", "migu"]
@@ -166,6 +168,9 @@ class LiveStreamRecorder:
         if self.platform_key in http_record_list:
             url = url.replace("https://", "http://")
         return url
+
+    def set_preview_url(self, stream_info: StreamData):
+        self.recording.preview_url = stream_info.m3u8_url or stream_info.flv_url
 
     def _get_record_format(self, stream_info: StreamData):
         use_flv_record = ["shopee"]
@@ -214,6 +219,7 @@ class LiveStreamRecorder:
         self.recording.recording_dir = os.path.dirname(save_path)
         os.makedirs(self.recording.recording_dir, exist_ok=True)
         record_url = self._get_record_url(stream_info)
+        self.set_preview_url(stream_info)
 
         if use_direct_download:
             logger.info(f"Use Direct Downloader to Download FLV Stream: {record_url}")

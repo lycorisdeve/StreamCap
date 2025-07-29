@@ -84,16 +84,16 @@ class RecordingCardManager:
 
         display_title = RecordingCardState.get_display_title(recording, self._)
         display_title_label = ft.Text(
-            display_title, 
-            size=14, 
-            selectable=True, 
-            max_lines=1, 
+            display_title,
+            size=14,
+            selectable=True,
+            max_lines=1,
             no_wrap=True,
             overflow=ft.TextOverflow.ELLIPSIS,
             expand=True,
             weight=RecordingCardState.get_title_weight(recording),
         )
-        
+
         open_folder_button = ft.IconButton(
             icon=ft.Icons.FOLDER,
             tooltip=self._["open_folder"],
@@ -159,7 +159,7 @@ class RecordingCardManager:
             "monitor_button": monitor_button,
             "status_label": status_label,
         }
-        
+
     def get_card_background_color(self, recording: Recording):
         is_dark_mode = self.app.page.theme_mode == ft.ThemeMode.DARK
         if recording.selected:
@@ -175,12 +175,12 @@ class RecordingCardManager:
         config = RecordingCardState.get_status_label_config(recording, self._)
         if not config:
             return None
-            
+
         return ft.Container(
             content=ft.Text(
-                config["text"], 
-                color=config["text_color"], 
-                size=12, 
+                config["text"],
+                color=config["text_color"],
+                size=12,
                 weight=ft.FontWeight.BOLD
             ),
             bgcolor=config["bgcolor"],
@@ -196,20 +196,20 @@ class RecordingCardManager:
         if recording.rec_id in self.cards_obj:
             try:
                 recording_card = self.cards_obj[recording.rec_id]
-                
+
                 display_title = RecordingCardState.get_display_title(recording, self._)
                 if recording_card.get("display_title_label"):
                     recording_card["display_title_label"].value = display_title
                     recording_card["display_title_label"].weight = RecordingCardState.get_title_weight(recording)
-                
+
                 new_status_label = self.create_status_label(recording)
-                
+
                 if recording_card["card"] and recording_card["card"].content and recording_card["card"].content.content:
                     title_row = recording_card["card"].content.content.controls[0]
                     title_row.alignment = ft.MainAxisAlignment.START
                     title_row.spacing = 5
                     title_row.tight = True
-                    
+
                     # Update the status label if it exists
                     if new_status_label:
                         if len(title_row.controls) > 1:
@@ -219,21 +219,21 @@ class RecordingCardManager:
                     else:
                         if len(title_row.controls) > 1:
                             title_row.controls.pop()
-                
+
                 if recording_card.get("duration_label"):
                     recording_card["duration_label"].value = self.app.record_manager.get_duration(recording)
-                
+
                 if recording_card.get("speed_label"):
                     recording_card["speed_label"].value = recording.speed
-                
+
                 if recording_card.get("record_button"):
                     recording_card["record_button"].icon = self.get_icon_for_recording_state(recording)
                     recording_card["record_button"].tooltip = self.get_tip_for_recording_state(recording)
-                
+
                 if recording_card.get("monitor_button"):
                     recording_card["monitor_button"].icon = self.get_icon_for_monitor_state(recording)
                     recording_card["monitor_button"].tooltip = self.get_tip_for_monitor_state(recording)
-                
+
                 if recording_card["card"] and recording_card["card"].content:
                     recording_card["card"].content.bgcolor = self.get_card_background_color(recording)
                     recording_card["card"].content.border = ft.border.all(2, self.get_card_border_color(recording))
@@ -362,12 +362,12 @@ class RecordingCardManager:
                 k: v for k, v in self.cards_obj.items()
                 if k in keep_ids
             }
-            
+
             try:
                 recordings_page.recording_card_area.update()
             except (ft.core.page.PageDisconnectedException, AssertionError) as e:
                 logger.debug(f"Update recording card area failed: {e}")
-                
+
         except (ft.core.page.PageDisconnectedException, AssertionError) as e:
             logger.debug(f"Remove recording card failed: {e}")
         except Exception as e:
@@ -489,7 +489,7 @@ class RecordingCardManager:
     async def preview_video_button_on_click(self, _, recording: Recording):
         if self.app.page.web and recording.record_url:
             video_player = VideoPlayer(self.app)
-            await video_player.preview_video(recording.record_url, is_file_path=False, room_url=recording.url)
+            await video_player.preview_video(recording.preview_url, is_file_path=False, room_url=recording.url)
         elif recording.recording_dir and os.path.exists(recording.recording_dir):
             video_files = []
             for root, _, files in os.walk(recording.recording_dir):
