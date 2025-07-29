@@ -11,8 +11,8 @@ import sys
 import traceback
 from datetime import datetime, time, timedelta
 from pathlib import Path
-from typing import Any
-from urllib.parse import urlparse
+from typing import Any, Optional
+from urllib.parse import parse_qs, urlparse
 
 import execjs
 
@@ -256,3 +256,14 @@ def get_startup_info(system_type: str | None = None):
 def is_valid_video_file(source: str) -> bool:
     video_extensions = ['.mp4', '.mov', '.mkv', '.ts', '.flv', '.mp3', '.m4a', '.wav', '.aac', '.wma']
     return Path(source).suffix.lower() in video_extensions
+
+
+def get_query_params(url: str, param_name: Optional[str] = None) -> dict | list[str]:
+    parsed_url = urlparse(url)
+    query_params = parse_qs(parsed_url.query)
+
+    if param_name is None:
+        return query_params
+    else:
+        values = query_params.get(param_name, [])
+        return values

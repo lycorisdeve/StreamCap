@@ -87,7 +87,7 @@ class RecordingManager:
 
     @staticmethod
     async def _update_recording(
-        recording: Recording, monitor_status: bool, display_title: str, status_info: str, selected: bool
+            recording: Recording, monitor_status: bool, display_title: str, status_info: str, selected: bool
     ):
         attrs_update = {
             "monitor_status": monitor_status,
@@ -228,7 +228,7 @@ class RecordingManager:
             recording.is_checking = True
             recording.status_info = RecordingStatus.MONITORING
             platform, platform_key = get_platform_info(recording.url)
-            
+
             if platform and platform_key and (recording.platform is None or recording.platform_key is None):
                 recording.platform = platform
                 recording.platform_key = platform_key
@@ -286,8 +286,8 @@ class RecordingManager:
                         message=recording.streamer_name + ' | ' + self._["live_recording_started_message"],
                         app_icon=self.app.tray_manager.icon_path
                     )
-                
-                if (message_pusher.MessagePusher.should_push_message(self.settings, recording, message_type='start')
+
+                if (msg_manager.should_push_message(self.settings, recording, message_type='start')
                         and not recording.notified_live_start):
                     push_content = self._["push_content"]
                     begin_push_message_text = user_config.get("custom_stream_start_content")
@@ -303,7 +303,7 @@ class RecordingManager:
 
                     self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
                     recording.notified_live_start = True
-  
+
                 if not recording.only_notify_no_record:
                     recording.status_info = RecordingStatus.PREPARING_RECORDING
                     recording.loop_time_seconds = self.loop_time_seconds
@@ -315,7 +315,7 @@ class RecordingManager:
                         recording.loop_time_seconds = int(notify_loop_time or 3600)
                     else:
                         recording.loop_time_seconds = self.loop_time_seconds
-                    
+
                     recording.cumulative_duration = timedelta()
                     recording.last_duration = timedelta()
                     recording.status_info = RecordingStatus.LIVE_BROADCASTING
@@ -325,7 +325,7 @@ class RecordingManager:
                 if not recording.is_live and recording.notified_live_start:
                     recording.notified_live_start = False
                     recording.notified_live_end = False
-                
+
                 recording.is_checking = False
                 recording.status_info = RecordingStatus.MONITORING
                 title = f"{stream_info.anchor_name or recording.streamer_name} - {self._[recording.quality]}"
@@ -370,6 +370,8 @@ class RecordingManager:
                 recording.last_duration = recording.cumulative_duration
             recording.start_time = None
             recording.is_recording = False
+            recording.notified_live_start = False
+            recording.notified_live_end = False
             recording.manually_stopped = manually_stopped
             logger.info(f"Stopped recording for {recording.title}")
 
@@ -389,7 +391,7 @@ class RecordingManager:
         self.app.page.run_task(self.app.record_card_manager.remove_recording_card, recordings)
         self.app.page.pubsub.send_others_on_topic('delete', recordings)
         await self.remove_recordings(recordings)
-        
+
         # update the filter area of the home page
         if hasattr(self.app, 'current_page') and hasattr(self.app.current_page, 'content_area'):
             if len(self.app.current_page.content_area.controls) > 1:
