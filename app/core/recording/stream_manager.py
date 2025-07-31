@@ -361,33 +361,14 @@ class LiveStreamRecorder:
                 else:
 
                     logger.success(f"Live recording completed: {record_name}")
-                    msg_manager = message_pusher.MessagePusher(self.settings)
-                    user_config = self.settings.user_config
-
-                    if (self.app.recording_enabled and msg_manager.should_push_message(
-                            self.settings, self.recording, check_manually_stopped=True, message_type='end') and
-                            not self.recording.notified_live_end):
-                        push_content = self._["push_content_end"]
-                        end_push_message_text = user_config.get("custom_stream_end_content")
-                        if end_push_message_text:
-                            push_content = end_push_message_text
-
-                        push_at = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
-                        push_content = push_content.replace("[room_name]", self.recording.streamer_name).replace(
-                            "[time]", push_at
-                        )
-                        msg_title = user_config.get("custom_notification_title").strip()
-                        msg_title = msg_title or self._["status_notify"]
-
-                        self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
-                        self.recording.notified_live_end = True
-
+                    self.app.page.run_task(self.end_message_push)
                     self.recording.is_recording = False
                 try:
                     self.recording.update({"display_title": display_title})
                     self.app.page.run_task(self.app.record_card_manager.update_card, self.recording)
                     self.app.page.pubsub.send_others_on_topic("update", self.recording)
                     if self.app.recording_enabled and process in self.app.process_manager.ffmpeg_processes:
+                        await asyncio.sleep(15)
                         self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
                     else:
                         self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
@@ -660,27 +641,7 @@ class LiveStreamRecorder:
                 logger.success(f"Direct Downloading Stopped: {record_name}")
             else:
                 logger.success(f"Direct Downloading Completed: {record_name}")
-                msg_manager = message_pusher.MessagePusher(self.settings)
-                user_config = self.settings.user_config
-
-                if (self.app.recording_enabled and msg_manager.should_push_message(
-                        self.settings, self.recording, check_manually_stopped=True, message_type='end') and
-                        not self.recording.notified_live_end):
-                    push_content = self._["push_content_end"]
-                    end_push_message_text = user_config.get("custom_stream_end_content")
-                    if end_push_message_text:
-                        push_content = end_push_message_text
-
-                    push_at = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
-                    push_content = push_content.replace("[room_name]", self.recording.streamer_name).replace(
-                        "[time]", push_at
-                    )
-                    msg_title = user_config.get("custom_notification_title").strip()
-                    msg_title = msg_title or self._["status_notify"]
-
-                    self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
-                    self.recording.notified_live_end = True
-
+                self.app.page.run_task(self.end_message_push)
                 self.recording.is_recording = False
 
             try:
@@ -688,6 +649,7 @@ class LiveStreamRecorder:
                 await self.app.record_card_manager.update_card(self.recording)
                 self.app.page.pubsub.send_others_on_topic("update", self.recording)
                 if self.app.recording_enabled:
+                    await asyncio.sleep(15)
                     self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
                 else:
                     self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
@@ -745,3 +707,27 @@ class LiveStreamRecorder:
                 message=self.recording.streamer_name + ' | ' + self._["live_recording_stopped_message"],
                 app_icon=self.app.tray_manager.icon_path
             )
+
+    async def end_message_push(self):
+        msg_manager = message_pusher.MessagePusher(self.settings)
+        user_config = self.settings.user_config
+
+        if (self.app.recording_enabled and msg_manager.should_push_message(
+                self.settings, self.recording, check_manually_stopped=True, message_type='end') and
+                not self.recording.notified_live_end):
+            self.recording.notified_live_end = True
+            push_content = self._["push_content_end"]
+            end_push_message_text = user_config.get("custom_stream_end_content")
+            if end_push_message_text:
+                push_content = end_push_message_text
+
+            push_at = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+            push_content = push_content.replace("[room_name]", self.recording.streamer_name).replace(
+                "[time]", push_at
+            )
+            msg_title = user_config.get("custom_notification_title").strip()
+            msg_title = msg_title or self._["status_notify"]
+
+            self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
+
+
