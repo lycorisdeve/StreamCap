@@ -139,7 +139,8 @@
     "not_disk_space_tip": "磁盘存储空间不足, 停止录制 ⚠️",
     "notify": "通知",
     "live_recording_stopped_message": "直播录制已结束！",
-    "live_recording_started_message": "直播正在进行中"
+    "live_recording_started_message": "直播正在进行中",
+    "not_config_tip": "未配置消息推送渠道"
   },
   "stream_manager": {
     "record_stream_error": "直播源录制出错",
