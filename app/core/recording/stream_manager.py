@@ -470,21 +470,31 @@ class LiveStreamRecorder:
             converts_file_path = converts_file_path.replace("\\", "/")
             if os.path.exists(converts_file_path) and os.path.getsize(converts_file_path) > 0:
                 save_path = converts_file_path.rsplit(".", maxsplit=1)[0] + ".mp4"
-                _output = subprocess.check_output(
-                    [
-                        "ffmpeg",
-                        "-i", converts_file_path,
-                        "-c:v", "copy",
-                        "-c:a", "copy",
-                        "-f", "mp4",
-                        save_path
-                    ],
-                    stderr=subprocess.STDOUT,
-                    startupinfo=self.subprocess_start_info,
+                ffmpeg_command = [
+                    "ffmpeg",
+                    "-i", converts_file_path,
+                    "-c:v", "copy",
+                    "-c:a", "copy",
+                    "-f", "mp4",
+                    save_path
+                ]
+                process = await asyncio.create_subprocess_exec(
+                    *ffmpeg_command,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    startupinfo=self.subprocess_start_info
                 )
 
-                converts_success = True
-                logger.info(f"Video transcoding completed: {save_path}")
+                self.app.add_ffmpeg_process(process)
+                task = asyncio.create_task(process.communicate())
+                _, stderr = await task
+                if process.returncode == 0:
+                    converts_success = True
+                    logger.info(f"Video transcoding completed: {save_path}")
+                else:
+                    logger.error(
+                        f"Video transcoding failed! Error message: {stderr.decode() if stderr else 'Unknown error'}")
 
         except subprocess.CalledProcessError as e:
             logger.error(f"Video transcoding failed! Error message: {e.output.decode()}")
@@ -492,7 +502,7 @@ class LiveStreamRecorder:
         try:
             if converts_success:
                 if is_original_delete:
-                    time.sleep(1)
+                    await asyncio.sleep(1)
                     if os.path.exists(converts_file_path):
                         os.remove(converts_file_path)
                     logger.info(f"Delete Original File: {converts_file_path}")
