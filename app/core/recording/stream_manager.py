@@ -149,8 +149,8 @@ class LiveStreamRecorder:
 
     def _select_source_url(self, stream_info: StreamData):
         if (
-            self.user_config.get("default_live_source") != "HLS"
-            and self.is_flv_preferred_platform
+                self.user_config.get("default_live_source") != "HLS"
+                and self.is_flv_preferred_platform
         ):
             codec = utils.get_query_params(stream_info.flv_url, "codec")
             if codec and codec[0] == 'h265':
@@ -369,12 +369,10 @@ class LiveStreamRecorder:
                     self.recording.update({"display_title": display_title})
                     self.app.page.run_task(self.app.record_card_manager.update_card, self.recording)
                     self.app.page.pubsub.send_others_on_topic("update", self.recording)
-                    if self.app.recording_enabled and process in self.app.process_manager.ffmpeg_processes:
-                        await asyncio.sleep(15)
-                        self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
-                    else:
+                    if not self.app.recording_enabled:
                         self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
                         self.app.page.run_task(self.stop_recording_notify)
+
                 except Exception as e:
                     logger.debug(f"Failed to update UI: {e}")
 
@@ -660,12 +658,10 @@ class LiveStreamRecorder:
                 self.recording.update({"display_title": display_title})
                 await self.app.record_card_manager.update_card(self.recording)
                 self.app.page.pubsub.send_others_on_topic("update", self.recording)
-                if self.app.recording_enabled:
-                    await asyncio.sleep(15)
-                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
-                else:
+                if not self.app.recording_enabled:
                     self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
                     self.app.page.run_task(self.stop_recording_notify)
+
             except Exception as e:
                 logger.debug(f"Failed to update UI: {e}")
 
@@ -741,4 +737,3 @@ class LiveStreamRecorder:
             msg_title = msg_title or self._["status_notify"]
 
             self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
-            
