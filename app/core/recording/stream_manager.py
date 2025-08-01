@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import time
 from datetime import datetime
-from typing import Any
+from typing import TypeVar
 
 from ...messages import desktop_notify, message_pusher
 from ...models.media.video_quality_model import VideoQuality
@@ -16,6 +16,8 @@ from ..media.direct_downloader import DirectStreamDownloader
 from ..platforms import platform_handlers
 from ..platforms.platform_handlers import StreamData
 from ..runtime.process_manager import BackgroundService
+
+T = TypeVar("T")
 
 
 class LiveStreamRecorder:
@@ -54,7 +56,7 @@ class LiveStreamRecorder:
         for key in ("recording_manager", "stream_manager"):
             self._.update(language.get(key, {}))
 
-    def _get_info(self, key: str, default: Any = None):
+    def _get_info(self, key: str, default: T = None) -> T:
         return self.recording_info.get(key, default) or default
 
     def is_use_proxy(self):
@@ -739,5 +741,4 @@ class LiveStreamRecorder:
             msg_title = msg_title or self._["status_notify"]
 
             self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
-
-
+            
