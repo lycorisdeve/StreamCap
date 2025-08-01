@@ -87,7 +87,7 @@ class RecordingManager:
 
     @staticmethod
     async def _update_recording(
-            recording: Recording, monitor_status: bool, display_title: str, status_info: str, selected: bool
+        recording: Recording, monitor_status: bool, display_title: str, status_info: str, selected: bool
     ):
         attrs_update = {
             "monitor_status": monitor_status,
@@ -269,24 +269,27 @@ class RecordingManager:
             if self.settings.user_config.get("remove_emojis"):
                 stream_info.anchor_name = utils.clean_name(stream_info.anchor_name, self._["live_room"])
 
-            recording.is_live = stream_info.is_live
-            if recording.is_live and not recording.is_recording:
+            if stream_info.is_live:
                 recording.live_title = stream_info.title
                 if recording.streamer_name.strip() == self._["live_room"]:
                     recording.streamer_name = stream_info.anchor_name
                 recording.title = f"{recording.streamer_name} - {self._[recording.quality]}"
                 recording.display_title = f"[{self._['is_live']}] {recording.title}"
 
+                if not recording.is_live:
+                    recording.is_live = stream_info.is_live
+                    recording.notified_live_start = False
+                    recording.notified_live_end = False
+
+                    if desktop_notify.should_push_notification(self.app):
+                        desktop_notify.send_notification(
+                            title=self._["notify"],
+                            message=recording.streamer_name + ' | ' + self._["live_recording_started_message"],
+                            app_icon=self.app.tray_manager.icon_path
+                        )
+
                 msg_manager = message_pusher.MessagePusher(self.settings)
                 user_config = self.settings.user_config
-
-                if desktop_notify.should_push_notification(self.app):
-                    desktop_notify.send_notification(
-                        title=self._["notify"],
-                        message=recording.streamer_name + ' | ' + self._["live_recording_started_message"],
-                        app_icon=self.app.tray_manager.icon_path
-                    )
-
                 if (msg_manager.should_push_message(self.settings, recording, message_type='start')
                         and not recording.notified_live_start):
                     push_content = self._["push_content"]
@@ -312,21 +315,19 @@ class RecordingManager:
                 else:
                     if recording.notified_live_start:
                         notify_loop_time = user_config.get("notify_loop_time")
-                        recording.loop_time_seconds = int(notify_loop_time or 3600)
+                        recording.loop_time_seconds = int(notify_loop_time or 600)
                     else:
                         recording.loop_time_seconds = self.loop_time_seconds
 
                     recording.cumulative_duration = timedelta()
                     recording.last_duration = timedelta()
                     recording.status_info = RecordingStatus.LIVE_BROADCASTING
-                    recording.is_checking = False
 
             else:
-                if not recording.is_live and recording.notified_live_start:
-                    recording.notified_live_start = False
-                    recording.notified_live_end = False
+                if recording.is_live:
+                    recording.is_live = False
+                    self.app.page.run_task(recorder.end_message_push)
 
-                recording.is_checking = False
                 recording.status_info = RecordingStatus.MONITORING
                 title = f"{stream_info.anchor_name or recording.streamer_name} - {self._[recording.quality]}"
                 if recording.streamer_name == self._["live_room"] or \
@@ -342,6 +343,7 @@ class RecordingManager:
 
             self.app.page.run_task(self.app.record_card_manager.update_card, recording)
             self.app.page.pubsub.send_others_on_topic("update", recording)
+            recording.is_checking = False
 
     @staticmethod
     def start_update(recording: Recording):
@@ -361,6 +363,7 @@ class RecordingManager:
     @staticmethod
     def stop_recording(recording: Recording, manually_stopped: bool = True):
         """Stop the recording process."""
+        recording.is_live = False
         if recording.is_recording:
             if recording.start_time is not None:
                 elapsed = datetime.now() - recording.start_time
@@ -370,8 +373,6 @@ class RecordingManager:
                 recording.last_duration = recording.cumulative_duration
             recording.start_time = None
             recording.is_recording = False
-            recording.notified_live_start = False
-            recording.notified_live_end = False
             recording.manually_stopped = manually_stopped
             logger.info(f"Stopped recording for {recording.title}")
 
@@ -392,7 +393,7 @@ class RecordingManager:
         self.app.page.pubsub.send_others_on_topic('delete', recordings)
         await self.remove_recordings(recordings)
 
-        # update the filter area of the home page
+        # update the filter area of the recording list page
         if hasattr(self.app, 'current_page') and hasattr(self.app.current_page, 'content_area'):
             if len(self.app.current_page.content_area.controls) > 1:
                 self.app.current_page.content_area.controls[1] = self.app.current_page.create_filter_area()
