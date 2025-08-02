@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import time
 from datetime import datetime
-from typing import Any
+from typing import TypeVar
 
 from ...messages import desktop_notify, message_pusher
 from ...models.media.video_quality_model import VideoQuality
@@ -16,6 +16,8 @@ from ..media.direct_downloader import DirectStreamDownloader
 from ..platforms import platform_handlers
 from ..platforms.platform_handlers import StreamData
 from ..runtime.process_manager import BackgroundService
+
+T = TypeVar("T")
 
 
 class LiveStreamRecorder:
@@ -54,7 +56,7 @@ class LiveStreamRecorder:
         for key in ("recording_manager", "stream_manager"):
             self._.update(language.get(key, {}))
 
-    def _get_info(self, key: str, default: Any = None):
+    def _get_info(self, key: str, default: T = None) -> T:
         return self.recording_info.get(key, default) or default
 
     def is_use_proxy(self):
@@ -147,8 +149,8 @@ class LiveStreamRecorder:
 
     def _select_source_url(self, stream_info: StreamData):
         if (
-            self.user_config.get("default_live_source") != "HLS"
-            and self.is_flv_preferred_platform
+                self.user_config.get("default_live_source") != "HLS"
+                and self.is_flv_preferred_platform
         ):
             codec = utils.get_query_params(stream_info.flv_url, "codec")
             if codec and codec[0] == 'h265':
@@ -367,12 +369,10 @@ class LiveStreamRecorder:
                     self.recording.update({"display_title": display_title})
                     self.app.page.run_task(self.app.record_card_manager.update_card, self.recording)
                     self.app.page.pubsub.send_others_on_topic("update", self.recording)
-                    if self.app.recording_enabled and process in self.app.process_manager.ffmpeg_processes:
-                        await asyncio.sleep(15)
-                        self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
-                    else:
+                    if not self.app.recording_enabled:
                         self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
                         self.app.page.run_task(self.stop_recording_notify)
+
                 except Exception as e:
                     logger.debug(f"Failed to update UI: {e}")
 
@@ -470,21 +470,31 @@ class LiveStreamRecorder:
             converts_file_path = converts_file_path.replace("\\", "/")
             if os.path.exists(converts_file_path) and os.path.getsize(converts_file_path) > 0:
                 save_path = converts_file_path.rsplit(".", maxsplit=1)[0] + ".mp4"
-                _output = subprocess.check_output(
-                    [
-                        "ffmpeg",
-                        "-i", converts_file_path,
-                        "-c:v", "copy",
-                        "-c:a", "copy",
-                        "-f", "mp4",
-                        save_path
-                    ],
-                    stderr=subprocess.STDOUT,
-                    startupinfo=self.subprocess_start_info,
+                ffmpeg_command = [
+                    "ffmpeg",
+                    "-i", converts_file_path,
+                    "-c:v", "copy",
+                    "-c:a", "copy",
+                    "-f", "mp4",
+                    save_path
+                ]
+                process = await asyncio.create_subprocess_exec(
+                    *ffmpeg_command,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    startupinfo=self.subprocess_start_info
                 )
 
-                converts_success = True
-                logger.info(f"Video transcoding completed: {save_path}")
+                self.app.add_ffmpeg_process(process)
+                task = asyncio.create_task(process.communicate())
+                _, stderr = await task
+                if process.returncode == 0:
+                    converts_success = True
+                    logger.info(f"Video transcoding completed: {save_path}")
+                else:
+                    logger.error(
+                        f"Video transcoding failed! Error message: {stderr.decode() if stderr else 'Unknown error'}")
 
         except subprocess.CalledProcessError as e:
             logger.error(f"Video transcoding failed! Error message: {e.output.decode()}")
@@ -492,7 +502,7 @@ class LiveStreamRecorder:
         try:
             if converts_success:
                 if is_original_delete:
-                    time.sleep(1)
+                    await asyncio.sleep(1)
                     if os.path.exists(converts_file_path):
                         os.remove(converts_file_path)
                     logger.info(f"Delete Original File: {converts_file_path}")
@@ -648,12 +658,10 @@ class LiveStreamRecorder:
                 self.recording.update({"display_title": display_title})
                 await self.app.record_card_manager.update_card(self.recording)
                 self.app.page.pubsub.send_others_on_topic("update", self.recording)
-                if self.app.recording_enabled:
-                    await asyncio.sleep(15)
-                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
-                else:
+                if not self.app.recording_enabled:
                     self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
                     self.app.page.run_task(self.stop_recording_notify)
+
             except Exception as e:
                 logger.debug(f"Failed to update UI: {e}")
 
@@ -729,5 +737,3 @@ class LiveStreamRecorder:
             msg_title = msg_title or self._["status_notify"]
 
             self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
-
-

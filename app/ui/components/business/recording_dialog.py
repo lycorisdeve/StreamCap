@@ -27,17 +27,14 @@ class RecordingDialog:
         """Show a dialog for adding or editing a recording."""
         initial_values = self.recording.to_dict() if self.recording else {}
 
-        user_config = self.app.settings.user_config
-        default_record_format = initial_values.get("record_format", user_config.get("video_format", VideoFormat.TS))
+        config = RecordingConfig(initial_values, self.app.settings.user_config)
+        default_record_format = config.get_value("record_format", "video_format", VideoFormat.TS)
         default_record_type = "video" if default_record_format in VideoFormat.get_formats() else "audio"
-        default_record_quality = initial_values.get("quality", user_config.get("record_quality", VideoQuality.OD))
-        segmented_recording_enabled = user_config.get('segmented_recording_enabled', False)
-        video_segment_time = user_config.get('video_segment_time', 1800)
-        segment_record = initial_values.get("segment_record", segmented_recording_enabled)
-        segment_time = initial_values.get("segment_time", video_segment_time)
-        only_notify_no_record = initial_values.get("only_notify_no_record", False)
-        flv_use_direct_download = initial_values.get(
-            "flv_use_direct_download", user_config.get("flv_use_direct_download", False))
+        default_record_quality = config.get_value("quality", "record_quality", VideoQuality.OD)
+        segment_record = config.get_value("segment_record", "segmented_recording_enabled", False)
+        segment_time = config.get_value("segment_time", "video_segment_time", 1800)
+        only_notify_no_record = config.get_value("only_notify_no_record", default=False)
+        flv_use_direct_download = config.get_value("flv_use_direct_download", default=False)
 
         async def on_url_change(_):
             """Enable or disable the submit button based on whether the URL field is filled."""
@@ -441,4 +438,12 @@ class RecordingDialog:
 
         self.page.overlay.append(dialog)
         self.page.update()
-        
+
+
+class RecordingConfig:
+    def __init__(self, initial_values, user_config):
+        self.initial_values = initial_values
+        self.user_config = user_config
+
+    def get_value(self, key, user_config_key=None, default=None):
+        return self.initial_values.get(key, self.user_config.get(user_config_key or key, default))

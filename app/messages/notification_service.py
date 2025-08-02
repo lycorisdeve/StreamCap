@@ -71,7 +71,7 @@ class NotificationService:
             open_ssl: bool = True,
     ) -> dict[str, Any]:
         receivers = to_email.replace("，", ",").split(",") if to_email.strip() else []
-
+        results = {"success": [], "error": []}
         try:
             message = MIMEMultipart()
             send_name = base64.b64encode(sender_name.encode("utf-8")).decode()
@@ -91,10 +91,12 @@ class NotificationService:
                 smtp_obj = smtplib.SMTP(email_host, int(smtp_port))
             smtp_obj.login(login_email, password)
             smtp_obj.sendmail(sender_email, receivers, message.as_string())
-            return {"success": receivers, "error": []}
+            results["success"] = receivers
+
         except smtplib.SMTPException as e:
             logger.info(f"Email push failed, push email: {to_email},  Error message: {e}")
-            return {"success": [], "error": receivers}
+            results["error"] = receivers
+        return results
 
     async def send_to_telegram(
             self, chat_id: int, token: str, content: str, proxy: Optional[str] = None) -> dict[str, Any]:

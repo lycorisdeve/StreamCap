@@ -1,11 +1,13 @@
 import json
 import os
 import shutil
-from typing import Any
+from typing import TypeVar
 
 import aiofiles
 
 from ...utils.logger import logger
+
+T = TypeVar("T")
 
 
 class ConfigManager:
@@ -163,7 +165,7 @@ class ConfigManager:
             error_message="An error occurred while saving cookies config",
         )
 
-    def get_config_value(self, key: str, default: Any = None):
+    def get_config_value(self, key: str, default: T = None) -> T:
         user_config = self.load_user_config()
         default_config = self.load_default_config()
         return user_config.get(key, default_config.get(key, default))

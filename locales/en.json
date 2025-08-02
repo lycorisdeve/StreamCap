@@ -137,7 +137,8 @@
     "not_disk_space_tip": "Insufficient disk storage space, stop recording ⚠️",
     "notify": "Notify",
     "live_recording_stopped_message": "Live room recording has been stopped",
-    "live_recording_started_message": "Live room recording has been started"
+    "live_recording_started_message": "Live room recording has been started",
+    "not_config_tip": "Message push channel not configured"
   },
     "stream_manager": {
     "record_stream_error": "Live streaming source recording error",
