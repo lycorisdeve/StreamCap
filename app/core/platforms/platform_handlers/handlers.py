@@ -4,6 +4,28 @@ from ....utils.utils import trace_error_decorator
 from .base import PlatformHandler, StreamData
 
 
+class CustomHandler(PlatformHandler):
+    platform = "custom"
+
+    def __init__(
+            self,
+            proxy: str | None = None,
+            cookies: str | None = None,
+            record_quality: str | None = None,
+            platform: str | None = None,
+    ) -> None:
+        super().__init__(proxy, cookies, record_quality, platform)
+
+    @trace_error_decorator
+    async def get_stream_info(self, live_url: str) -> StreamData:
+        stream_data = StreamData(platform="Custom", anchor_name="CustomLive", is_live=True, record_url=live_url)
+        if ".flv" in live_url:
+            stream_data.flv_url = live_url
+        if ".m3u8" in live_url:
+            stream_data.flv_url = live_url
+        return stream_data
+
+
 class DouyinHandler(PlatformHandler):
     platform = "douyin"
 
@@ -1077,6 +1099,7 @@ class PicartoHandler(PlatformHandler):
         return await self.live_stream.fetch_stream_url(json_data, self.record_quality)
 
 
+CustomHandler.register(r"https?://.*\.(?:flv|m3u8)(\?.*)?$")
 DouyinHandler.register(r"https://.*\.douyin\.com/")
 TikTokHandler.register(r"https://.*\.tiktok\.com/")
 KuaishouHandler.register(r"https://live\.kuaishou\.com/")
@@ -1127,3 +1150,4 @@ LianJieHandler.register(r"https://.*\.lailianjie\.com/")
 MiguHandler.register(r"https://.*\.miguvideo\.com/")
 LaixiuHandler.register(r"https://.*\.imkktv\.com/")
 PicartoHandler.register(r"https://.*\.picarto\.tv/")
+
