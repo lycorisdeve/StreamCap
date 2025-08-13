@@ -74,7 +74,7 @@ class LiveStreamRecorder:
             live_title = stream_info.title
 
         if self.recording.streamer_name and self.recording.streamer_name != self._["live_room"]:
-            stream_info.anchor_name = self.recording.streamer_name
+            stream_info.anchor_name = utils.clean_name(self.recording.streamer_name)
         else:
             stream_info.anchor_name = utils.clean_name(stream_info.anchor_name, self._["live_room"])
 
