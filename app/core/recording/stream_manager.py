@@ -569,15 +569,15 @@ class LiveStreamRecorder:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 startupinfo=self.subprocess_start_info,
-                text=True
+                text=False
             )
 
             stdout, stderr = await process.communicate()
 
             if stdout:
-                logger.info(stdout.splitlines()[0])
+                logger.info(stdout.splitlines()[0].decode())
             if stderr:
-                logger.error(stderr.splitlines()[0])
+                logger.error(stderr.splitlines()[0].decode())
 
             if process.returncode != 0:
                 logger.info(f"Custom Script process exited with return code {process.returncode}")
