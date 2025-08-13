@@ -94,6 +94,7 @@ def get_platform_info(record_url: str) -> tuple:
         "fm.missevan.com/": ("猫耳FM直播", "maoerfm"),
         "winktv.co.kr/": ("WinkTV", "winktv"),
         "flextv.co.kr/": ("FlexTV", "flextv"),
+        "ttinglive.com/": ("FlexTV", "flextv"),
         "look.163.com/": ("Look直播", "look"),
         "popkontv.com/": ("PopkonTV", "popkontv"),
         "twitcasting.tv/": ("TwitCasting", "twitcasting"),
