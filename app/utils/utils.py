@@ -204,7 +204,7 @@ def is_time_interval_exceeded(last_check_time, interval_seconds=60):
 
 def clean_name(input_text, default=None):
     if input_text and input_text.strip():
-        rstr = r"[\/\\\:\*\？?\"\<\>\|&#.。,， ~！· ]"
+        rstr = r"[\/\\\:：\*\？?\"\<\>\|&#.。,， ~！· ]"
         cleaned_name = input_text.strip().replace("（", "(").replace("）", ")")
         cleaned_name = re.sub(rstr, "_", cleaned_name)
         cleaned_name = remove_emojis(cleaned_name, "_").replace("__", "_").strip("_")

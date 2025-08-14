@@ -563,7 +563,7 @@ class RecordingsPage(PageBase):
             self.content_area.controls[1] = self.create_filter_area()
             self.content_area.update()
 
-        await self.app.snack_bar.show_snack_bar(self._["add_recording_success_tip"], bgcolor=ft.Colors.GREEN)
+            await self.app.snack_bar.show_snack_bar(self._["add_recording_success_tip"], bgcolor=ft.Colors.GREEN)
 
     async def search_on_click(self, _e):
         """Open the search dialog when the search button is clicked."""

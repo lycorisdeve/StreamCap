@@ -74,7 +74,7 @@ class LiveStreamRecorder:
             live_title = stream_info.title
 
         if self.recording.streamer_name and self.recording.streamer_name != self._["live_room"]:
-            stream_info.anchor_name = self.recording.streamer_name
+            stream_info.anchor_name = utils.clean_name(self.recording.streamer_name)
         else:
             stream_info.anchor_name = utils.clean_name(stream_info.anchor_name, self._["live_room"])
 
@@ -422,6 +422,8 @@ class LiveStreamRecorder:
                             self.user_config.get("convert_to_mp4")
                         )
 
+                if self.app.recording_enabled and not self.is_flv_preferred_platform:
+                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
         except Exception as e:
             logger.error(f"An error occurred during the subprocess execution: {e}")
             self.recording.status_info = RecordingStatus.RECORDING_ERROR
@@ -653,6 +655,8 @@ class LiveStreamRecorder:
                 logger.success(f"Direct Downloading Completed: {record_name}")
                 self.app.page.run_task(self.end_message_push)
                 self.recording.is_recording = False
+                if self.app.recording_enabled and not self.is_flv_preferred_platform:
+                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
 
             try:
                 self.recording.update({"display_title": display_title})

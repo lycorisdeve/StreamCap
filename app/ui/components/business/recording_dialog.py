@@ -317,7 +317,14 @@ class RecordingDialog:
             logger.warning(f"This platform does not support recording: {url}")
             await self.app.snack_bar.show_snack_bar(self._["platform_not_supported_tip"], duration=3000)
 
+        def get_existing_recordings():
+            existing_recordings = [rec.url for rec in self.app.record_manager.recordings]
+            return existing_recordings
+
         async def on_confirm(e):
+
+            existing_recordings = get_existing_recordings()
+
             if tabs.selected_index == 0:
                 quality_info = self._[quality_dropdown.value]
 
@@ -360,11 +367,43 @@ class RecordingDialog:
                         "flv_use_direct_download": flv_use_direct_download_dropdown.value == "true",
                     }
                 ]
-                await self.on_confirm_callback(recordings_info)
+
+                if live_url in existing_recordings and not rec_id:
+                    async def confirm_duplicate():
+                        async def close_duplicate_dialog(_):
+                            self.url_duplicate_confirm_dialog.open = False
+                            self.page.update()
+                            await close_dialog(e)
+
+                        async def proceed_with_add(_):
+                            await close_duplicate_dialog(e)
+                            await self.on_confirm_callback(recordings_info)
+
+                        duplicate_confirm_dialog = ft.AlertDialog(
+                            modal=True,
+                            title=ft.Text(self._["duplicate_url_title"]),
+                            content=ft.Text(self._["duplicate_url_content"]),
+                            actions=[
+                                ft.TextButton(self._["cancel"], on_click=close_duplicate_dialog),
+                                ft.TextButton(self._["sure"], on_click=proceed_with_add),
+                            ],
+                            actions_alignment=ft.MainAxisAlignment.END,
+                        )
+
+                        self.url_duplicate_confirm_dialog = duplicate_confirm_dialog
+                        self.url_duplicate_confirm_dialog.open = True
+                        self.page.overlay.append(duplicate_confirm_dialog)
+                        self.page.update()
+
+                    await confirm_duplicate()
+                    return
+                else:
+                    await self.on_confirm_callback(recordings_info)
 
             elif tabs.selected_index == 1:  # Batch entry
                 lines = batch_input.value.splitlines()
                 recordings_info = []
+                batch_url_list = []
                 streamer_name = ""
                 quality = "OD"
                 quality_dict = {"0": "OD", "1": "UHD", "2": "HD", "3": "SD", "4": "LD"}
@@ -387,6 +426,11 @@ class RecordingDialog:
                         await not_supported(url)
                         continue
 
+                    existing_urls = set(batch_url_list) | set(existing_recordings)
+                    if url.strip() in existing_urls:
+                        logger.info(f"Skip {url.strip()}, the live room URL already exists.")
+                        continue
+
                     quality = quality_dict.get(quality, "OD")
                     title = f"{streamer_name} - {self._[quality]}"
                     display_title = title
@@ -402,6 +446,7 @@ class RecordingDialog:
                         "title": title,
                         "display_title": display_title,
                     }
+                    batch_url_list.append(url.strip())
                     recordings_info.append(recording_info)
 
                 await self.on_confirm_callback(recordings_info)
