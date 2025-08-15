@@ -14,7 +14,7 @@
   },
   "home_page": {
       "welcome": "欢迎使用 StreamCap",
-      "tagline": "强大的流媒体录制工具",
+      "tagline": "记录直播的每一个精彩瞬间",
       "start_recording": "开始录制",
       "recording_list": "录制列表",
       "browse_recordings": "浏览录制",
@@ -111,7 +111,9 @@
     "minute_label_text": "分",
     "select_media_type": "选择媒体类型",
     "video": "视频",
-    "audio": "音频"
+    "audio": "音频",
+    "duplicate_url_title": "重复的直播间地址",
+    "duplicate_url_content": "该直播间已存在，是否继续添加？"
   },
   "search_dialog": {
     "search_keyword": "输入搜索关键词"

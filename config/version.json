@@ -1,13 +1,13 @@
 {
   "introduction": {
-    "en": "A free application dedicated to recording videos from online live streaming platforms. By integrating FFmpeg, it efficiently and reliably records live streams from over 40 major platforms including Douyin, TikTok, Kuaishou, Huya, Douyu, Bilibili, Rednote, Baidu, Weibo, Kuwo, Twitch, YouTube, PandaTV, SoopLive, FlexTV, PopKontv, Twitcasting, WinkTV, 17Live, Acfun, CHZZK, and Shopee.",
-    "zh_CN": "一款专注于录制在线直播平台视频的免费应用。通过集成FFmpeg，高效、稳定地录制抖音、TikTok、快手、虎牙、斗鱼、B站、小红书、百度、微博、酷狗、Twitch、YouTube、PandaTV、SoopLive、FlexTV、PopKontv、Twitcasting、WinkTV、17Live、Acfun、CHZZK 和 Shopee 等40+主流平台的直播流。"
+    "en": "A free application dedicated to recording videos from online live streaming platforms. By integrating FFmpeg, it efficiently and reliably records live streams from over 40 major platforms including Douyin, TikTok, Kuaishou, Huya, Douyu, Bilibili, Rednote, Baidu, Weibo, Kuwo, Migu, Twitch, YouTube, PandaTV, SoopLive, FlexTV(TTing), PopKontv, Twitcasting, WinkTV, 17Live, Acfun, CHZZK, and Shopee.",
+    "zh_CN": "一款专注于录制在线直播平台视频的免费应用。通过集成FFmpeg，高效、稳定地录制抖音、TikTok、快手、虎牙、斗鱼、B站、小红书、百度、微博、酷狗、咪咕、Twitch、YouTube、PandaTV、SoopLive、FlexTV(TTing)、PopKontv、Twitcasting、WinkTV、17Live、Acfun、CHZZK 和 Shopee 等40+主流平台的直播流。"
   },
   "open_source_license": "Apache License 2.0",
   "version_updates": [
     {
-      "version": "1.0.2-alpha",
-      "kernel_version": "4.0.5",
+      "version": "1.0.2",
+      "kernel_version": "4.0.7",
       "updates": {
         "en": [
           "None"
@@ -16,11 +16,11 @@
           "无"
         ]
       },
-      "release_date": "",
+      "release_date": "2025-08-15",
       "announcement": {
         "en": [
           {
-            "title": "StreamCap v1.0.2 will be released soon",
+            "title": "StreamCap v1.0.2 is officially released",
             "content": "New multi-platform support, web adaptation for mobile, bug fixes, and stability improvements"
           },
           {
@@ -29,12 +29,12 @@
           },
           {
             "title": "Coming soon",
-            "content": "The next version will support classification by live room status and platform, and minimize to tray"
+            "content": "None"
           }
         ],
         "zh_CN": [
           {
-            "title": "StreamCap v1.0.2 即将发布",
+            "title": "StreamCap v1.0.2 正式发布",
             "content": "新增平台支持，进行移动端web适配，修复已知问题，提升稳定性"
           },
           {
@@ -43,7 +43,7 @@
           },
           {
             "title": "即将推出",
-            "content": "下个版本将支持按直播间状态和平台进行分类以及程序最小化至托盘"
+            "content": "暂无"
           }
         ]
       }

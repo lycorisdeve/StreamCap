@@ -14,7 +14,7 @@
   },
     "home_page": {
       "welcome": "Welcome to StreamCap",
-      "tagline": "Powerful live streaming recording tool",
+      "tagline": "Record every exciting moment of the live broadcast",
       "start_recording": "Start Recording",
       "recording_list": "Recording List",
       "browse_recordings": "Browse Recordings",
@@ -110,7 +110,9 @@
     "minute_label_text": "Minute",
     "select_media_type": "Select Media Type",
     "video": "Video",
-    "audio": "Audio"
+    "audio": "Audio",
+    "duplicate_url_title": "Duplicate Live Room URL",
+    "duplicate_url_content": "The live room URL already exists, do you want to continue adding?"
   },
   "search_dialog": {
     "search_keyword": "Enter search keyword"
