@@ -84,6 +84,56 @@ async def handle_app_close(page: ft.Page, app, save_progress_overlay) -> None:
         close_confirm_dialog.open = False
         page.update()
 
+    close_confirm_controls = [
+        ft.Text(
+            _["confirm_exit_content"],
+            size=14,
+            text_align=ft.TextAlign.CENTER,
+        ),
+        ft.Container(height=10)
+    ]
+
+    if page.platform.value != 'macos':
+        close_confirm_controls.append(
+            ft.Container(
+                content=ft.Text(
+                    _["minimize_to_tray_tip"],
+                    size=12,
+                    color=ft.colors.GREY_500,
+                    text_align=ft.TextAlign.CENTER,
+                ),
+                padding=ft.padding.all(8),
+                border_radius=5,
+                bgcolor=ft.colors.with_opacity(0.1, ft.colors.BLUE_GREY),
+            )
+        )
+
+    close_confirm_actions = [
+        ft.TextButton(
+            content=ft.Text(_["cancel"], size=14),
+            on_click=close_dialog,
+            style=ft.ButtonStyle(
+                color=ft.colors.PRIMARY,
+            ),
+        ),
+        ft.OutlinedButton(
+            content=ft.Text(_["exit_program"], size=14),
+            on_click=close_dialog_dismissed,
+            style=ft.ButtonStyle(
+                color=ft.colors.ERROR,
+            ),
+        ),
+    ]
+    if page.platform.value != 'macos':
+        close_confirm_actions.insert(
+            1, ft.TextButton(
+                content=ft.Text(_["minimize_to_tray"], size=14),
+                on_click=minimize_to_tray,
+                style=ft.ButtonStyle(
+                    color=ft.colors.PRIMARY,
+                ),
+            ))
+
     close_confirm_dialog = ft.AlertDialog(
         modal=True,
         title=ft.Text(
@@ -94,55 +144,15 @@ async def handle_app_close(page: ft.Page, app, save_progress_overlay) -> None:
         ),
         content=ft.Container(
             content=ft.Column(
-                controls=[
-                    ft.Text(
-                        _["confirm_exit_content"],
-                        size=14,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Container(height=10),
-                    ft.Container(
-                        content=ft.Text(
-                            _["minimize_to_tray_tip"],
-                            size=12,
-                            color=ft.colors.GREY_500,
-                            text_align=ft.TextAlign.CENTER,
-                        ),
-                        padding=ft.padding.all(8),
-                        border_radius=5,
-                        bgcolor=ft.colors.with_opacity(0.1, ft.colors.BLUE_GREY),
-                    ),
-                ],
+                controls=close_confirm_controls,
                 spacing=5,
                 tight=True,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             padding=ft.padding.symmetric(horizontal=20, vertical=10),
-            width=400,
+            width=400 if page.platform.value != 'macos' else None,
         ),
-        actions=[
-            ft.TextButton(
-                content=ft.Text(_["cancel"], size=14),
-                on_click=close_dialog,
-                style=ft.ButtonStyle(
-                    color=ft.colors.PRIMARY,
-                ),
-            ),
-            ft.TextButton(
-                content=ft.Text(_["minimize_to_tray"], size=14),
-                on_click=minimize_to_tray,
-                style=ft.ButtonStyle(
-                    color=ft.colors.PRIMARY,
-                ),
-            ),
-            ft.OutlinedButton(
-                content=ft.Text(_["exit_program"], size=14),
-                on_click=close_dialog_dismissed,
-                style=ft.ButtonStyle(
-                    color=ft.colors.ERROR,
-                ),
-            ),
-        ],
+        actions=close_confirm_actions,
         actions_alignment=ft.MainAxisAlignment.END,
         shape=ft.RoundedRectangleBorder(radius=10),
     )
