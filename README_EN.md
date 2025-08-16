@@ -278,6 +278,18 @@ https://3.cn/28MLBy-E
 
 Faceit:
 https://www.faceit.com/zh/players/Compl1/stream
+
+Lianjie:
+https://show.lailianjie.com/10000258
+
+Migu:
+https://www.miguvideo.com/p/live/120000541321
+
+Laixiu:
+https://www.imkktv.com/h5/share/video.html?uid=1845195&roomId=1710496
+
+Picarto:
+https://www.picarto.tv/cuteavalanche
 ```
 
 ## 📖Documentation
