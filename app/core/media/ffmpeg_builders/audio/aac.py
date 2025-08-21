@@ -11,7 +11,7 @@ class AACCommandBuilder(FFmpegCommandBuilder):
                 "-ar", "44100",
                 "-ac", "2",
                 "-map", "0:a",
-                "-f", "adts",
+                "-f", "segment",
                 "-segment_time", str(self.segment_time),
                 "-reset_timestamps", "1",
                 self.full_path,
