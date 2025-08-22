@@ -775,8 +775,7 @@ class LiveStreamRecorder:
 
             push_at = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
             push_content = push_content.replace("[room_name]", self.recording.streamer_name).replace(
-                "[time]", push_at
-            )
+                "[time]", push_at).replace("[title]", self.recording.live_title or "None")
             msg_title = user_config.get("custom_notification_title").strip()
             msg_title = msg_title or self._["status_notify"]
 
