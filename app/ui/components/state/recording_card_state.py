@@ -14,9 +14,11 @@ class RecordingCardState:
             return CardStateType.RECORDING
         elif recording.status_info in RecordingCardState.ERROR_STATUSES:
             return CardStateType.ERROR
+        elif recording.is_checking:
+            return CardStateType.CHECKING
         elif recording.is_live and recording.monitor_status and not recording.is_recording:
             return CardStateType.LIVE
-        elif (not recording.is_live and recording.monitor_status and 
+        elif (not recording.is_live and recording.monitor_status and
               recording.status_info != RecordingStatus.NOT_IN_SCHEDULED_CHECK):
             return CardStateType.OFFLINE
         elif (not recording.monitor_status or 
@@ -33,6 +35,7 @@ class RecordingCardState:
             CardStateType.LIVE: ft.Colors.BLUE,
             CardStateType.OFFLINE: ft.Colors.AMBER,
             CardStateType.STOPPED: ft.Colors.GREY,
+            CardStateType.CHECKING: ft.Colors.PURPLE,
         }
         return color_map.get(state, ft.Colors.TRANSPARENT)
     
@@ -66,6 +69,11 @@ class RecordingCardState:
                 "bgcolor": ft.Colors.GREY,
                 "text_color": ft.Colors.WHITE,
             },
+            CardStateType.CHECKING: {
+                "text": language_dict.get("checking"),
+                "bgcolor": ft.Colors.PURPLE,
+                "text_color": ft.Colors.WHITE,
+            },
         }
         
         return configs.get(state, {})
@@ -79,7 +87,7 @@ class RecordingCardState:
     
     @staticmethod
     def get_title_weight(recording: Recording) -> ft.FontWeight:
-        return ft.FontWeight.BOLD if recording.is_recording or recording.is_live else None
+        return ft.FontWeight.BOLD if recording.is_recording or recording.is_live or recording.is_checking else None
     
     @staticmethod
     def get_recording_icon(recording: Recording) -> ft.Icons:

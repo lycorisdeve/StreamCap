@@ -186,7 +186,8 @@
     "stopped": "Stopped",
     "filter": "Filter",
     "offline": "Offline",
-    "no_monitor": "Not Monitored"
+    "no_monitor": "Not Monitored",
+    "checking": "Checking"
   },
   "settings_page": {
     "recording_settings": "Recording Settings",

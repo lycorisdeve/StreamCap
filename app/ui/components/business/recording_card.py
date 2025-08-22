@@ -266,7 +266,7 @@ class RecordingCardManager:
             recording.update(
                 {
                     "monitor_status": not recording.monitor_status,
-                    "status_info": RecordingStatus.MONITORING,
+                    "status_info": RecordingStatus.STATUS_CHECKING,
                     "display_title": f"{recording.title}",
                 }
             )
@@ -462,8 +462,8 @@ class RecordingCardManager:
                 try:
                     delete_alert_dialog.open = False
                     delete_alert_dialog.update()
-                except (ft.core.page.PageDisconnectedException, AssertionError) as e:
-                    logger.debug(f"Close delete dialog failed: {e}")
+                except (ft.core.page.PageDisconnectedException, AssertionError) as err:
+                    logger.debug(f"Close delete dialog failed: {err}")
 
             delete_alert_dialog = ft.AlertDialog(
                 title=ft.Text(self._["confirm"]),

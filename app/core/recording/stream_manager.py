@@ -31,6 +31,7 @@ class LiveStreamRecorder:
         self.recording = recording
         self.recording_info = recording_info
         self.subprocess_start_info = app.subprocess_start_up_info
+        self.should_stop = False
 
         self.user_config = self.settings.user_config
         self.account_config = self.settings.accounts_config
@@ -226,6 +227,21 @@ class LiveStreamRecorder:
         record_url = self._get_record_url(stream_info)
         self.set_preview_url(stream_info)
 
+        try:
+            if self.recording.rec_id in self.app.record_manager.active_recorders:
+                old_recorder = self.app.record_manager.active_recorders[self.recording.rec_id]
+                logger.warning(
+                    f"Found existing recorder instance for {self.recording.rec_id}, id: {id(old_recorder)}, stopping it"
+                )
+                old_recorder.request_stop()
+
+                await asyncio.sleep(1)
+            
+            self.app.record_manager.active_recorders[self.recording.rec_id] = self
+            logger.info(f"Saved recorder instance for {self.recording.rec_id}, id: {id(self)}")
+        except Exception as e:
+            logger.error(f"Failed to save recorder instance: {e}")
+
         if use_direct_download:
             logger.info(f"Use Direct Downloader to Download FLV Stream: {record_url}")
             headers = {}
@@ -284,6 +300,9 @@ class LiveStreamRecorder:
         The child process executes ffmpeg for recording
         """
 
+        logger.info(f"Starting ffmpeg recording - recorder id: {id(self)}, rec_id: {self.recording.rec_id}")
+        self.should_stop = False
+
         try:
             save_file_path = ffmpeg_command[-1]
 
@@ -302,29 +321,32 @@ class LiveStreamRecorder:
             logger.log("STREAM", f"Recording Stream URL: {record_url}")
 
             while True:
-                if not self.recording.is_recording or not self.app.recording_enabled:
+                if self.should_stop or self.recording.force_stop or not self.app.recording_enabled:
                     logger.info(f"Preparing to End Recording: {live_url}")
-
-                    if os.name == "nt":
-                        if process.stdin:
-                            process.stdin.write(b"q")
-                            await process.stdin.drain()
-                            await asyncio.sleep(5)
-                    else:
-                        import signal
-                        process.send_signal(signal.SIGINT)
-                        # process.terminate()
-                        await asyncio.sleep(5)
-
-                    if process.stdin:
-                        process.stdin.close()
-
+                    
                     try:
+                        if os.name == "nt":
+                            if process.stdin:
+                                process.stdin.write(b"q")
+                                await process.stdin.drain()
+                                await asyncio.sleep(5)
+                        else:
+                            import signal
+                            process.send_signal(signal.SIGINT)
+                            # process.terminate()
+                            await asyncio.sleep(5)
+
+                        if process.stdin:
+                            process.stdin.close()
+
                         await asyncio.wait_for(process.wait(), timeout=15.0)
                     except asyncio.TimeoutError:
                         logger.warning(f"FFmpeg process did not exit gracefully, forcing termination: {live_url}")
                         process.kill()
                         await process.wait()
+
+                    self.recording.force_stop = False
+                    break
 
                 if process.returncode is not None:
                     logger.info(f"Exit loop recording (normal 0 | abnormal 1): code={process.returncode}, {live_url}")
@@ -358,13 +380,19 @@ class LiveStreamRecorder:
                     display_title = self.recording.display_title
 
                 self.recording.live_title = None
-                if not self.recording.is_recording:
+                if self.recording.manually_stopped:
                     logger.success(f"Live recording has stopped: {record_name}")
                 else:
-
                     logger.success(f"Live recording completed: {record_name}")
                     self.app.page.run_task(self.end_message_push)
-                    self.recording.is_recording = False
+                
+                try:
+                    if self.recording.rec_id in self.app.record_manager.active_recorders:
+                        del self.app.record_manager.active_recorders[self.recording.rec_id]
+                        logger.info(f"Removed recorder from active_recorders: {self.recording.rec_id}")
+                except Exception as e:
+                    logger.error(f"Failed to remove recorder instance: {e}")
+                
                 try:
                     self.recording.update({"display_title": display_title})
                     self.app.page.run_task(self.app.record_card_manager.update_card, self.recording)
@@ -622,6 +650,10 @@ class LiveStreamRecorder:
         """
         Use the direct downloader to download the live stream
         """
+        
+        logger.info(f"Starting direct download - recorder id: {id(self)}, rec_id: {self.recording.rec_id}")
+        self.should_stop = False
+        
         try:
             await self.direct_downloader.start_download()
 
@@ -631,9 +663,10 @@ class LiveStreamRecorder:
             logger.log("STREAM", f"Direct Download Stream URL: {record_url}")
 
             while True:
-                if not self.recording.is_recording or not self.app.recording_enabled:
+                if self.should_stop or self.recording.force_stop or not self.app.recording_enabled:
                     logger.info(f"Prepare to end direct download: {live_url}")
                     await self.direct_downloader.stop_download()
+                    self.recording.force_stop = False
                     break
 
                 await asyncio.sleep(1)
@@ -649,12 +682,19 @@ class LiveStreamRecorder:
                 display_title = self.recording.display_title
 
             self.recording.live_title = None
-            if not self.recording.is_recording:
+            if self.recording.manually_stopped:
                 logger.success(f"Direct Downloading Stopped: {record_name}")
             else:
                 logger.success(f"Direct Downloading Completed: {record_name}")
                 self.app.page.run_task(self.end_message_push)
-                self.recording.is_recording = False
+
+                try:
+                    if self.recording.rec_id in self.app.record_manager.active_recorders:
+                        del self.app.record_manager.active_recorders[self.recording.rec_id]
+                        logger.info(f"Removed recorder from active_recorders: {self.recording.rec_id}")
+                except Exception as e:
+                    logger.error(f"Failed to remove recorder instance: {e}")
+                
                 if self.app.recording_enabled and not self.is_flv_preferred_platform:
                     self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
 
@@ -741,3 +781,12 @@ class LiveStreamRecorder:
             msg_title = msg_title or self._["status_notify"]
 
             self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
+
+    def request_stop(self):
+        logger.info(f"Stop requested for recorder: {self.recording.url}, rec_id: {self.recording.rec_id}")
+        logger.info(f"Recorder instance details - id: {id(self)}, recording: {self.recording.title}")
+        
+        old_value = self.should_stop
+        self.should_stop = True
+        
+        logger.info(f"Set should_stop from {old_value} to {self.should_stop} for recorder: {self.recording.rec_id}")
