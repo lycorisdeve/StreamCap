@@ -143,7 +143,10 @@ async def main(page: ft.Page) -> None:
                     logger.error(f"Failed to start tray manager: {err}")
 
         page.update()
-        page.on_route_change(ft.RouteChangeEvent(route=page.route))
+        
+        last_route = app.settings.user_config.get("last_route", "/home")
+        logger.info(f"Restored last route: {last_route}")
+        page.go(last_route)
 
     if is_web:
         auth_manager = AuthManager(app)

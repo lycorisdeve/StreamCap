@@ -38,6 +38,10 @@ async def handle_app_close(page: ft.Page, app, save_progress_overlay) -> None:
 
     async def close_dialog_dismissed(e):
         app.recording_enabled = False
+        
+        app.settings.user_config["last_route"] = page.route
+        await app.config_manager.save_user_config(app.settings.user_config)
+        logger.info(f"Saved last route: {page.route}")
 
         # check if there are active recordings
         active_recordings = [p for p in app.process_manager.ffmpeg_processes if p.returncode is None]
