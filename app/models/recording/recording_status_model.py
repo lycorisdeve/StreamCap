@@ -7,6 +7,7 @@ class CardStateType(Enum):
     LIVE = "live"
     OFFLINE = "offline"
     STOPPED = "stopped"
+    CHECKING = "checking"
     UNKNOWN = "unknown"
 
 

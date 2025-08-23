@@ -62,6 +62,9 @@ class Recording:
         self.is_recording = False
         self.start_time = None
         self.manually_stopped = False
+        self.force_stop = False
+        self.stopping_in_progress = False
+        self.stop_requested = False
         self.platform = None
         self.platform_key = None
         self.notified_live_start = False

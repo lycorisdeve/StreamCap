@@ -188,7 +188,8 @@
     "stopped": "已停止",
     "filter": "筛选",
     "offline": "未开播",
-    "no_monitor": "未监控"
+    "no_monitor": "未监控",
+    "checking": "检测中"
   },
   "settings_page": {
     "recording_settings": "录制设置",
