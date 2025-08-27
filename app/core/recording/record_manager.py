@@ -464,6 +464,6 @@ class RecordingManager:
 
     @staticmethod
     async def _reset_stopping_flag(recording: Recording):
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.5)
         recording.stopping_in_progress = False
         logger.debug(f"Reset stopping_in_progress flag for recording: {recording.rec_id}")

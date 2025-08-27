@@ -350,6 +350,7 @@ class LiveStreamRecorder:
 
                 if process.returncode is not None:
                     logger.info(f"Exit loop recording (normal 0 | abnormal 1): code={process.returncode}, {live_url}")
+                    self.recording.is_recording = False
                     break
 
                 await asyncio.sleep(1)
@@ -404,6 +405,9 @@ class LiveStreamRecorder:
                 except Exception as e:
                     logger.debug(f"Failed to update UI: {e}")
 
+                if self.app.recording_enabled and not self.is_flv_preferred_platform:
+                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
+
                 if self.user_config.get("convert_to_mp4") and self.save_format == "ts":
                     if self.segment_record:
                         file_paths = utils.get_file_paths(os.path.dirname(save_file_path))
@@ -450,8 +454,6 @@ class LiveStreamRecorder:
                             self.user_config.get("convert_to_mp4")
                         )
 
-                if self.app.recording_enabled and not self.is_flv_preferred_platform:
-                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
         except Exception as e:
             logger.error(f"An error occurred during the subprocess execution: {e}")
             self.recording.status_info = RecordingStatus.RECORDING_ERROR
