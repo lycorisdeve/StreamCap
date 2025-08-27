@@ -7,13 +7,13 @@
   "version_updates": [
     {
       "version": "1.0.2",
-      "kernel_version": "4.0.7",
+      "kernel_version": "4.0.8",
       "updates": {
         "en": [
-          "None"
+          "Enrich functions and enhance stability"
         ],
         "zh_CN": [
-          "无"
+          "丰富功能，增强稳定性"
         ]
       },
       "release_date": "2025-08-15",
