@@ -74,12 +74,14 @@ def handle_window_event(page: ft.Page, app: App, save_progress_overlay: 'SavePro
     return on_window_event
 
 
-def handle_disconnect(page: ft.Page) -> callable:
+def handle_disconnect(page: ft.Page, app: App) -> callable:
     """Handle disconnection for web mode."""
 
-    def disconnect(_: ft.ControlEvent) -> None:
+    async def disconnect(_: ft.ControlEvent) -> None:
         page.pubsub.unsubscribe_all()
-
+        app.settings.user_config["last_route"] = page.route
+        await app.config_manager.save_user_config(app.settings.user_config)
+        logger.info(f"Saved last route: {page.route}")
     return disconnect
 
 
@@ -134,7 +136,7 @@ async def main(page: ft.Page) -> None:
         page.window.prevent_close = True
         page.window.on_event = handle_window_event(page, app, save_progress_overlay)
         if is_web:
-            page.on_disconnect = handle_disconnect(page)
+            page.on_disconnect = handle_disconnect(page, app)
         elif page.platform.value == "windows":
             if hasattr(app, "tray_manager"):
                 try:
@@ -143,10 +145,13 @@ async def main(page: ft.Page) -> None:
                     logger.error(f"Failed to start tray manager: {err}")
 
         page.update()
-        
-        last_route = app.settings.user_config.get("last_route", "/home")
-        logger.info(f"Restored last route: {last_route}")
-        page.go(last_route)
+
+        if page.route == '/':
+            last_route = app.settings.user_config.get("last_route", "/home")
+            logger.info(f"Restored last route: {last_route}")
+            page.go(last_route)
+        else:
+            page.go(page.route)
 
     if is_web:
         auth_manager = AuthManager(app)
