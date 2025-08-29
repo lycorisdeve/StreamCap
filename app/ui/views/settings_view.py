@@ -462,6 +462,14 @@ class SettingsPage(PageBase):
                                 hint_text=self._["platform_max_concurrent_requests_tip"]
                             ),
                         ),
+                        self.create_setting_row(
+                            self._["check_on_create"],
+                            ft.Switch(
+                                value=self.get_config_value("check_on_create", True),
+                                data="check_on_create",
+                                on_change=self.on_change,
+                            ),
+                        ),
                     ],
                     is_mobile,
                 ),

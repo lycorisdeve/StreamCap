@@ -366,7 +366,8 @@
     "switch_account_type": "切换账号类型",
     "switch_language_tip": "提示: 建议切换语言后重启程序",
     "platform_max_concurrent_requests": "平台最大并发录制数",
-    "platform_max_concurrent_requests_tip": "每个平台允许同时发起请求的最大并发数，默认3"
+    "platform_max_concurrent_requests_tip": "每个平台允许同时发起请求的最大并发数，默认3",
+    "check_on_create": "新增录制时立即获取直播状态"
   },
   "about_page": {
     "about_project": "关于本程序",
