@@ -37,11 +37,7 @@ class RecordingCardManager:
     async def create_card(self, recording: Recording):
         """Create a card for a given recording."""
         rec_id = recording.rec_id
-        if not self.cards_obj.get(rec_id):
-            if self.app.recording_enabled:
-                self.app.page.run_task(self.app.record_manager.check_if_live, recording)
-            else:
-                recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
+
         card_data = self._create_card_components(recording)
         self.cards_obj[rec_id] = card_data
         self.start_update_task(recording)

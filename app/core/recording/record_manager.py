@@ -192,19 +192,34 @@ class RecordingManager:
                 if not recording.detection_time or is_exceeded:
                     self.app.page.run_task(self.check_if_live, recording)
 
+    _periodic_task_running = False
+    
+    @classmethod
+    def is_periodic_task_running(cls):
+        return cls._periodic_task_running
+    
+    @classmethod
+    def set_periodic_task_running(cls, value=True):
+        cls._periodic_task_running = value
+    
     async def setup_periodic_live_check(self, interval: int = 180):
         """Set up a periodic task to check live status."""
-
         async def periodic_check():
+            logger.info("Starting periodic live check background task")
             while True:
-                await asyncio.sleep(interval)
+                logger.debug(f"Running periodic check (interval: {interval}s)")
                 await self.check_free_space()
                 if self.app.recording_enabled:
                     await self.check_all_live_status()
+                await asyncio.sleep(interval)
 
-        if not self.periodic_task_started:
+        if not RecordingManager.is_periodic_task_running():
+            RecordingManager.set_periodic_task_running(True)
             self.periodic_task_started = True
-            await periodic_check()
+            logger.info(f"Initializing periodic live check task with interval: {interval}s")
+            asyncio.create_task(periodic_check())
+        else:
+            logger.info("Periodic live check task already running globally, skipping initialization")
 
     async def check_if_live(self, recording: Recording):
         """Check if the live stream is available, fetch stream data and update is_live status."""

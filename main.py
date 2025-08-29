@@ -22,6 +22,13 @@ MIN_WIDTH = 950
 ASSETS_DIR = "assets"
 
 
+class GlobalState:
+    periodic_tasks_started = False
+
+
+global_state = GlobalState()
+
+
 def setup_window(page: ft.Page, is_web: bool) -> None:
     page.window.icon = os.path.join(execute_dir, ASSETS_DIR, "icon.ico")
     page.window.center()
@@ -66,7 +73,6 @@ def handle_route_change(page: ft.Page, app: App) -> callable:
 
 
 def handle_window_event(page: ft.Page, app: App, save_progress_overlay: 'SaveProgressOverlay') -> callable:
-
     async def on_window_event(e: ft.ControlEvent) -> None:
         if e.data == "close":
             await handle_app_close(page, app, save_progress_overlay)
@@ -82,21 +88,21 @@ def handle_disconnect(page: ft.Page, app: App) -> callable:
         app.settings.user_config["last_route"] = page.route
         await app.config_manager.save_user_config(app.settings.user_config)
         logger.info(f"Saved last route: {page.route}")
+
     return disconnect
 
 
 def handle_page_resize(page: ft.Page, app: App) -> callable:
     """handle page resize"""
-    
+
     def on_resize(_: ft.ControlEvent) -> None:
         setup_responsive_layout(page, app)
         page.update()
-    
-    return on_resize 
+
+    return on_resize
 
 
 async def main(page: ft.Page) -> None:
-
     page.title = "StreamCap"
     page.window.min_width = MIN_WIDTH
     page.window.min_height = MIN_WIDTH * WINDOW_SCALE
@@ -129,6 +135,7 @@ async def main(page: ft.Page) -> None:
         if is_web:
             setup_responsive_layout(page, app)
             page.on_resize = handle_page_resize(page, app)
+            page.on_disconnect = handle_disconnect(page, app)
 
         page.add(app.complete_page)
         
@@ -136,13 +143,23 @@ async def main(page: ft.Page) -> None:
         page.window.prevent_close = True
         page.window.on_event = handle_window_event(page, app, save_progress_overlay)
         if is_web:
-            page.on_disconnect = handle_disconnect(page, app)
-        elif page.platform.value == "windows":
-            if hasattr(app, "tray_manager"):
-                try:
-                    app.tray_manager.start(page)
-                except Exception as err:
-                    logger.error(f"Failed to start tray manager: {err}")
+            global global_state
+            if not global_state.periodic_tasks_started:
+                global_state.periodic_tasks_started = True
+                logger.info("Starting periodic tasks for the first time in web mode")
+                page.run_task(app.start_periodic_tasks)
+            else:
+                logger.info("Periodic tasks already running in web mode, skipping initialization")
+        else:
+            logger.info("Starting periodic tasks in desktop mode")
+            page.run_task(app.start_periodic_tasks)
+
+            if page.platform.value == "windows":
+                if hasattr(app, "tray_manager"):
+                    try:
+                        app.tray_manager.start(page)
+                    except Exception as err:
+                        logger.error(f"Failed to start tray manager: {err}")
 
         page.update()
 
