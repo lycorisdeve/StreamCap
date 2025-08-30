@@ -268,6 +268,7 @@ class RecordingCardManager:
                     "monitor_status": not recording.monitor_status,
                     "status_info": RecordingStatus.STATUS_CHECKING,
                     "display_title": f"{recording.title}",
+                    "showed_checking_status": False,
                 }
             )
             self.app.page.run_task(self.app.record_manager.check_if_live, recording)
