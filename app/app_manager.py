@@ -134,3 +134,7 @@ class App:
                     await self.update_checker.show_update_dialog(update_info)
         except Exception as e:
             logger.error(f"Update check failed: {e}")
+
+    async def start_periodic_tasks(self):
+        """Start all periodic tasks"""
+        await self.record_manager.setup_periodic_live_check()

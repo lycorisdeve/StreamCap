@@ -4,6 +4,7 @@ import uuid
 import flet as ft
 
 from ...core.platforms.platform_handlers import get_platform_info
+from ...core.recording.record_manager import RecordingManager
 from ...models.recording.recording_model import Recording
 from ...utils.logger import logger
 from ..base_page import PageBase
@@ -471,7 +472,7 @@ class RecordingsPage(PageBase):
         self.loading_indicator.update()
         self.recording_card_area.update()
         
-        if not self.app.record_manager.periodic_task_started:
+        if not RecordingManager.is_periodic_task_running():
             self.page.run_task(
                 self.app.record_manager.setup_periodic_live_check,
                 self.app.record_manager.loop_time_seconds

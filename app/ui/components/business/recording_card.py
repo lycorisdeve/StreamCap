@@ -38,10 +38,10 @@ class RecordingCardManager:
         """Create a card for a given recording."""
         rec_id = recording.rec_id
         if not self.cards_obj.get(rec_id):
-            if self.app.recording_enabled:
+            check_on_create = self.app.settings.user_config.get("check_on_create", True)
+            if self.app.recording_enabled and check_on_create:
                 self.app.page.run_task(self.app.record_manager.check_if_live, recording)
-            else:
-                recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
+            
         card_data = self._create_card_components(recording)
         self.cards_obj[rec_id] = card_data
         self.start_update_task(recording)

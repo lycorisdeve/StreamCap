@@ -64,5 +64,6 @@
     "is_grid_view": true,
     "theme_mode": "light",
     "platform_max_concurrent_requests": "3",
-    "last_route": "/home"
+    "last_route": "/home",
+    "check_on_create": true
 }

@@ -364,7 +364,8 @@
     "switch_account_type": "Switch account type",
     "switch_language_tip": "Tip: It is recommended to restart the program after switching languages",
     "platform_max_concurrent_requests": "Max concurrent recordings per platform",
-    "platform_max_concurrent_requests_tip": "The maximum number of concurrent requests allowed per platform. Default is 3."
+    "platform_max_concurrent_requests_tip": "The maximum number of concurrent requests allowed per platform. Default is 3.",
+    "check_on_create": "Check live status when creating a recording"
   },
   "about_page": {
     "about_project": "About This Application",
