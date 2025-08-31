@@ -1,6 +1,7 @@
 import flet as ft
 
 from ....messages.message_pusher import MessagePusher
+from ....models.recording.recording_status_model import RecordingStatus
 
 
 class CardDialog(ft.AlertDialog):
@@ -38,7 +39,8 @@ class CardDialog(ft.AlertDialog):
         scheduled_recording_status = self._["enabled"] if recording.scheduled_recording else self._["disabled"]
         scheduled_time_range = recording.scheduled_time_range or self._["none"]
         save_path = recording.recording_dir or self._["no_recording_dir_tip"]
-        recording_status_info = self._[recording.status_info]
+        status_info = RecordingStatus.MONITORING if recording.monitor_status else RecordingStatus.STOPPED_MONITORING
+        recording_status_info = self._[recording.status_info or status_info]
         should_push_message = MessagePusher.should_push_message(self.app.settings, recording)
         message_push = self._["enabled"] if should_push_message else self._["disabled"]
         if not should_push_message and recording.enabled_message_push:

@@ -75,6 +75,7 @@ class Recording:
         self.display_title = self.title
         self.selected = False
         self.is_checking = False
+        self.showed_checking_status = False
         self.status_info = None
         self.live_title = None
         self.detection_time = None
