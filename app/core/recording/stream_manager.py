@@ -565,8 +565,9 @@ class LiveStreamRecorder:
             params = [
                 f'--record_name "{record_name}"',
                 f'--save_file_path "{save_file_path}"',
-                f"--save_type {save_type}--split_video_by_time {split_video_by_time}",
-                f"--converts_to_mp4 {converts_to_mp4}"
+                f'--save_type {save_type}',
+                f'--split_video_by_time {split_video_by_time}',
+                f'--converts_to_mp4 {converts_to_mp4}',
             ]
         else:
             params = [
