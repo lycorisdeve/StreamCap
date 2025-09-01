@@ -89,7 +89,7 @@ class RecordingManager:
 
     @staticmethod
     async def _update_recording(
-        recording: Recording, monitor_status: bool, display_title: str, status_info: str, selected: bool
+            recording: Recording, monitor_status: bool, display_title: str, status_info: str, selected: bool
     ):
         attrs_update = {
             "monitor_status": monitor_status,
@@ -118,9 +118,9 @@ class RecordingManager:
 
             self.app.page.run_task(self.app.record_card_manager.update_card, recording)
             self.app.page.pubsub.send_others_on_topic("update", recording)
-            
+
             self.app.page.run_task(self.check_if_live, recording)
-            
+
             if auto_save:
                 self.app.page.run_task(self.persist_recordings)
 
@@ -195,21 +195,21 @@ class RecordingManager:
                     self.app.page.run_task(self.check_if_live, recording)
 
     _periodic_task_running = False
-    
+
     @classmethod
     def is_periodic_task_running(cls):
         return cls._periodic_task_running
-    
+
     @classmethod
     def set_periodic_task_running(cls, value=True):
         cls._periodic_task_running = value
-    
+
     async def setup_periodic_live_check(self, interval: int = 180):
         """Set up a periodic task to check live status."""
+
         async def periodic_check():
             logger.info("Starting periodic live check background task")
             while True:
-                logger.debug(f"Running periodic check (interval: {interval}s)")
                 await self.check_free_space()
                 if self.app.recording_enabled:
                     await self.check_all_live_status()
@@ -230,7 +230,7 @@ class RecordingManager:
         if recording.is_recording or recording.stopping_in_progress:
             logger.debug(f"Skip check_if_live because recording is busy: {recording.url}")
             return
-            
+
         if recording.rec_id in self.active_recorders:
             logger.debug(f"Skip check_if_live because recorder is active: {recording.url}")
             return
@@ -404,10 +404,10 @@ class RecordingManager:
         if recording.is_recording:
 
             recording.stopping_in_progress = True
-            
+
             logger.info(f"Trying to stop recorder for {recording.rec_id}, title: {recording.title}")
             logger.debug(f"Active recorders: {list(self.active_recorders.keys())}")
-            
+
             if recording.rec_id in self.active_recorders:
                 recorder = self.active_recorders[recording.rec_id]
                 logger.debug(f"Found recorder instance - id: {id(recorder)}")
@@ -417,7 +417,7 @@ class RecordingManager:
                 logger.warning(f"No active recorder found for {recording.rec_id}, cannot request stop")
                 recording.force_stop = True
                 logger.info(f"Set force_stop=True for recording: {recording.rec_id}")
-            
+
             if recording.start_time is not None:
                 elapsed = datetime.now() - recording.start_time
                 # Add the elapsed time to the cumulative duration.
