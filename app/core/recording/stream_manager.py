@@ -358,6 +358,14 @@ class LiveStreamRecorder:
             return_code = process.returncode
             safe_return_code = [0, 255]
             stdout, stderr = await process.communicate()
+            
+            try:
+                if self.recording.rec_id in self.app.record_manager.active_recorders:
+                    del self.app.record_manager.active_recorders[self.recording.rec_id]
+                    logger.info(f"Removed recorder from active_recorders: {self.recording.rec_id}")
+            except Exception as e:
+                logger.error(f"Failed to remove recorder instance: {e}")
+            
             if return_code not in safe_return_code and stderr:
                 logger.error(f"FFmpeg Stderr Output: {str(stderr.decode()).splitlines()[0]}")
                 self.recording.status_info = RecordingStatus.RECORDING_ERROR
@@ -386,13 +394,6 @@ class LiveStreamRecorder:
                 else:
                     logger.success(f"Live recording completed: {record_name}")
                     self.app.page.run_task(self.end_message_push)
-                
-                try:
-                    if self.recording.rec_id in self.app.record_manager.active_recorders:
-                        del self.app.record_manager.active_recorders[self.recording.rec_id]
-                        logger.info(f"Removed recorder from active_recorders: {self.recording.rec_id}")
-                except Exception as e:
-                    logger.error(f"Failed to remove recorder instance: {e}")
                 
                 try:
                     self.recording.update({"display_title": display_title})
@@ -564,8 +565,9 @@ class LiveStreamRecorder:
             params = [
                 f'--record_name "{record_name}"',
                 f'--save_file_path "{save_file_path}"',
-                f"--save_type {save_type}--split_video_by_time {split_video_by_time}",
-                f"--converts_to_mp4 {converts_to_mp4}"
+                f'--save_type {save_type}',
+                f'--split_video_by_time {split_video_by_time}',
+                f'--converts_to_mp4 {converts_to_mp4}',
             ]
         else:
             params = [
@@ -683,20 +685,19 @@ class LiveStreamRecorder:
                 self.recording.status_info = RecordingStatus.STOPPED_MONITORING
                 display_title = self.recording.display_title
 
+            try:
+                if self.recording.rec_id in self.app.record_manager.active_recorders:
+                    del self.app.record_manager.active_recorders[self.recording.rec_id]
+                    logger.info(f"Removed recorder from active_recorders: {self.recording.rec_id}")
+            except Exception as e:
+                logger.error(f"Failed to remove recorder instance: {e}")
+                
             self.recording.live_title = None
             if self.recording.manually_stopped:
                 logger.success(f"Direct Downloading Stopped: {record_name}")
             else:
                 logger.success(f"Direct Downloading Completed: {record_name}")
                 self.app.page.run_task(self.end_message_push)
-
-                try:
-                    if self.recording.rec_id in self.app.record_manager.active_recorders:
-                        del self.app.record_manager.active_recorders[self.recording.rec_id]
-                        logger.info(f"Removed recorder from active_recorders: {self.recording.rec_id}")
-                except Exception as e:
-                    logger.error(f"Failed to remove recorder instance: {e}")
-                
                 if self.app.recording_enabled and not self.is_flv_preferred_platform:
                     self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
 
