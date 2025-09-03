@@ -9,6 +9,7 @@ from ...models.recording.recording_status_model import RecordingStatus
 from ...utils import utils
 from ...utils.logger import logger
 from ..platforms.platform_handlers import get_platform_info
+from ..runtime.process_manager import BackgroundService
 from .stream_manager import LiveStreamRecorder
 
 
@@ -210,10 +211,14 @@ class RecordingManager:
         async def periodic_check():
             logger.info("Starting periodic live check background task")
             while True:
+                immediate_check_on_startup = self.app.settings.user_config.get("check_live_on_browser_refresh", True)
+                if immediate_check_on_startup:
+                    await asyncio.sleep(interval)
                 await self.check_free_space()
                 if self.app.recording_enabled:
                     await self.check_all_live_status()
-                await asyncio.sleep(interval)
+                if not immediate_check_on_startup:
+                    await asyncio.sleep(interval)
 
         if not RecordingManager.is_periodic_task_running():
             RecordingManager.set_periodic_task_running(True)
@@ -341,7 +346,9 @@ class RecordingManager:
                 msg_title = user_config.get("custom_notification_title").strip()
                 msg_title = msg_title or self._["status_notify"]
 
-                self.app.page.run_task(msg_manager.push_messages, msg_title, push_content)
+                BackgroundService.get_instance().add_task(
+                    msg_manager.push_messages_sync, msg_title, push_content
+                )
                 recording.notified_live_start = True
 
             if not recording.only_notify_no_record:
@@ -483,6 +490,5 @@ class RecordingManager:
 
     @staticmethod
     async def _reset_stopping_flag(recording: Recording):
-        await asyncio.sleep(0.5)
         recording.stopping_in_progress = False
         logger.debug(f"Reset stopping_in_progress flag for recording: {recording.rec_id}")

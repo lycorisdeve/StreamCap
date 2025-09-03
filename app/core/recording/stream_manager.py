@@ -287,6 +287,14 @@ class LiveStreamRecorder:
                 self.user_config.get("custom_script_command")
             )
 
+    async def remove_active_recorder(self):
+        try:
+            if self.recording.rec_id in self.app.record_manager.active_recorders:
+                del self.app.record_manager.active_recorders[self.recording.rec_id]
+                logger.info(f"Removed recorder from active_recorders: {self.recording.rec_id}")
+        except Exception as e:
+            logger.error(f"Failed to remove recorder instance: {e}")
+
     async def start_ffmpeg(
             self,
             record_name: str,
@@ -323,7 +331,8 @@ class LiveStreamRecorder:
             while True:
                 if self.should_stop or self.recording.force_stop or not self.app.recording_enabled:
                     logger.info(f"Preparing to End Recording: {live_url}")
-                    
+                    await self.remove_active_recorder()
+                    self.recording.is_recording = False
                     try:
                         if os.name == "nt":
                             if process.stdin:
@@ -350,6 +359,7 @@ class LiveStreamRecorder:
 
                 if process.returncode is not None:
                     logger.info(f"Exit loop recording (normal 0 | abnormal 1): code={process.returncode}, {live_url}")
+                    await self.remove_active_recorder()
                     self.recording.is_recording = False
                     break
 
@@ -359,52 +369,48 @@ class LiveStreamRecorder:
             safe_return_code = [0, 255]
             stdout, stderr = await process.communicate()
             
-            try:
-                if self.recording.rec_id in self.app.record_manager.active_recorders:
-                    del self.app.record_manager.active_recorders[self.recording.rec_id]
-                    logger.info(f"Removed recorder from active_recorders: {self.recording.rec_id}")
-            except Exception as e:
-                logger.error(f"Failed to remove recorder instance: {e}")
-            
             if return_code not in safe_return_code and stderr:
-                logger.error(f"FFmpeg Stderr Output: {str(stderr.decode()).splitlines()[0]}")
-                self.recording.status_info = RecordingStatus.RECORDING_ERROR
+                if not self.recording.is_recording:
+                    logger.error(f"FFmpeg Stderr Output: {str(stderr.decode()).splitlines()[0]}")
+                    self.recording.status_info = RecordingStatus.RECORDING_ERROR
 
-                try:
-                    self.app.record_manager.stop_recording(self.recording)
-                    await self.app.record_card_manager.update_card(self.recording)
-                    self.app.page.pubsub.send_others_on_topic("update", self.recording)
-                    await self.app.snack_bar.show_snack_bar(
-                        record_name + " " + self._["record_stream_error"], duration=2000
-                    )
-                except Exception as e:
-                    logger.debug(f"Failed to update UI: {e}")
+                    try:
+                        self.app.record_manager.stop_recording(self.recording)
+                        await self.app.record_card_manager.update_card(self.recording)
+                        self.app.page.pubsub.send_others_on_topic("update", self.recording)
+                        await self.app.snack_bar.show_snack_bar(
+                            record_name + " " + self._["record_stream_error"], duration=2000
+                        )
+                    except Exception as e:
+                        logger.debug(f"Failed to update UI: {e}")
 
             if return_code in safe_return_code:
-                if self.recording.monitor_status:
-                    self.recording.status_info = RecordingStatus.MONITORING
-                    display_title = self.recording.title
-                else:
-                    self.recording.status_info = RecordingStatus.STOPPED_MONITORING
-                    display_title = self.recording.display_title
+                self.recording.is_live = False
+                if not self.recording.is_recording:
+                    if self.recording.monitor_status:
+                        self.recording.status_info = RecordingStatus.MONITORING
+                        display_title = self.recording.title
+                    else:
+                        self.recording.status_info = RecordingStatus.STOPPED_MONITORING
+                        display_title = self.recording.display_title
 
-                self.recording.live_title = None
-                if self.recording.manually_stopped:
-                    logger.success(f"Live recording has stopped: {record_name}")
-                else:
-                    logger.success(f"Live recording completed: {record_name}")
-                    self.app.page.run_task(self.end_message_push)
-                
-                try:
-                    self.recording.update({"display_title": display_title})
-                    self.app.page.run_task(self.app.record_card_manager.update_card, self.recording)
-                    self.app.page.pubsub.send_others_on_topic("update", self.recording)
-                    if not self.app.recording_enabled:
-                        self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
-                        self.app.page.run_task(self.stop_recording_notify)
+                    self.recording.live_title = None
+                    if self.recording.manually_stopped:
+                        logger.success(f"Live recording has stopped: {record_name}")
+                    else:
+                        logger.success(f"Live recording completed: {record_name}")
+                        self.app.page.run_task(self.end_message_push)
+                    
+                    try:
+                        self.recording.update({"display_title": display_title})
+                        self.app.page.run_task(self.app.record_card_manager.update_card, self.recording)
+                        self.app.page.pubsub.send_others_on_topic("update", self.recording)
+                    except Exception as e:
+                        logger.debug(f"Failed to update UI: {e}")
 
-                except Exception as e:
-                    logger.debug(f"Failed to update UI: {e}")
+                if not self.app.recording_enabled:
+                    self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
+                    self.app.page.run_task(self.stop_recording_notify)
 
                 if self.app.recording_enabled and not self.is_flv_preferred_platform:
                     self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
@@ -669,6 +675,8 @@ class LiveStreamRecorder:
             while True:
                 if self.should_stop or self.recording.force_stop or not self.app.recording_enabled:
                     logger.info(f"Prepare to end direct download: {live_url}")
+                    await self.remove_active_recorder()
+                    self.recording.is_recording = False
                     await self.direct_downloader.stop_download()
                     self.recording.force_stop = False
                     break
@@ -678,39 +686,37 @@ class LiveStreamRecorder:
                 if self.direct_downloader.download_task and self.direct_downloader.download_task.done():
                     break
 
-            if self.recording.monitor_status:
-                self.recording.status_info = RecordingStatus.MONITORING
-                display_title = self.recording.title
-            else:
-                self.recording.status_info = RecordingStatus.STOPPED_MONITORING
-                display_title = self.recording.display_title
+            await self.remove_active_recorder()
+            self.recording.is_recording = False
 
-            try:
-                if self.recording.rec_id in self.app.record_manager.active_recorders:
-                    del self.app.record_manager.active_recorders[self.recording.rec_id]
-                    logger.info(f"Removed recorder from active_recorders: {self.recording.rec_id}")
-            except Exception as e:
-                logger.error(f"Failed to remove recorder instance: {e}")
-                
-            self.recording.live_title = None
-            if self.recording.manually_stopped:
-                logger.success(f"Direct Downloading Stopped: {record_name}")
-            else:
-                logger.success(f"Direct Downloading Completed: {record_name}")
-                self.app.page.run_task(self.end_message_push)
-                if self.app.recording_enabled and not self.is_flv_preferred_platform:
-                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
+            if not self.recording.is_recording:
+                self.recording.is_live = False
+                if self.recording.monitor_status:
+                    self.recording.status_info = RecordingStatus.MONITORING
+                    display_title = self.recording.title
+                else:
+                    self.recording.status_info = RecordingStatus.STOPPED_MONITORING
+                    display_title = self.recording.display_title
 
-            try:
-                self.recording.update({"display_title": display_title})
-                await self.app.record_card_manager.update_card(self.recording)
-                self.app.page.pubsub.send_others_on_topic("update", self.recording)
-                if not self.app.recording_enabled:
-                    self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
-                    self.app.page.run_task(self.stop_recording_notify)
+                self.recording.live_title = None
+                if self.recording.manually_stopped:
+                    logger.success(f"Direct Downloading Stopped: {record_name}")
+                else:
+                    logger.success(f"Direct Downloading Completed: {record_name}")
+                    self.app.page.run_task(self.end_message_push)
+                    if self.app.recording_enabled and not self.is_flv_preferred_platform:
+                        self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
 
-            except Exception as e:
-                logger.debug(f"Failed to update UI: {e}")
+                try:
+                    self.recording.update({"display_title": display_title})
+                    await self.app.record_card_manager.update_card(self.recording)
+                    self.app.page.pubsub.send_others_on_topic("update", self.recording)
+                except Exception as e:
+                    logger.debug(f"Failed to update UI: {e}")
+
+            if not self.app.recording_enabled:
+                self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
+                self.app.page.run_task(self.stop_recording_notify)
 
             if self.user_config.get("execute_custom_script") and script_command:
                 logger.info("Prepare to execute custom script in the background")
