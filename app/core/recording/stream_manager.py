@@ -47,6 +47,8 @@ class LiveStreamRecorder:
         self.save_format = self._get_info("save_format", default=self.DEFAULT_SAVE_FORMAT).lower()
         self.proxy = self.is_use_proxy()
         self.direct_downloader = None
+        self.min_valid_recording_duration = 25
+        self.recording_start_time = 0
         os.makedirs(self.output_dir, exist_ok=True)
         self.app.language_manager.add_observer(self)
         self._ = {}
@@ -327,6 +329,7 @@ class LiveStreamRecorder:
             self.recording.record_url = record_url
             logger.info(f"Recording in Progress: {live_url}")
             logger.log("STREAM", f"Recording Stream URL: {record_url}")
+            self.recording_start_time = time.time()
 
             while True:
                 if self.should_stop or self.recording.force_stop or not self.app.recording_enabled:
@@ -412,8 +415,13 @@ class LiveStreamRecorder:
                     self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
                     self.app.page.run_task(self.stop_recording_notify)
 
-                if self.app.recording_enabled and not self.is_flv_preferred_platform:
-                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
+                if not self.recording.manually_stopped:
+                    recording_duration = time.time() - self.recording_start_time
+                    if recording_duration > self.min_valid_recording_duration:
+                        if self.app.recording_enabled and not self.is_flv_preferred_platform:
+                            self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
+                    else:
+                        self.recording.status_info = RecordingStatus.RECORDING_ERROR
 
                 if self.user_config.get("convert_to_mp4") and self.save_format == "ts":
                     if self.segment_record:
