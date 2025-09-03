@@ -31,7 +31,7 @@ class LiveStreamRecorder:
         self.recording = recording
         self.recording_info = recording_info
         self.subprocess_start_info = app.subprocess_start_up_info
-        self.should_stop = False
+        self.should_stop = False  # manually stopped
 
         self.user_config = self.settings.user_config
         self.account_config = self.settings.accounts_config
@@ -297,6 +297,16 @@ class LiveStreamRecorder:
         except Exception as e:
             logger.error(f"Failed to remove recorder instance: {e}")
 
+    async def recheck_live_status(self):
+        if not self.should_stop:
+            # not manually stopped
+            recording_duration = time.time() - self.recording_start_time
+            if recording_duration > self.min_valid_recording_duration:
+                if self.app.recording_enabled and not self.is_flv_preferred_platform:
+                    self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
+            else:
+                self.recording.status_info = RecordingStatus.RECORDING_ERROR
+
     async def start_ffmpeg(
             self,
             record_name: str,
@@ -398,7 +408,7 @@ class LiveStreamRecorder:
                         display_title = self.recording.display_title
 
                     self.recording.live_title = None
-                    if self.recording.manually_stopped:
+                    if self.should_stop:
                         logger.success(f"Live recording has stopped: {record_name}")
                     else:
                         logger.success(f"Live recording completed: {record_name}")
@@ -415,13 +425,7 @@ class LiveStreamRecorder:
                     self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
                     self.app.page.run_task(self.stop_recording_notify)
 
-                if not self.recording.manually_stopped:
-                    recording_duration = time.time() - self.recording_start_time
-                    if recording_duration > self.min_valid_recording_duration:
-                        if self.app.recording_enabled and not self.is_flv_preferred_platform:
-                            self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
-                    else:
-                        self.recording.status_info = RecordingStatus.RECORDING_ERROR
+                await self.recheck_live_status()
 
                 if self.user_config.get("convert_to_mp4") and self.save_format == "ts":
                     if self.segment_record:
@@ -679,6 +683,7 @@ class LiveStreamRecorder:
             self.recording.record_url = record_url
             logger.info(f"Direct Downloading: {live_url}")
             logger.log("STREAM", f"Direct Download Stream URL: {record_url}")
+            self.recording_start_time = time.time()
 
             while True:
                 if self.should_stop or self.recording.force_stop or not self.app.recording_enabled:
@@ -707,13 +712,11 @@ class LiveStreamRecorder:
                     display_title = self.recording.display_title
 
                 self.recording.live_title = None
-                if self.recording.manually_stopped:
+                if self.should_stop:
                     logger.success(f"Direct Downloading Stopped: {record_name}")
                 else:
                     logger.success(f"Direct Downloading Completed: {record_name}")
                     self.app.page.run_task(self.end_message_push)
-                    if self.app.recording_enabled and not self.is_flv_preferred_platform:
-                        self.app.page.run_task(self.app.record_manager.check_if_live, self.recording)
 
                 try:
                     self.recording.update({"display_title": display_title})
@@ -725,6 +728,8 @@ class LiveStreamRecorder:
             if not self.app.recording_enabled:
                 self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
                 self.app.page.run_task(self.stop_recording_notify)
+
+            await self.recheck_live_status()
 
             if self.user_config.get("execute_custom_script") and script_command:
                 logger.info("Prepare to execute custom script in the background")
