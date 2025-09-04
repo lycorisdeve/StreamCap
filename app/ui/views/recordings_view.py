@@ -682,7 +682,7 @@ class RecordingsPage(PageBase):
         self.loading_indicator.update()
         
         if recording.rec_id not in self.app.record_card_manager.cards_obj:
-            card = await self.app.record_card_manager.create_card(recording)
+            card = await self.app.record_card_manager.create_card(recording, subscribe_add_cards=True)
             recording.scheduled_time_range = await self.app.record_manager.get_scheduled_time_range(
                 recording.scheduled_start_time, recording.monitor_hours
             )

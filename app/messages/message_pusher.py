@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional
 
 from ..models.recording.recording_model import Recording
@@ -31,10 +32,10 @@ class MessagePusher:
 
     @staticmethod
     def should_push_message(
-        settings: SettingsPage,
-        recording: Recording,
-        check_manually_stopped: bool = False,
-        message_type: Optional[str] = None
+            settings: SettingsPage,
+            recording: Recording,
+            check_manually_stopped: bool = False,
+            message_type: Optional[str] = None
     ) -> bool:
         """
         Check if message should be pushed
@@ -87,6 +88,14 @@ class MessagePusher:
             logger.info(f"Push {service_name} message successfully: {result['success']}")
         if result.get("error") or (not result.get("success") and not result.get("error")):
             logger.error(f"Push {service_name} message failed: {result['error']}")
+
+    def push_messages_sync(self, msg_title: str, push_content: str) -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(self.push_messages(msg_title, push_content))
+        finally:
+            loop.close()
 
     async def push_messages(self, msg_title: str, push_content: str) -> None:
         """Push messages to all enabled notification services"""

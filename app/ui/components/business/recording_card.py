@@ -34,13 +34,14 @@ class RecordingCardManager:
         self.app.page.pubsub.subscribe_topic("update", self.subscribe_update_card)
         self.app.page.pubsub.subscribe_topic("delete", self.subscribe_remove_cards)
 
-    async def create_card(self, recording: Recording):
+    async def create_card(self, recording: Recording, subscribe_add_cards: bool = False):
         """Create a card for a given recording."""
         rec_id = recording.rec_id
         if not self.cards_obj.get(rec_id):
-            check_on_create = self.app.settings.user_config.get("check_on_create", True)
-            if self.app.recording_enabled and check_on_create:
-                self.app.page.run_task(self.app.record_manager.check_if_live, recording)
+            check_live_on_browser_refresh = self.app.settings.user_config.get("check_live_on_browser_refresh", True)
+            if self.app.recording_enabled and not subscribe_add_cards:
+                if check_live_on_browser_refresh or recording.streamer_name == self._['live_room']:
+                    self.app.page.run_task(self.app.record_manager.check_if_live, recording)
             
         card_data = self._create_card_components(recording)
         self.cards_obj[rec_id] = card_data

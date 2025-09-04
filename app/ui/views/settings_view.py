@@ -463,11 +463,12 @@ class SettingsPage(PageBase):
                             ),
                         ),
                         self.create_setting_row(
-                            self._["check_on_create"],
+                            self._["check_live_on_browser_refresh"],
                             ft.Switch(
-                                value=self.get_config_value("check_on_create", True),
-                                data="check_on_create",
+                                value=self.get_config_value("check_live_on_browser_refresh", True),
+                                data="check_live_on_browser_refresh",
                                 on_change=self.on_change,
+                                tooltip=self._['check_live_on_browser_refresh_tip']
                             ),
                         ),
                     ],
