@@ -87,7 +87,7 @@ def get_platform_info(record_url: str) -> tuple:
         "xhslink.com/": ("小红书直播", "xhs"),
         "https://www.bigo.tv/": ("Bigo直播", "bigo"),
         "https://app.blued.cn/": ("Blued直播", "blued"),
-        "sooplive.co.kr/": ("SOOP", "soop"),
+        "sooplive.co.kr/": ("SOOP", "sooplive"),
         "cc.163.com/": ("网易CC直播", "netease"),
         "qiandurebo.com/": ("千度热播", "qiandurebo"),
         "pandalive.co.kr/": ("PandaTV", "pandalive"),
