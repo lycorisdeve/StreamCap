@@ -7,7 +7,7 @@ from typing import Any, Optional, TypeVar
 from streamget import StreamData
 
 T = TypeVar("T", bound="PlatformHandler")
-InstanceKey = tuple[str | None, tuple[tuple[str, str], ...] | None, str, str | None]
+InstanceKey = tuple[str | None, tuple[tuple[str, str], ...] | None, str, str | None, str | None, str | None, str | None]
 
 
 class PlatformHandler(abc.ABC):
@@ -60,12 +60,13 @@ class PlatformHandler(abc.ABC):
 
     @classmethod
     def _get_instance_key(
-        cls, proxy: str | None, cookies: str | None, record_quality: str, platform: str | None
+        cls, proxy: str | None, cookies: str | None, record_quality: str, platform: str | None,
+        username: str | None = None, password: str | None = None, account_type: str | None = None
     ) -> InstanceKey:
         """
         Generate a unique key for each instance based on the provided parameters.
         """
-        return proxy, cookies, record_quality, platform
+        return proxy, cookies, record_quality, platform, username, password, account_type
 
     @classmethod
     def _get_handler_class(cls, live_url: str) -> type["PlatformHandler"] | None:
@@ -97,7 +98,7 @@ class PlatformHandler(abc.ABC):
         if not handler_class:
             return None
 
-        instance_key = cls._get_instance_key(proxy, cookies, record_quality, platform)
+        instance_key = cls._get_instance_key(proxy, cookies, record_quality, platform, username, password, account_type)
         if instance_key not in cls._instances:
             init_signature = inspect.signature(handler_class.__init__)
             handler_kwargs: dict[str, Any] = {
