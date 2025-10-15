@@ -11,25 +11,22 @@ class ShowSnackBar:
 
         message_row = ft.Row(
             controls=[
-                ft.Icon(name=ft.icons.NOTIFICATIONS, color=ft.colors.SURFACE_VARIANT, size=20) if not emoji else
-                ft.Text(emoji, size=20),
-                ft.Text(message, size=14),
+                ft.Icon(name=ft.icons.NOTIFICATIONS, color=ft.colors.SURFACE_VARIANT, size=18) if not emoji else
+                ft.Text(emoji, size=20, no_wrap=False),
+                ft.Text(message, size=14, no_wrap=False),
             ],
             spacing=10,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            wrap=True,
+            width=235 if show_close_icon else 285,
+            auto_scroll=True,
         )
 
         snack_bar = ft.SnackBar(
             content=ft.Container(
                 content=ft.Row(
                     controls=[
-                        message_row,
-                        ft.IconButton(
-                            icon=ft.icons.CLOSE,
-                            icon_size=16,
-                            on_click=lambda e: setattr(snack_bar, "open", False),
-                            visible=show_close_icon
-                        )
+                        message_row
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER
@@ -48,7 +45,8 @@ class ShowSnackBar:
             snack_bar.bgcolor = "#F5F5F5"
 
         if not self.app.is_mobile:
-            snack_bar.margin = ft.margin.only(left=self.app.page.width - 300, top=0, right=10, bottom=10)
+            snack_bar_width = 350
+            snack_bar.margin = ft.margin.only(left=self.app.page.width - snack_bar_width, top=0, right=10, bottom=10)
 
         snack_bar.open = True
         self.app.snack_bar_area.content = snack_bar
