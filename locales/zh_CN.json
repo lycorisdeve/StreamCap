@@ -212,6 +212,7 @@
     "author": "作者",
     "time": "时间",
     "title": "标题",
+    "remember_window_size": "退出时记住窗口大小",
     "proxy_settings": "代理设置",
     "is_proxy_enabled": "设置是否使用代理及相关配置",
     "enable_proxy": "开启代理",

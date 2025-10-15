@@ -213,6 +213,7 @@
     "time": "time",
     "title": "title",
     "proxy_settings": "Proxy Settings",
+    "remember_window_size": "Remember Window Size",
     "is_proxy_enabled": "Configuration for using proxy and related settings",
     "enable_proxy": "Enable Proxy",
     "proxy_address": "Proxy Address",

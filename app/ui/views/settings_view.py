@@ -286,6 +286,14 @@ class SettingsPage(PageBase):
                             ),
                         ),
                         self.create_folder_setting_row(self._["name_rules"]),
+                        self.create_setting_row(
+                            self._["remember_window_size"],
+                            ft.Switch(
+                                value=self.get_config_value("remember_window_size", False),
+                                on_change=self.on_change,
+                                data="remember_window_size",
+                            ),
+                        ),
                     ],
                     is_mobile,
                 ),
