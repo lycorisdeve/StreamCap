@@ -160,31 +160,78 @@ class RecordingDialog:
         )
 
         scheduled_recording = initial_values.get("scheduled_recording", False)
-        scheduled_start_time = initial_values.get("scheduled_start_time")
-        monitor_hours = initial_values.get("monitor_hours", 5)
+        scheduled_start_time = initial_values.get("scheduled_start_time", '')
+        monitor_hours = initial_values.get("monitor_hours", '5')
         message_push_enabled = initial_values.get('enabled_message_push', True)
 
+        time_slots = 2
+        time_inputs = []
+        hour_inputs = []
+        time_buttons = []
+        time_picker_handlers = []
+        
+        time_values = scheduled_start_time.split(",")
+        time_values = (time_values + [""] * time_slots)[:time_slots]
+
+        hour_values = str(monitor_hours).split(",")
+        hour_values = (hour_values + [""] * time_slots)[:time_slots]
+
+        def create_time_picker_handler(index):
+            async def pick_time(_):
+                async def handle_change(_):
+                    time_inputs[index].value = time_picker.value
+                    time_inputs[index].update()
+
+                time_picker = ft.TimePicker(
+                    confirm_text=self._['confirm'],
+                    cancel_text=self._['cancel'],
+                    error_invalid_text=self._['time_out_of_range'],
+                    help_text=self._['pick_time_slot'],
+                    hour_label_text=self._['hour_label_text'],
+                    minute_label_text=self._['minute_label_text'],
+                    on_change=handle_change
+                )
+                self.page.open(time_picker)
+            return pick_time
+        
+        for i in range(time_slots):
+            time_input = ft.TextField(
+                label=self._["scheduled_start_time"],
+                hint_text=self._["example"] + "：18:30:00",
+                border_radius=5,
+                filled=False,
+                value=time_values[i],
+            )
+            time_inputs.append(time_input)
+            
+            hour_input = ft.TextField(
+                label=self._["monitor_hours"],
+                hint_text=self._["example"] + "：5",
+                border_radius=5,
+                filled=False,
+                value=hour_values[i],
+                keyboard_type=ft.KeyboardType.NUMBER,
+                visible=scheduled_recording,
+            )
+            hour_inputs.append(hour_input)
+            
+            handler = create_time_picker_handler(i)
+            time_picker_handlers.append(handler)
+            
+            button = ft.ElevatedButton(
+                self._['pick_time'],
+                icon=ft.Icons.TIME_TO_LEAVE,
+                on_click=handler,
+                tooltip=self._['pick_time_tip']
+            )
+            time_buttons.append(button)
+        
         async def on_scheduled_setting_change(e):
             selected_value = e.control.value
-            schedule_and_monitor_row.visible = selected_value == "true"
-            monitor_hours_input.visible = selected_value == "true"
+            for i in range(time_slots):
+                time_rows[i].visible = selected_value == "true"
+                hour_inputs[i].visible = selected_value == "true"
             self.page.update()
-
-        async def pick_time(_):
-            async def handle_change(_):
-                scheduled_start_time_input.value = time_picker.value
-                scheduled_start_time_input.update()
-
-            time_picker = ft.TimePicker(
-                confirm_text=self._['confirm'],
-                cancel_text=self._['cancel'],
-                error_invalid_text=self._['time_out_of_range'],
-                help_text=self._['pick_time_slot'],
-                hour_label_text=self._['hour_label_text'],
-                minute_label_text=self._['minute_label_text'],
-                on_change=handle_change
-            )
-            self.page.open(time_picker)
 
         scheduled_setting_dropdown = ft.Dropdown(
             label=self._["scheduled_recording"],
@@ -199,39 +246,18 @@ class RecordingDialog:
             width=500,
         )
 
-        scheduled_start_time_input = ft.TextField(
-            label=self._["scheduled_start_time"],
-            hint_text=self._["example"] + "：18:30:00",
-            border_radius=5,
-            filled=False,
-            value=scheduled_start_time,
-        )
-
-        time_picker_button = ft.ElevatedButton(
-            self._['pick_time'],
-            icon=ft.Icons.TIME_TO_LEAVE,
-            on_click=pick_time,
-            tooltip=self._['pick_time_tip']
-        )
-
-        schedule_and_monitor_row = ft.Row(
-            [
-                ft.Container(content=scheduled_start_time_input, expand=True),
-                ft.Container(content=time_picker_button),
-            ],
-            spacing=10,
-            visible=scheduled_recording,
-        )
-
-        monitor_hours_input = ft.TextField(
-            label=self._["monitor_hours"],
-            hint_text=self._["example"] + "：5",
-            border_radius=5,
-            filled=False,
-            value=monitor_hours,
-            keyboard_type=ft.KeyboardType.NUMBER,
-            visible=scheduled_recording,
-        )
+        time_rows = []
+        for i in range(time_slots):
+            row = ft.Row(
+                [
+                    ft.Container(content=time_inputs[i], expand=True),
+                    ft.Container(content=hour_inputs[i], expand=True),
+                    ft.Container(content=time_buttons[i]),
+                ],
+                spacing=10,
+                visible=scheduled_recording,
+            )
+            time_rows.append(row)
 
         message_push_dropdown = ft.Dropdown(
             label=self._["enable_message_push"],
@@ -301,8 +327,7 @@ class RecordingDialog:
                                 segment_setting_dropdown,
                                 segment_input,
                                 scheduled_setting_dropdown,
-                                schedule_and_monitor_row,
-                                monitor_hours_input,
+                                *time_rows,
                                 message_push_dropdown,
                                 no_record_dropdown
                             ],
@@ -363,9 +388,9 @@ class RecordingDialog:
                         "segment_time": segment_input.value,
                         "monitor_status": initial_values.get("monitor_status", True),
                         "display_title": display_title,
-                        "scheduled_recording": schedule_and_monitor_row.visible,
-                        "scheduled_start_time": str(scheduled_start_time_input.value),
-                        "monitor_hours": monitor_hours_input.value,
+                        "scheduled_recording": scheduled_setting_dropdown.value == 'true',
+                        "scheduled_start_time": ','.join([str(i.value) for i in time_inputs]),
+                        "monitor_hours": ','.join([str(i.value) for i in hour_inputs]),
                         "recording_dir": recording_dir_field.value,
                         "enabled_message_push": message_push_dropdown.value == "true",
                         "only_notify_no_record": no_record_dropdown.value == "true",

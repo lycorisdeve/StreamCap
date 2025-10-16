@@ -255,16 +255,21 @@ class RecordingManager:
             recording.showed_checking_status = True
             self.app.page.run_task(self.app.record_card_manager.update_card, recording)
 
-        if recording.scheduled_recording and recording.scheduled_start_time and recording.monitor_hours:
-            scheduled_time_range = await self.get_scheduled_time_range(
+        if recording.scheduled_recording:
+            scheduled_time_range_list = await self.get_scheduled_time_range(
                 recording.scheduled_start_time, recording.monitor_hours)
-            recording.scheduled_time_range = scheduled_time_range
-            in_scheduled = utils.is_current_time_within_range(scheduled_time_range)
+            recording.scheduled_time_range = scheduled_time_range_list
+            in_scheduled = False
+            for scheduled_time_range in scheduled_time_range_list:
+                in_scheduled = utils.is_current_time_within_range(scheduled_time_range)
+                if in_scheduled:
+                    break
+
             if not in_scheduled:
                 recording.status_info = RecordingStatus.NOT_IN_SCHEDULED_CHECK
                 recording.is_live = False
                 recording.is_checking = False
-                logger.info(f"Skip Detection: {recording.url} not in scheduled check range {scheduled_time_range}")
+                logger.info(f"Skip Detection: {recording.url} not in scheduled check range {scheduled_time_range_list}")
                 self.app.page.run_task(self.app.record_card_manager.update_card, recording)
                 return
 
@@ -389,6 +394,7 @@ class RecordingManager:
         recording.is_checking = False
         self.app.page.run_task(self.app.record_card_manager.update_card, recording)
         self.app.page.pubsub.send_others_on_topic("update", recording)
+        return
 
     @staticmethod
     def start_update(recording: Recording):
@@ -481,12 +487,18 @@ class RecordingManager:
             self.app.recording_enabled = True
 
     @staticmethod
-    async def get_scheduled_time_range(scheduled_start_time, monitor_hours) -> str | None:
-        monitor_hours = float(monitor_hours or 5)
-        if scheduled_start_time and monitor_hours:
-            end_time = utils.add_hours_to_time(scheduled_start_time, monitor_hours)
-            scheduled_time_range = f"{scheduled_start_time}~{end_time}"
-            return scheduled_time_range
+    async def get_scheduled_time_range(scheduled_start_time, monitor_hours) -> list | None:
+        scheduled_time_range_list = []
+        for index, start_time in enumerate(scheduled_start_time.split(',')):
+            try:
+                hours = str(monitor_hours).split(',')[index]
+                if start_time and hours:
+                    end_time = utils.add_hours_to_time(start_time, float(hours or 5))
+                    scheduled_time_range = f"{start_time}~{end_time}"
+                    scheduled_time_range_list.append(scheduled_time_range)
+            except Exception:
+                pass
+        return scheduled_time_range_list
 
     @staticmethod
     async def _reset_stopping_flag(recording: Recording):
