@@ -29,7 +29,7 @@ class GlobalState:
 global_state = GlobalState()
 
 
-def setup_window(page: ft.Page, is_web: bool) -> None:
+def setup_window(page: ft.Page, app: App, is_web: bool) -> None:
     page.window.icon = os.path.join(execute_dir, ASSETS_DIR, "icon.ico")
     page.window.center()
     page.window.to_front()
@@ -39,6 +39,14 @@ def setup_window(page: ft.Page, is_web: bool) -> None:
 
     if not is_web:
         try:
+            if app.settings.user_config.get("remember_window_size"):
+                window_width = app.settings.user_config.get("window_width")
+                window_height = app.settings.user_config.get("window_height")
+                if window_width and window_height:
+                    page.window.width = int(window_width)
+                    page.window.height = int(window_height)
+                    return
+
             screen = get_monitors()[0]
             page.window.width = int(screen.width * WINDOW_SCALE)
             page.window.height = int(screen.height * WINDOW_SCALE)
@@ -75,6 +83,10 @@ def handle_route_change(page: ft.Page, app: App) -> callable:
 def handle_window_event(page: ft.Page, app: App, save_progress_overlay: 'SaveProgressOverlay') -> callable:
     async def on_window_event(e: ft.ControlEvent) -> None:
         if e.data == "close":
+            if app.settings.user_config.get("remember_window_size"):
+                app.settings.user_config["window_width"] = page.window.width
+                app.settings.user_config["window_height"] = page.window.height
+                await app.config_manager.save_user_config(app.settings.user_config)
             await handle_app_close(page, app, save_progress_overlay)
 
     return on_window_event
@@ -108,13 +120,13 @@ async def main(page: ft.Page) -> None:
     page.window.min_height = MIN_WIDTH * WINDOW_SCALE
 
     is_web = args.web or platform == "web"
-    setup_window(page, is_web)
 
     app = App(page)
     page.data = app
     app.is_web_mode = is_web
     app.is_mobile = False
-    
+    setup_window(page, app, is_web)
+
     if not is_web:
         try:
             app.tray_manager = TrayManager(app)
