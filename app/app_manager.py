@@ -137,4 +137,6 @@ class App:
 
     async def start_periodic_tasks(self):
         """Start all periodic tasks"""
-        await self.record_manager.setup_periodic_live_check()
+        await self.record_manager.setup_periodic_live_check(
+            int(self.record_manager.loop_time_seconds or 180)
+        )
