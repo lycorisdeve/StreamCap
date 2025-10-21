@@ -16,18 +16,22 @@ class MessagePusher:
         if self.settings.user_config.get("enable_proxy"):
             return self.settings.user_config.get("proxy_address")
 
-    def is_any_push_channel_enabled(self) -> bool:
-        """Check if any push channel is enabled"""
-        push_channels = [
+    @staticmethod
+    def _get_push_channels() -> list[str]:
+        return [
             "dingtalk_enabled",
             "wechat_enabled",
+            "feishu_enabled",
             "bark_enabled",
             "ntfy_enabled",
             "telegram_enabled",
             "email_enabled",
-            "serverchan_enabled"
+            "serverchan_enabled",
         ]
-        
+
+    def is_any_push_channel_enabled(self) -> bool:
+        """Check if any push channel is enabled"""
+        push_channels = self._get_push_channels()
         return any(self.settings.user_config.get(channel) for channel in push_channels)
 
     @staticmethod
@@ -47,7 +51,7 @@ class MessagePusher:
         should_only_notify_no_record = user_config.get("only_notify_no_record")
         is_stream_start_enabled = user_config.get("stream_start_notification_enabled")
         is_stream_end_enabled = user_config.get("stream_end_notification_enabled")
-        
+
         if message_type is None:
             if hasattr(recording, 'is_recording') and recording.is_recording:
                 message_type = 'end'
@@ -63,16 +67,7 @@ class MessagePusher:
         if message_type == 'end' and not is_stream_end_enabled:
             return False
 
-        push_channels = [
-            "dingtalk_enabled",
-            "wechat_enabled",
-            "bark_enabled",
-            "ntfy_enabled",
-            "telegram_enabled",
-            "email_enabled",
-            "serverchan_enabled"
-        ]
-        
+        push_channels = MessagePusher._get_push_channels()
         any_channel_enabled = any(user_config.get(channel) for channel in push_channels)
         
         if not any_channel_enabled:
@@ -166,3 +161,10 @@ class MessagePusher:
                 tags=self.settings.user_config.get("serverchan_tags", "Live Status Update"),
             )
             self.log_push_result("ServerChan", result)
+
+        if self.settings.user_config.get("feishu_enabled"):
+            result = await self.notifier.send_to_feishu(
+                url=self.settings.user_config.get("feishu_webhook_url"),
+                content=push_content,
+            )
+            self.log_push_result("Feishu", result)

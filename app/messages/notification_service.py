@@ -234,3 +234,20 @@ class NotificationService:
                 logger.info(f"ServerChan push failed, SCKEY/SendKey: {key}, Error message: {resp.get('message')}")
 
         return results
+
+    async def send_to_feishu(
+            self, url: str, content: str
+    ) -> dict[str, list[str]]:
+        results = {"success": [], "error": []}
+        api_list = [u.strip() for u in url.replace("，", ",").split(",") if u.strip()]
+        for api in api_list:
+            json_data = {
+                "msg_type": "text",
+                "content": {"text": content}
+            }
+            resp = await self._async_post(api, json_data)
+            if resp.get("msg") == 'success':
+                results["success"].append(api)
+            else:
+                results["error"].append(api)
+        return results

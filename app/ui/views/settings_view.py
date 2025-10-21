@@ -633,6 +633,20 @@ class SettingsPage(PageBase):
                             ],
                         ),
                         self.create_channel_config(
+                            self._["feishu"],
+                            [
+                                self.create_setting_row(
+                                    self._["feishu_webhook_url"],
+                                    ft.TextField(
+                                        value=self.get_config_value("feishu_webhook_url"),
+                                        width=300,
+                                        on_change=self.on_change,
+                                        data="feishu_webhook_url",
+                                    ),
+                                ),
+                            ],
+                        ),
+                        self.create_channel_config(
                             self._["serverchan"],
                             [
                                 self.create_setting_row(
@@ -837,6 +851,9 @@ class SettingsPage(PageBase):
             ),
             self.create_channel_switch_container(
                 self._["wechat"], ft.Icons.WECHAT, "wechat_enabled"
+            ),
+            self.create_channel_switch_container(
+                self._["feishu"], ft.Icons.BOOK, "feishu_enabled"
             ),
             self.create_channel_switch_container(
                 self._["serverchan"], ft.Icons.CLOUD_OUTLINED, "serverchan_enabled"
