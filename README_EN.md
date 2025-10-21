@@ -271,6 +271,7 @@ https://www.youtube.com/watch?v=cS6zS5hi1w0
 
 Taobao:
 (Requires configuring cookies)
+https://tbzb.taobao.com/live?liveId=538503930649
 https://m.tb.cn/h.TWp0HTd
 
 JD:

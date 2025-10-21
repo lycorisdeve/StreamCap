@@ -125,6 +125,7 @@ def get_platform_info(record_url: str) -> tuple:
         ".shp.": ("shopee", "shopee"),
         "youtube.com/": ("Youtube", "youtube"),
         "tb.cn": ("淘宝直播", "taobao"),
+        "tbzb.taobao.com": ("淘宝直播", "taobao"),
         "3.cn": ("京东直播", "jd"),
         "faceit.com": ("faceit", "faceit"),
         "lailianjie.com": ("连接直播", "lianjie"),
