@@ -843,7 +843,11 @@ class PiaopiaoHandler(PlatformHandler):
     async def get_stream_info(self, live_url: str) -> StreamData:
         if not self.live_stream:
             self.live_stream = streamget.PiaopaioLiveStream(proxy_addr=self.proxy, cookies=self.cookies)
-        json_data = await self.live_stream.fetch_web_stream_data(url=live_url)
+
+        if 'preview.html' not in live_url:
+            json_data = await self.live_stream.fetch_app_stream_data(url=live_url)
+        else:
+            json_data = await self.live_stream.fetch_web_stream_data(url=live_url)
         return await self.live_stream.fetch_stream_url(json_data, self.record_quality)
 
 
@@ -1151,4 +1155,3 @@ LianJieHandler.register(r"https://.*\.lailianjie\.com/")
 MiguHandler.register(r"https://.*\.miguvideo\.com/")
 LaixiuHandler.register(r"https://.*\.imkktv\.com/")
 PicartoHandler.register(r"https://.*\.picarto\.tv/")
-
