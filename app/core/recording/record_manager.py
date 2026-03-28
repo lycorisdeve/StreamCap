@@ -148,7 +148,7 @@ class RecordingManager:
         Start monitoring multiple recordings based on user selection or all recordings if none are selected.
         """
         selected_recordings = await self.get_selected_recordings()
-        pre_start_monitor_recordings = selected_recordings if selected_recordings else self.recordings
+        pre_start_monitor_recordings = selected_recordings or self.recordings
         cards_obj = self.app.record_card_manager.cards_obj
         for recording in pre_start_monitor_recordings:
             if cards_obj[recording.rec_id]["card"].visible:
