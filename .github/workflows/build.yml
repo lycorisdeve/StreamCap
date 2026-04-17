@@ -19,28 +19,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-      - name: Install system dependencies
+      - name: Install FFmpeg
         run: |
           choco install ffmpeg -y
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          ffmpeg -version
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install git+https://github.com/ihmily/streamget.git --upgrade
           pip install pyinstaller
+
+      - name: Update StreamGet from Git
+        run: |
+          pip install git+https://github.com/ihmily/streamget.git --upgrade
 
       - name: Create .env file
         run: |
@@ -52,7 +49,7 @@ jobs:
         run: |
           pyinstaller --noconfirm --onedir --windowed --icon "assets/icon.ico" --name "StreamCap" --add-data "assets;assets/" --add-data "config;config/" --add-data "locales;locales/" --hidden-import "flet.matplotlib_chart" --hidden-import "flet.plotly_chart" --hidden-import "flet.video" --collect-all "streamget" main.py
 
-      - name: Fix Windows pkg
+      - name: Fix Windows package structure
         run: |
           mv dist/StreamCap/_internal/config dist/StreamCap/
           mv dist/StreamCap/_internal/locales dist/StreamCap/
@@ -78,30 +75,26 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-      - name: Install system dependencies
+      - name: Install FFmpeg
         run: |
           # Install FFmpeg
           brew install ffmpeg
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/Library/Caches/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          ffmpeg -version
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pyinstaller dmgbuild
+
+      - name: Update StreamGet from Git
+        run: |
           pip install git+https://github.com/ihmily/streamget.git --upgrade
-          pip install pyinstaller
-          pip install dmgbuild
 
       - name: Create .env file
         run: |
@@ -113,13 +106,14 @@ jobs:
         run: |
           pyinstaller --noconfirm --onedir --windowed --icon "assets/icon.ico" --name "StreamCap" --add-data "assets:assets/" --add-data "config:config/" --add-data "locales:locales/" --hidden-import "flet.matplotlib_chart" --hidden-import "flet.plotly_chart" --hidden-import "flet.video" --collect-all "streamget" main.py
 
-      - name: Create macOS app bundle
+      - name: Create macOS app bundle structure
         run: |
           mkdir -p "StreamCap.app/Contents/MacOS"
           mkdir -p "StreamCap.app/Contents/Resources"
 
-          # Create Info.plist
-          cat > "StreamCap.app/Contents/Info.plist" << EOF
+      - name: Generate Info.plist
+        run: |
+          cat > "StreamCap.app/Contents/Info.plist" << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -148,16 +142,15 @@ jobs:
           </plist>
           EOF
 
-          # Copy executable and resources
+      - name: Copy binaries and assets
+        run: |
           cp -r dist/StreamCap/* "StreamCap.app/Contents/MacOS/"
           cp assets/icon.ico "StreamCap.app/Contents/Resources/icon.ico"
-
-          # Make executable
           chmod +x "StreamCap.app/Contents/MacOS/StreamCap"
 
       - name: Create DMG settings file
         run: |
-          cat > dmg_settings.py << EOF
+          cat > dmg_settings.py << 'EOF'
           import os
 
           # DMG settings
@@ -188,7 +181,7 @@ jobs:
           icon_size = 128
           EOF
 
-      - name: Create DMG
+      - name: Create DMG package
         run: |
           dmgbuild -s dmg_settings.py "StreamCap" "StreamCap-macOS.dmg"
 
@@ -207,30 +200,27 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-      - name: Install system dependencies
+      - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          ffmpeg -version
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-web.txt
+
+      - name: Update StreamGet from Git
+        run: |
           pip install git+https://github.com/ihmily/streamget.git --upgrade
 
-      - name: Create .env file
+      - name: Create .env file for Web
         run: |
           echo "PLATFORM=web" > .env
           echo "HOST=0.0.0.0" >> .env
@@ -240,7 +230,7 @@ jobs:
         run: |
           timeout 30s python main.py --web --host 0.0.0.0 --port 6006 || true
 
-      - name: Package Linux build
+      - name: Package Linux code
         run: |
           mkdir -p ../package
           rsync -av --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' --exclude='*.log' --exclude='.pytest_cache' --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='*.egg-info' . ../package/StreamCap/
@@ -256,14 +246,12 @@ jobs:
           path: StreamCap-Linux.tar.gz
           retention-days: 30
 
-    # 这里提供一个输出
-    outputs:
-      linux-artifact-path: ${{ steps.upload-linux-artifact.outputs.artifact-path }}
-
   prerelease:
     needs: [build-windows, build-macos, build-linux]
     if: github.event_name != 'pull_request' && github.repository == 'lycorisdeve/streamcap'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -285,30 +273,27 @@ jobs:
           name: StreamCap-Linux
           path: releases/
 
-      - name: Check and rename files
+      - name: Check and rename artifacts for Beta
         run: |
-          # 检查 Windows 文件是否存在并重命名
           if [ -f "releases/StreamCap-Windows.zip" ]; then
             mv releases/StreamCap-Windows.zip "StreamCap_Windows_beta.zip"
           else
             echo "StreamCap-Windows.zip not found!"
           fi
 
-          # 检查 macOS 文件是否存在并重命名
           if [ -f "releases/StreamCap-macOS.dmg" ]; then
             mv releases/StreamCap-macOS.dmg "StreamCap_macOS_beta.dmg"
           else
             echo "StreamCap-macOS.dmg not found!"
           fi
 
-          # 检查 Linux 文件是否存在并重命名
           if [ -f "releases/StreamCap-Linux.tar.gz" ]; then
             mv releases/StreamCap-Linux.tar.gz "StreamCap_Linux_beta.tar.gz"
           else
             echo "StreamCap-Linux.tar.gz not found!"
           fi
 
-      - name: Delete Pre-Release (if exists)
+      - name: Delete Old Pre-Release (if exists)
         run: |
           if gh release view beta &>/dev/null; then
             gh release delete beta -y
@@ -316,18 +301,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Create or update beta tag
+      - name: Create or Update Beta Tag
         uses: richardsimko/update-tag@v1
         with:
           tag_name: beta
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      - name: Publish Pre-Release
+      - name: Publish Beta Release
         uses: ncipollo/release-action@v1
         with:
           name: StreamCap-beta
           tag: "beta"
-          body: "此版本为测试版，可能存在不稳定情况，升级前请务必备份好数据。"
+          body: "此版本为测试版，包含最新代码变更，可能存在不稳定情况，升级前请务必备份好数据。"
           prerelease: true
           artifacts: ${{ github.workspace }}/*.zip,${{ github.workspace }}/*.dmg,${{ github.workspace }}/*.tar.gz
