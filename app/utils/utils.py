@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import hashlib
 import json
@@ -20,6 +21,63 @@ from .logger import logger
 
 OptionalStr = str | None
 OptionalDict = dict | None
+
+# Pre-compiled regular expressions for performance
+EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001f1e0-\U0001f1ff"  # flags (iOS)
+    "\U0001f300-\U0001f5ff"  # symbols & pictographs
+    "\U0001f600-\U0001f64f"  # emoticons
+    "\U0001f680-\U0001f6ff"  # transport & map symbols
+    "\U0001f700-\U0001f77f"  # alchemical symbols
+    "\U0001f780-\U0001f7ff"  # Geometric Shapes Extended
+    "\U0001f800-\U0001f8ff"  # Supplemental Arrows-C
+    "\U0001f900-\U0001f9ff"  # Supplemental Symbols and Pictographs
+    "\U0001fa00-\U0001fa6f"  # Chess Symbols
+    "\U0001fa70-\U0001faff"  # Symbols and Pictographs Extended-A
+    "\U00002702-\U000027b0"  # Dingbats
+    "]+",
+    flags=re.UNICODE,
+)
+
+URL_PATTERN = re.compile(r"^(https?://)" r"([a-zA-Z0-9-]+\.)+[a-zA-Z0-9]{1,6}" r"(:\d+)?" r"(/\S*)?$")
+
+CONTAINS_URL_PATTERN = re.compile(r"(?i)\bhttps?://" r"(?:[a-zA-Z0-9-]+\.)+[a-zA-Z0-9]{1,6}" r"(?::\d+)?" r"(?:/\S*)?")
+
+
+def is_web_session_alive(page) -> bool:
+    """Return True if the flet page session/connection is still healthy."""
+    try:
+        session = getattr(page, "session", None)
+        if session is None:
+            return False
+        connection = getattr(session, "connection", None)
+        if connection is None:
+            return False
+        return getattr(connection, "loop", None) is not None
+    except Exception:
+        return False
+
+
+def run_task_safe(page, handler, *args, ui_only: bool = False, **kwargs):
+    """Safely schedule an async handler."""
+    if ui_only and not is_web_session_alive(page):
+        return None
+    try:
+        loop = asyncio.get_running_loop()
+        return loop.create_task(handler(*args, **kwargs))
+    except RuntimeError:
+        # No running loop in current thread; try flet's scheduler.
+        try:
+            return page.run_task(handler, *args, **kwargs)
+        except AttributeError:
+            logger.warning(
+                f"run_task_safe: flet session unavailable, drop task {getattr(handler, '__qualname__', handler)}"
+            )
+            return None
+    except Exception as e:
+        logger.error(f"run_task_safe failed to schedule {getattr(handler, '__qualname__', handler)}: {e}")
+        return None
 
 
 class Color:
@@ -73,23 +131,7 @@ def get_file_paths(directory: str) -> list:
 
 
 def remove_emojis(text: str, replace_text: str = "") -> str:
-    emoji_pattern = re.compile(
-        "["
-        "\U0001f1e0-\U0001f1ff"  # flags (iOS)
-        "\U0001f300-\U0001f5ff"  # symbols & pictographs
-        "\U0001f600-\U0001f64f"  # emoticons
-        "\U0001f680-\U0001f6ff"  # transport & map symbols
-        "\U0001f700-\U0001f77f"  # alchemical symbols
-        "\U0001f780-\U0001f7ff"  # Geometric Shapes Extended
-        "\U0001f800-\U0001f8ff"  # Supplemental Arrows-C
-        "\U0001f900-\U0001f9ff"  # Supplemental Symbols and Pictographs
-        "\U0001fa00-\U0001fa6f"  # Chess Symbols
-        "\U0001fa70-\U0001faff"  # Symbols and Pictographs Extended-A
-        "\U00002702-\U000027b0"  # Dingbats
-        "]+",
-        flags=re.UNICODE,
-    )
-    return emoji_pattern.sub(replace_text, text)
+    return EMOJI_PATTERN.sub(replace_text, text)
 
 
 def check_disk_capacity(file_path: str | Path, show: bool = False) -> float:
@@ -217,26 +259,14 @@ def is_valid_url(url):
         result = urlparse(url)
         if not all([result.scheme, result.netloc]):
             return False
-        url_pattern = re.compile(
-            r"^(https?://)"
-            r"([a-zA-Z0-9-]+\.)+[a-zA-Z0-9]{1,6}"
-            r"(:\d+)?"
-            r"(/\S*)?$"
-        )
-        return bool(url_pattern.match(url))
+        return bool(URL_PATTERN.match(url))
     except ValueError:
         return False
 
 
 def contains_url(text):
-    url_pattern = re.compile(
-        r"(?i)\bhttps?://"
-        r"(?:[a-zA-Z0-9-]+\.)+[a-zA-Z0-9]{1,6}"
-        r"(?::\d+)?"
-        r"(?:/\S*)?"
-    )
     try:
-        return bool(url_pattern.search(text))
+        return bool(CONTAINS_URL_PATTERN.search(text))
     except ValueError:
         return False
 
@@ -254,7 +284,7 @@ def get_startup_info(system_type: str | None = None):
 
 
 def is_valid_video_file(source: str) -> bool:
-    video_extensions = ['.mp4', '.mov', '.mkv', '.nut', '.ts', '.flv', '.mp3', '.m4a', '.wav', '.aac', '.wma']
+    video_extensions = [".mp4", ".mov", ".mkv", ".nut", ".ts", ".flv", ".mp3", ".m4a", ".wav", ".aac", ".wma"]
     return Path(source).suffix.lower() in video_extensions
 
 

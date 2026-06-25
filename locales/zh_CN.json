@@ -243,6 +243,7 @@
     "login_required_disabled": "已禁用安全登录",
     "current_username": "当前用户名",
     "old_password": "旧密码",
+    "default_old_password": "默认: admin",
     "new_password": "新密码",
     "confirm_password": "确认密码",
     "change_password": "修改密码",
@@ -455,7 +456,10 @@
     "stream_source": "直播源",
     "previewing":"正在预览",
     "view_stream_source_now": "正在访问直播源",
-    "unsupported_play_on_web": "Web端只支持预览MP4文件 ⚠️"
+    "unsupported_play_on_web": "Web端只支持预览MP4文件 ⚠️",
+    "screenshot": "截图",
+    "screenshot_success": "截图已保存",
+    "screenshot_failed": "截图失败 ⚠️"
   },
   "update": {
     "new_version": "发现新版本 {version}",

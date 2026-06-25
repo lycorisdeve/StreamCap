@@ -40,9 +40,9 @@ class RecordingCardManager:
         if not self.cards_obj.get(rec_id):
             check_live_on_browser_refresh = self.app.settings.user_config.get("check_live_on_browser_refresh", True)
             if self.app.recording_enabled and not subscribe_add_cards:
-                if check_live_on_browser_refresh or recording.streamer_name == self._['live_room']:
+                if check_live_on_browser_refresh or recording.streamer_name == self._["live_room"]:
                     self.app.page.run_task(self.app.record_manager.check_if_live, recording)
-            
+
         card_data = self._create_card_components(recording)
         self.cards_obj[rec_id] = card_data
         self.start_update_task(recording)
@@ -55,30 +55,35 @@ class RecordingCardManager:
 
         record_button = ft.IconButton(
             icon=self.get_icon_for_recording_state(recording),
+            icon_color=ft.Colors.PRIMARY,
             tooltip=self.get_tip_for_recording_state(recording),
             on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_button_on_click, e, rec),
         )
 
         edit_button = ft.IconButton(
             icon=ft.Icons.EDIT,
+            icon_color=ft.Colors.PRIMARY,
             tooltip=self._["edit_record_config"],
             on_click=lambda e, rec=recording: self.app.page.run_task(self.edit_recording_button_click, e, rec),
         )
 
         preview_button = ft.IconButton(
             icon=ft.Icons.VIDEO_LIBRARY,
+            icon_color=ft.Colors.PRIMARY,
             tooltip=self._["preview_video"],
             on_click=lambda e, rec=recording: self.app.page.run_task(self.preview_video_button_on_click, e, rec),
         )
 
         monitor_button = ft.IconButton(
             icon=self.get_icon_for_monitor_state(recording),
+            icon_color=ft.Colors.PRIMARY,
             tooltip=self.get_tip_for_monitor_state(recording),
             on_click=lambda e, rec=recording: self.app.page.run_task(self.monitor_button_on_click, e, rec),
         )
 
         delete_button = ft.IconButton(
             icon=ft.Icons.DELETE,
+            icon_color=ft.Colors.PRIMARY,
             tooltip=self._["delete_monitor"],
             on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_delete_button_click, e, rec),
         )
@@ -97,11 +102,13 @@ class RecordingCardManager:
 
         open_folder_button = ft.IconButton(
             icon=ft.Icons.FOLDER,
+            icon_color=ft.Colors.PRIMARY,
             tooltip=self._["open_folder"],
             on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_dir_button_on_click, e, rec),
         )
         recording_info_button = ft.IconButton(
             icon=ft.Icons.INFO,
+            icon_color=ft.Colors.PRIMARY,
             tooltip=self._["recording_info"],
             on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_info_button_on_click, e, rec),
         )
@@ -130,21 +137,21 @@ class RecordingCardManager:
                             preview_button,
                             edit_button,
                             delete_button,
-                            monitor_button
+                            monitor_button,
                         ],
                         spacing=3,
                         alignment=ft.MainAxisAlignment.START,
-                        scroll=ft.ScrollMode.HIDDEN
+                        scroll=ft.ScrollMode.HIDDEN,
                     ),
                 ],
                 spacing=3,
-                tight=True
+                tight=True,
             ),
             padding=8,
             on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_card_on_click, e, rec),
             bgcolor=self.get_card_background_color(recording),
             border_radius=5,
-            border=ft.border.all(2, self.get_card_border_color(recording)),
+            border=ft.Border.all(2, self.get_card_border_color(recording)),
         )
         card = ft.Card(key=str(recording.rec_id), content=card_container)
 
@@ -178,18 +185,13 @@ class RecordingCardManager:
             return None
 
         return ft.Container(
-            content=ft.Text(
-                config["text"],
-                color=config["text_color"],
-                size=12,
-                weight=ft.FontWeight.BOLD
-            ),
+            content=ft.Text(config["text"], color=config["text_color"], size=12, weight=ft.FontWeight.BOLD),
             bgcolor=config["bgcolor"],
             border_radius=5,
             padding=5,
             width=60,
             height=26,
-            alignment=ft.alignment.center,
+            alignment=ft.alignment.Alignment.CENTER,
         )
 
     async def update_card(self, recording):
@@ -237,14 +239,14 @@ class RecordingCardManager:
 
                 if recording_card["card"] and recording_card["card"].content:
                     recording_card["card"].content.bgcolor = self.get_card_background_color(recording)
-                    recording_card["card"].content.border = ft.border.all(2, self.get_card_border_color(recording))
+                    recording_card["card"].content.border = ft.Border.all(2, self.get_card_border_color(recording))
                     try:
                         self.app.page.update()
-                    except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+                    except (ft.FletPageDisconnectedException, AssertionError) as e:
                         logger.debug(f"Update card failed: {e}")
                         return
 
-            except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+            except (ft.FletPageDisconnectedException, AssertionError) as e:
                 logger.debug(f"Update card failed: {e}")
                 return
             except Exception as e:
@@ -277,7 +279,7 @@ class RecordingCardManager:
 
         await self.update_card(recording)
         self.app.page.pubsub.send_others_on_topic("update", recording)
-        self.app.page.run_task(self.app.record_manager.persist_recordings)
+        self.app.services.run_coro(self.app.record_manager.persist_recordings())
 
     async def show_recording_info_dialog(self, recording: Recording):
         """Display a dialog with detailed information about the recording."""
@@ -287,9 +289,9 @@ class RecordingCardManager:
             self.app.dialog_area.content = dialog
             try:
                 self.app.page.update()
-            except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+            except (ft.FletPageDisconnectedException, AssertionError) as e:
                 logger.debug(f"Update recording info dialog failed: {e}")
-        except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+        except (ft.FletPageDisconnectedException, AssertionError) as e:
             logger.debug(f"Show recording info dialog failed: {e}")
         except Exception as e:
             logger.debug(f"Show recording info dialog failed: {e}")
@@ -304,7 +306,8 @@ class RecordingCardManager:
             recording.display_title = f"[{self._['monitor_stopped']}] " + recording.title
 
         recording.scheduled_time_range = await self.app.record_manager.get_scheduled_time_range(
-            recording.scheduled_start_time, recording.monitor_hours)
+            recording.scheduled_start_time, recording.monitor_hours
+        )
 
         await self.update_card(recording)
         self.app.page.pubsub.send_others_on_topic("update", recording_dict)
@@ -320,7 +323,7 @@ class RecordingCardManager:
                     await self.app.record_manager.check_if_live(recording)
                     if recording.is_live:
                         self.app.record_manager.start_update(recording)
-                        await self.app.snack_bar.show_snack_bar(self._["pre_record_tip"], bgcolor=ft.Colors.GREEN)
+                        await self.app.snack_bar.show_snack_bar(self._["pre_record_tip"], bgcolor=ft.Colors.PRIMARY)
                     else:
                         await self.app.snack_bar.show_snack_bar(self._["is_not_live_tip"])
                 else:
@@ -336,8 +339,12 @@ class RecordingCardManager:
                 await self.app.snack_bar.show_snack_bar(self._["please_stop_monitor_tip"])
                 return
             await self.app.record_manager.delete_recording_cards([recording])
+            current_page = getattr(self.app, "current_page", None)
+            if current_page is not None and getattr(current_page, "page_name", None) == "recordings":
+                current_page.content_area.controls[1] = current_page.create_filter_area()
+                current_page.content_area.update()
             await self.app.snack_bar.show_snack_bar(
-                self._["delete_recording_success_tip"], bgcolor=ft.Colors.GREEN, duration=2000
+                self._["delete_recording_success_tip"], bgcolor=ft.Colors.PRIMARY, duration=2000
             )
 
     async def remove_recording_card(self, recordings: list[Recording]):
@@ -349,9 +356,7 @@ class RecordingCardManager:
             keep_ids = existing_ids - remove_ids
 
             cards_to_remove = [
-                card_data["card"]
-                for rec_id, card_data in self.cards_obj.items()
-                if rec_id not in keep_ids
+                card_data["card"] for rec_id, card_data in self.cards_obj.items() if rec_id not in keep_ids
             ]
 
             recordings_page.recording_card_area.content.controls = [
@@ -360,17 +365,14 @@ class RecordingCardManager:
                 if control not in cards_to_remove
             ]
 
-            self.cards_obj = {
-                k: v for k, v in self.cards_obj.items()
-                if k in keep_ids
-            }
+            self.cards_obj = {k: v for k, v in self.cards_obj.items() if k in keep_ids}
 
             try:
                 recordings_page.recording_card_area.update()
-            except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+            except (ft.FletPageDisconnectedException, AssertionError) as e:
                 logger.debug(f"Update recording card area failed: {e}")
 
-        except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+        except (ft.FletPageDisconnectedException, AssertionError) as e:
             logger.debug(f"Remove recording card failed: {e}")
         except Exception as e:
             logger.debug(f"Remove recording card failed: {e}")
@@ -403,12 +405,17 @@ class RecordingCardManager:
             if not recording or recording.rec_id not in self.cards_obj:  # Stop task if card is removed
                 break
 
+            # Skip update when not on recordings page (cards are detached from page tree)
+            current_page = getattr(self.app, "current_page", None)
+            if not current_page or getattr(current_page, "page_name", None) != "recordings":
+                continue
+
             if recording.is_recording:
                 try:
                     duration_label = self.cards_obj[recording.rec_id]["duration_label"]
                     duration_label.value = self.app.record_manager.get_duration(recording)
                     duration_label.update()
-                except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+                except (ft.FletPageDisconnectedException, AssertionError) as e:
                     logger.debug(f"Update duration failed: {e}")
                     break
                 except Exception as e:
@@ -426,9 +433,9 @@ class RecordingCardManager:
             self.cards_obj[recording.rec_id]["card"].content.bgcolor = await self.update_record_hover(recording)
             try:
                 self.cards_obj[recording.rec_id]["card"].update()
-            except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+            except (ft.FletPageDisconnectedException, AssertionError) as e:
                 logger.debug(f"Update card click state failed: {e}")
-        except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+        except (ft.FletPageDisconnectedException, AssertionError) as e:
             logger.debug(f"Handle card click event failed: {e}")
         except Exception as e:
             logger.debug(f"Handle card click event failed: {e}")
@@ -437,7 +444,7 @@ class RecordingCardManager:
         if recording.recording_dir:
             if os.path.exists(recording.recording_dir):
                 if not utils.open_folder(recording.recording_dir):
-                    await self.app.snack_bar.show_snack_bar(self._['no_video_file'])
+                    await self.app.snack_bar.show_snack_bar(self._["no_video_file"])
             else:
                 await self.app.snack_bar.show_snack_bar(self._["no_recording_folder"])
 
@@ -456,6 +463,7 @@ class RecordingCardManager:
 
     async def recording_delete_button_click(self, _, recording: Recording):
         try:
+
             async def confirm_dlg(_):
                 self.app.page.run_task(self.on_delete_recording, recording)
                 await close_dialog(None)
@@ -464,15 +472,15 @@ class RecordingCardManager:
                 try:
                     delete_alert_dialog.open = False
                     delete_alert_dialog.update()
-                except (ft.core.page.PageDisconnectedException, AssertionError) as err:
+                except (ft.FletPageDisconnectedException, AssertionError) as err:
                     logger.debug(f"Close delete dialog failed: {err}")
 
             delete_alert_dialog = ft.AlertDialog(
                 title=ft.Text(self._["confirm"]),
                 content=ft.Text(self._["delete_confirm_tip"]),
                 actions=[
-                    ft.TextButton(text=self._["cancel"], on_click=close_dialog),
-                    ft.TextButton(text=self._["sure"], on_click=confirm_dlg),
+                    ft.TextButton(content=self._["cancel"], on_click=close_dialog),
+                    ft.TextButton(content=self._["sure"], on_click=confirm_dlg),
                 ],
                 actions_alignment=ft.MainAxisAlignment.END,
                 modal=False,
@@ -481,9 +489,9 @@ class RecordingCardManager:
             self.app.dialog_area.content = delete_alert_dialog
             try:
                 self.app.page.update()
-            except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+            except (ft.FletPageDisconnectedException, AssertionError) as e:
                 logger.debug(f"Update delete dialog failed: {e}")
-        except (ft.core.page.PageDisconnectedException, AssertionError) as e:
+        except (ft.FletPageDisconnectedException, AssertionError) as e:
             logger.debug(f"Show delete dialog failed: {e}")
         except Exception as e:
             logger.debug(f"Show delete dialog failed: {e}")
@@ -496,8 +504,9 @@ class RecordingCardManager:
             video_files = []
             for root, _, files in os.walk(recording.recording_dir):
                 for file in files:
-                    if utils.is_valid_video_file(file):
-                        video_files.append(os.path.join(root, file))
+                    file_str = str(file)
+                    if utils.is_valid_video_file(file_str):
+                        video_files.append(os.path.join(str(root), file_str))
 
             if video_files:
                 video_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)

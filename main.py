@@ -1,6 +1,7 @@
 import argparse
 import multiprocessing
 import os
+from collections.abc import Callable
 
 import flet as ft
 from dotenv import load_dotenv
@@ -8,6 +9,8 @@ from screeninfo import get_monitors
 
 from app.app_manager import App, execute_dir
 from app.auth.auth_manager import AuthManager
+from app.core.runtime.backend_services import BackendServices
+from app.core.runtime.bundled_env import setup_bundled_flet_view
 from app.lifecycle.app_close_handler import handle_app_close
 from app.lifecycle.tray_manager import TrayManager
 from app.ui.components.common.save_progress_overlay import SaveProgressOverlay
@@ -22,22 +25,13 @@ MIN_WIDTH = 950
 ASSETS_DIR = "assets"
 
 
-class GlobalState:
-    periodic_tasks_started = False
-
-
-global_state = GlobalState()
-
-
-def setup_window(page: ft.Page, app: App, is_web: bool) -> None:
+async def setup_window(page: ft.Page, app: App) -> None:
     page.window.icon = os.path.join(execute_dir, ASSETS_DIR, "icon.ico")
-    page.window.center()
-    page.window.to_front()
     page.window.skip_task_bar = False
     page.window.always_on_top = False
     page.focused = True
 
-    if not is_web:
+    if not page.web:
         try:
             if app.settings.user_config.get("remember_window_size"):
                 window_width = app.settings.user_config.get("window_width")
@@ -45,11 +39,20 @@ def setup_window(page: ft.Page, app: App, is_web: bool) -> None:
                 if window_width and window_height:
                     page.window.width = int(window_width)
                     page.window.height = int(window_height)
-                    return
+                else:
+                    screen = get_monitors()[0]
+                    page.window.width = int(screen.width * WINDOW_SCALE)
+                    page.window.height = int(screen.height * WINDOW_SCALE)
+            else:
+                screen = get_monitors()[0]
+                page.window.width = int(screen.width * WINDOW_SCALE)
+                page.window.height = int(screen.height * WINDOW_SCALE)
 
-            screen = get_monitors()[0]
-            page.window.width = int(screen.width * WINDOW_SCALE)
-            page.window.height = int(screen.height * WINDOW_SCALE)
+            page.update()
+            await page.window.center()
+            await page.window.to_front()
+            page.window.visible = True
+            page.update()
         except IndexError:
             logger.warning("No monitors detected, using default window size.")
 
@@ -65,7 +68,7 @@ def get_route_handler() -> dict[str, str]:
     }
 
 
-def handle_route_change(page: ft.Page, app: App) -> callable:
+def handle_route_change(page: ft.Page, app: App) -> Callable:
     route_map = get_route_handler()
 
     def route_change(e: ft.RouteChangeEvent) -> None:
@@ -73,16 +76,13 @@ def handle_route_change(page: ft.Page, app: App) -> callable:
         page_name = route_map.get(tr.route)
         if page_name:
             page.run_task(app.switch_page, page_name)
-        else:
-            logger.warning(f"Unknown route: {e.route}, redirecting to /")
-            page.go("/")
 
     return route_change
 
 
-def handle_window_event(page: ft.Page, app: App, save_progress_overlay: 'SaveProgressOverlay') -> callable:
-    async def on_window_event(e: ft.ControlEvent) -> None:
-        if e.data == "close":
+def handle_window_event(page: ft.Page, app: App, save_progress_overlay: "SaveProgressOverlay") -> Callable:
+    async def on_window_event(e) -> None:
+        if e.type == ft.WindowEventType.CLOSE:
             if app.settings.user_config.get("remember_window_size"):
                 app.settings.user_config["window_width"] = page.window.width
                 app.settings.user_config["window_height"] = page.window.height
@@ -92,7 +92,7 @@ def handle_window_event(page: ft.Page, app: App, save_progress_overlay: 'SavePro
     return on_window_event
 
 
-def handle_disconnect(page: ft.Page, app: App) -> callable:
+def handle_disconnect(page: ft.Page, app: App) -> Callable:
     """Handle disconnection for web mode."""
 
     async def disconnect(_: ft.ControlEvent) -> None:
@@ -101,10 +101,13 @@ def handle_disconnect(page: ft.Page, app: App) -> callable:
         await app.config_manager.save_user_config(app.settings.user_config)
         logger.info(f"Saved last route: {page.route}")
 
+        if app.services is not None:
+            app.services.unregister_ui_bridge(app)
+
     return disconnect
 
 
-def handle_page_resize(page: ft.Page, app: App) -> callable:
+def handle_page_resize(page: ft.Page, app: App) -> Callable:
     """handle page resize"""
 
     def on_resize(_: ft.ControlEvent) -> None:
@@ -119,55 +122,53 @@ async def main(page: ft.Page) -> None:
     page.window.min_width = MIN_WIDTH
     page.window.min_height = MIN_WIDTH * WINDOW_SCALE
 
-    is_web = args.web or platform == "web"
-
-    app = App(page)
+    _services = BackendServices.get()
+    app = App(page, services=_services)
     page.data = app
-    app.is_web_mode = is_web
+    app.is_web_mode = page.web
     app.is_mobile = False
-    setup_window(page, app, is_web)
+    await setup_window(page, app)
 
-    if not is_web:
+    if not page.web:
         try:
             app.tray_manager = TrayManager(app)
             logger.info("Tray manager initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize tray manager: {e}")
-    
+
     theme_mode = app.settings.user_config.get("theme_mode", "light")
     if theme_mode == "dark":
         page.theme_mode = ft.ThemeMode.DARK
     else:
         page.theme_mode = ft.ThemeMode.LIGHT
-    
+
     save_progress_overlay = SaveProgressOverlay(app)
     page.overlay.append(save_progress_overlay.overlay)
-    
+
     async def load_app():
-        if is_web:
+        if page.web:
             setup_responsive_layout(page, app)
             page.on_resize = handle_page_resize(page, app)
             page.on_disconnect = handle_disconnect(page, app)
 
         page.add(app.complete_page)
-        
+
         page.on_route_change = handle_route_change(page, app)
         page.window.prevent_close = True
         page.window.on_event = handle_window_event(page, app, save_progress_overlay)
-        if is_web:
-            global global_state
-            if not global_state.periodic_tasks_started:
-                global_state.periodic_tasks_started = True
-                logger.info("Starting periodic tasks for the first time in web mode")
+        if page.web:
+            rm = _services.recording_manager
+            if rm is not None and not rm.is_periodic_task_running():
+                logger.info("Starting periodic tasks for the first time in web mode (via session)")
                 page.run_task(app.start_periodic_tasks)
             else:
-                logger.info("Periodic tasks already running in web mode, skipping initialization")
+                logger.info("Periodic tasks already running (BackendServices), skipping")
         else:
             logger.info("Starting periodic tasks in desktop mode")
             page.run_task(app.start_periodic_tasks)
 
-            if page.platform.value == "windows":
-                if hasattr(app, "tray_manager"):
+            if page.platform and page.platform.value == "windows":
+                if app.tray_manager is not None:
                     try:
                         app.tray_manager.start(page)
                     except Exception as err:
@@ -175,32 +176,34 @@ async def main(page: ft.Page) -> None:
 
         page.update()
 
-        if page.route == '/':
+        if page.route in ["/", ""]:
             last_route = app.settings.user_config.get("last_route", "/home")
             logger.info(f"Restored last route: {last_route}")
-            page.go(last_route)
-        else:
-            page.go(page.route)
+            await page.push_route(last_route)
 
-    if is_web:
+        if page.web:
+            page.run_task(app.switch_page, page.route[1:])
+
+    if page.web:
         auth_manager = AuthManager(app)
         app.auth_manager = auth_manager
         await auth_manager.initialize()
-        
+
         login_required = app.settings.get_config_value("login_required", False)
-        
+
         if login_required:
-            session_token = await page.client_storage.get_async("session_token")
+            session_token = await page.shared_preferences.get("session_token")
             if not session_token or not auth_manager.validate_session(session_token):
+
                 async def on_login_success(token):
                     _session_info = auth_manager.active_sessions.get(token, {})
                     app.current_username = _session_info.get("username")
-                    
-                    page.clean()
+
+                    page.controls.clear()
                     await load_app()
-                
-                page.clean()
-                
+
+                page.controls.clear()
+
                 login_page = LoginPage(page, auth_manager, on_login_success)
                 page.add(login_page.get_view())
                 return
@@ -209,7 +212,7 @@ async def main(page: ft.Page) -> None:
                 app.current_username = session_info.get("username")
         else:
             app.current_username = "admin"
-    
+
     await load_app()
 
 
@@ -226,17 +229,22 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     multiprocessing.freeze_support()
-    if args.web or platform == "web":
+
+    services = BackendServices.bootstrap(execute_dir)
+
+    is_web = args.web or platform == "web"
+    if is_web:
+        services.start_background_loop()
         logger.debug("Running in web mode on http://" + args.host + ":" + str(args.port))
-        ft.app(
-            target=main,
+        ft.run(
+            main=main,
             view=ft.AppView.WEB_BROWSER,
             host=args.host,
             port=args.port,
             assets_dir=ASSETS_DIR,
-            use_color_emoji=True,
-            web_renderer=ft.WebRenderer.CANVAS_KIT
+            web_renderer=ft.WebRenderer.CANVAS_KIT,
+            no_cdn=True,
         )
-
     else:
-        ft.app(target=main, assets_dir=ASSETS_DIR)
+        setup_bundled_flet_view()
+        ft.run(main=main, view=ft.AppView.FLET_APP_HIDDEN, assets_dir=ASSETS_DIR)

@@ -3,6 +3,7 @@ import os
 import time
 from typing import Optional
 
+import aiofiles
 import httpx
 
 from ...utils.logger import logger
@@ -13,12 +14,14 @@ class DirectStreamDownloader:
     Directly download the live stream using HTTP requests, used to handle FLV streams that ffmpeg cannot handle normally
     """
 
-    def __init__(self,
-                 record_url: str,
-                 save_path: str,
-                 headers: Optional[dict[str, str]] = None,
-                 proxy: Optional[str] = None,
-                 chunk_size: int = 1024 * 16):  # 16KB chunks
+    def __init__(
+        self,
+        record_url: str,
+        save_path: str,
+        headers: Optional[dict[str, str]] = None,
+        proxy: Optional[str] = None,
+        chunk_size: int = 1024 * 16,
+    ):  # 16KB chunks
         self.record_url = record_url
         self.save_path = save_path
         self.headers = headers or {}
@@ -50,18 +53,27 @@ class DirectStreamDownloader:
         try:
             os.makedirs(os.path.dirname(self.save_path), exist_ok=True)
 
-            async with httpx.AsyncClient(headers=self.headers, proxy=self.proxy, timeout=None) as client:
+            async with httpx.AsyncClient(
+                headers=self.headers, proxy=self.proxy, timeout=None, follow_redirects=True, max_redirects=5
+            ) as client:
                 async with client.stream("GET", self.record_url) as response:
-                    if response.status_code != 200:
+                    # Accept 2xx status codes (200, 201, 206, etc.)
+                    if not (200 <= response.status_code < 300):
                         logger.error(f"Request Stream Failed, Status Code: {response.status_code}")
                         return
 
-                    with open(self.save_path, 'wb') as f:
+                    # Log if redirect occurred
+                    if response.history:
+                        redirect_count = len(response.history)
+                        final_url = str(response.url)
+                        logger.info(f"Redirected {redirect_count} time(s) to: {final_url}")
+
+                    async with aiofiles.open(self.save_path, "wb") as f:
                         async for chunk in response.aiter_bytes(self.chunk_size):
                             if self.stop_event.is_set():
                                 break
 
-                            f.write(chunk)
+                            await f.write(chunk)
                             self.total_bytes += len(chunk)
 
                             # Please don't remove this comment code

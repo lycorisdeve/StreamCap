@@ -48,7 +48,7 @@ class HomePage(PageBase):
             src=logo_path,
             width=120,
             height=120,
-            fit=ft.ImageFit.CONTAIN,
+            fit=ft.BoxFit.CONTAIN,
         )
 
         current_hour = datetime.now().hour
@@ -63,8 +63,8 @@ class HomePage(PageBase):
                 controls=[
                     ft.Container(
                         content=logo,
-                        alignment=ft.alignment.center,
-                        margin=ft.margin.only(top=30, bottom=10),
+                        alignment=ft.alignment.Alignment.CENTER,
+                        margin=ft.Margin.only(top=30, bottom=10),
                     ),
                     ft.Text(
                         f"{greeting}，{self._['welcome']}",
@@ -75,15 +75,17 @@ class HomePage(PageBase):
                     ft.Text(
                         self._["tagline"],
                         size=18,
-                        color=(ft.Colors.BLACK87 if self.app.page.theme_mode == ft.ThemeMode.LIGHT
-                               else ft.Colors.WHITE70),
+                        color=(
+                            ft.Colors.BLACK87 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE70
+                        ),
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Text(
                         self._["version"] + ":" + self.app.about.about_config["version_updates"][0]["version"],
                         size=14,
-                        color=(ft.Colors.BLACK54 if self.app.page.theme_mode == ft.ThemeMode.LIGHT
-                               else ft.Colors.WHITE60),
+                        color=(
+                            ft.Colors.BLACK54 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE60
+                        ),
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ],
@@ -91,8 +93,8 @@ class HomePage(PageBase):
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=10,
             ),
-            alignment=ft.alignment.center,
-            padding=ft.padding.only(bottom=20),
+            alignment=ft.alignment.Alignment.CENTER,
+            padding=ft.Padding.only(bottom=20),
         )
 
     def create_quick_action_area(self):
@@ -161,14 +163,14 @@ class HomePage(PageBase):
                                 width=button_width,
                                 height=button_height,
                             ),
-                            alignment=ft.alignment.center,
+                            alignment=ft.alignment.Alignment.CENTER,
                         ),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=10,
                 ),
-                alignment=ft.alignment.center,
-                padding=ft.padding.only(bottom=20),
+                alignment=ft.alignment.Alignment.CENTER,
+                padding=ft.Padding.only(bottom=20),
             )
         else:
             return ft.Container(
@@ -197,7 +199,7 @@ class HomePage(PageBase):
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 spacing=button_spacing,
                             ),
-                            margin=ft.margin.only(bottom=10),
+                            margin=ft.Margin.only(bottom=10),
                         ),
                         ft.Container(
                             content=ft.Row(
@@ -235,13 +237,13 @@ class HomePage(PageBase):
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     alignment=ft.MainAxisAlignment.CENTER,
                 ),
-                alignment=ft.alignment.center,
-                padding=ft.padding.only(bottom=20),
+                alignment=ft.alignment.Alignment.CENTER,
+                padding=ft.Padding.only(bottom=20),
             )
 
     @staticmethod
-    def create_action_button(text: str, icon: ft.Icons, color: ft.Colors, on_click: callable, width=180, height=60):
-        return ft.ElevatedButton(
+    def create_action_button(text: str, icon: ft.IconData, color: ft.Colors, on_click: callable, width=180, height=60):
+        return ft.Button(
             content=ft.Row(
                 controls=[
                     ft.Icon(icon, color=ft.Colors.WHITE),
@@ -257,7 +259,7 @@ class HomePage(PageBase):
             ),
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=10),
-                padding=ft.padding.all(15),
+                padding=ft.Padding.all(15),
                 bgcolor=color,
                 elevation=5,
             ),
@@ -267,7 +269,7 @@ class HomePage(PageBase):
         )
 
     def create_announcements_area(self):
-        def create_announcement_card(title: str, content: str, icon: ft.Icons, color: ft.Colors):
+        def create_announcement_card(title: str, content: str, icon: ft.IconData, color: ft.Colors):
             return ft.Card(
                 content=ft.Container(
                     content=ft.Column(
@@ -287,18 +289,21 @@ class HomePage(PageBase):
                                 content=ft.Text(
                                     content,
                                     size=14,
-                                    color=(ft.Colors.BLACK87 if self.app.page.theme_mode == ft.ThemeMode.LIGHT
-                                           else ft.Colors.WHITE70),
+                                    color=(
+                                        ft.Colors.BLACK87
+                                        if self.app.page.theme_mode == ft.ThemeMode.LIGHT
+                                        else ft.Colors.WHITE70
+                                    ),
                                 ),
-                                margin=ft.margin.only(left=34),
+                                margin=ft.Margin.only(left=34),
                             ),
                         ],
                         spacing=5,
                     ),
-                    padding=ft.padding.all(15),
+                    padding=ft.Padding.all(15),
                 ),
                 elevation=2,
-                margin=ft.margin.only(bottom=5),
+                margin=ft.Margin.only(bottom=5),
             )
 
         announcement_list = self.app.about.about_config["version_updates"][0]["announcement"][self.app.language_code]
@@ -336,12 +341,12 @@ class HomePage(PageBase):
                             controls=announcements,
                             spacing=5,
                         ),
-                        padding=ft.padding.only(top=5),
+                        padding=ft.Padding.only(top=5),
                     ),
                 ],
                 spacing=5,
             ),
-            padding=ft.padding.only(left=20, right=20),
+            padding=ft.Padding.only(left=20, right=20),
         )
 
     def create_stats_area(self):
@@ -361,7 +366,7 @@ class HomePage(PageBase):
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=5,
                 ),
-                padding=ft.padding.all(15),
+                padding=ft.Padding.all(15),
                 border_radius=10,
                 bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
                 width=150,
@@ -372,15 +377,15 @@ class HomePage(PageBase):
         if total_recordings > 0:
             sorted_recordings = sorted(
                 self.app.record_manager.recordings,
-                key=lambda r: r.last_updated if hasattr(r, 'last_updated') else 0,
-                reverse=True
+                key=lambda r: r.last_updated if hasattr(r, "last_updated") else 0,
+                reverse=True,
             )[-3:][::-1]
 
             for rec in sorted_recordings:
                 status_icon = ft.Icons.CIRCLE
                 status_color = ft.Colors.GREY
 
-                if hasattr(rec, 'status'):
+                if hasattr(rec, "status"):
                     if rec.status == "recording":
                         status_icon = ft.Icons.CIRCLE
                         status_color = ft.Colors.GREEN
@@ -399,7 +404,7 @@ class HomePage(PageBase):
                         controls=[
                             ft.Icon(status_icon, color=status_color, size=16),
                             ft.Text(
-                                rec.streamer_name if hasattr(rec, 'streamer_name') else "未命名录制",
+                                rec.streamer_name if hasattr(rec, "streamer_name") else "未命名录制",
                                 size=14,
                                 overflow=ft.TextOverflow.ELLIPSIS,
                             ),
@@ -430,14 +435,14 @@ class HomePage(PageBase):
                             controls=recent_recordings,
                             spacing=8,
                         ),
-                        padding=ft.padding.only(top=5),
+                        padding=ft.Padding.only(top=5),
                     ),
                 ],
                 spacing=5,
                 alignment=ft.MainAxisAlignment.START,
                 horizontal_alignment=ft.CrossAxisAlignment.START,
             ),
-            padding=ft.padding.all(15),
+            padding=ft.Padding.all(15),
             border_radius=10,
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
             expand=True,
@@ -524,12 +529,12 @@ class HomePage(PageBase):
                     ),
                     ft.Container(
                         content=stats_content,
-                        padding=ft.padding.only(top=10),
+                        padding=ft.Padding.only(top=10),
                     ),
                 ],
                 spacing=5,
             ),
-            padding=ft.padding.only(left=20, right=20),
+            padding=ft.Padding.only(left=20, right=20),
         )
 
     def create_features_area(self):
@@ -555,16 +560,19 @@ class HomePage(PageBase):
                                 description,
                                 size=13,
                                 text_align=ft.TextAlign.CENTER,
-                                color=(ft.Colors.BLACK54 if self.app.page.theme_mode == ft.ThemeMode.LIGHT
-                                       else ft.Colors.WHITE70),
+                                color=(
+                                    ft.Colors.BLACK54
+                                    if self.app.page.theme_mode == ft.ThemeMode.LIGHT
+                                    else ft.Colors.WHITE70
+                                ),
                             ),
                         ],
                         spacing=8,
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         alignment=ft.MainAxisAlignment.CENTER,
                     ),
-                    padding=ft.padding.all(15),
-                    alignment=ft.alignment.center,
+                    padding=ft.Padding.all(15),
+                    alignment=ft.alignment.Alignment.CENTER,
                     width=None if is_mobile else 220,
                     expand=is_mobile,
                 ),
@@ -645,13 +653,13 @@ class HomePage(PageBase):
                     ),
                     ft.Container(
                         content=feature_cards,
-                        padding=ft.padding.only(top=10),
+                        padding=ft.Padding.only(top=10),
                     ),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.START,
             ),
-            alignment=ft.alignment.bottom_left,
-            padding=ft.padding.only(left=20, right=20, bottom=30),
+            alignment=ft.alignment.Alignment.BOTTOM_LEFT,
+            padding=ft.Padding.only(left=20, right=20, bottom=30),
         )
 
     async def on_start_recording_click(self, _):

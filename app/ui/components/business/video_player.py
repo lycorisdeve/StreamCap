@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -21,10 +22,7 @@ class VideoPlayer:
             self._.update(language.get(key, {}))
 
     async def create_video_dialog(
-            self, title: str,
-            video_source: str,
-            is_file_path: bool = True,
-            room_url: str | None = None
+        self, title: str, video_source: str, is_file_path: bool = True, room_url: str | None = None
     ):
         """
         Create video playback dialog
@@ -48,22 +46,22 @@ class VideoPlayer:
             video_height = 450
 
         video = ftv.Video(
-            width=video_width,
-            height=video_height,
-            playlist=[ftv.VideoMedia(video_source)],
-            autoplay=True
+            width=video_width, height=video_height, playlist=[ftv.VideoMedia(video_source)], autoplay=True
         )
 
         async def copy_source(_):
-            self.app.page.set_clipboard(video_source)
+            await ft.Clipboard().set(video_source)
             await self.app.snack_bar.show_snack_bar(self._["copy_success"])
 
         async def open_in_browser(_):
             self.app.page.launch_url(room_url)
 
-        actions = [
-            ft.TextButton(self._["close"], on_click=close_dialog)
-        ]
+        async def take_screenshot(_):
+            await self._take_screenshot(video, video_source, is_file_path)
+
+        actions = [ft.TextButton(self._["close"], on_click=close_dialog)]
+
+        actions.insert(0, ft.TextButton(self._["screenshot"], on_click=take_screenshot))
 
         if room_url:
             actions.insert(0, ft.TextButton(self._["open_live_room_page"], on_click=open_in_browser))
@@ -83,7 +81,7 @@ class VideoPlayer:
 
             video_container = ft.Container(
                 content=video,
-                alignment=ft.alignment.center,
+                alignment=ft.alignment.Alignment.CENTER,
                 width=video_width,
                 height=video_height,
             )
@@ -92,18 +90,15 @@ class VideoPlayer:
                 modal=True,
                 title=ft.Text(title, overflow=ft.TextOverflow.ELLIPSIS, max_lines=1, size=14),
                 content=ft.Column(
-                    [
-                        video_container,
-                        actions_row
-                    ],
+                    [video_container, actions_row],
                     spacing=5,
                     alignment=ft.MainAxisAlignment.CENTER,
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     tight=True,
                 ),
                 actions=[],
-                inset_padding=ft.padding.only(left=10, right=10, top=5, bottom=5),
-                content_padding=ft.padding.only(left=5, right=5, top=5, bottom=0),
+                inset_padding=ft.Padding.only(left=10, right=10, top=5, bottom=5),
+                content_padding=ft.Padding.only(left=5, right=5, top=5, bottom=0),
             )
         else:
             dialog = ft.AlertDialog(
@@ -111,11 +106,46 @@ class VideoPlayer:
                 title=ft.Text(title),
                 content=video,
                 actions=actions,
-                actions_alignment=ft.MainAxisAlignment.END
+                actions_alignment=ft.MainAxisAlignment.END,
             )
         dialog.open = True
         self.app.dialog_area.content = dialog
         self.app.dialog_area.update()
+
+    async def _take_screenshot(self, video: ftv.Video, video_source: str, is_file_path: bool):
+        try:
+            image_bytes = await video.take_screenshot(format="image/png")
+        except Exception as e:
+            logger.error(f"Failed to take screenshot: {e}")
+            await self.app.snack_bar.show_snack_bar(self._["screenshot_failed"])
+            return
+
+        if not image_bytes:
+            await self.app.snack_bar.show_snack_bar(self._["screenshot_failed"])
+            return
+
+        try:
+            if is_file_path and video_source and os.path.isfile(video_source):
+                screenshot_dir = os.path.join(os.path.dirname(os.path.abspath(video_source)), "screenshots")
+                base_name = Path(video_source).stem
+            else:
+                save_root = self.app.settings.get_video_save_path()
+                screenshot_dir = os.path.join(save_root, "screenshots")
+                base_name = "screenshot"
+            os.makedirs(screenshot_dir, exist_ok=True)
+            filename = f"{base_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
+            file_path = os.path.join(screenshot_dir, filename)
+            with open(file_path, "wb") as f:
+                f.write(image_bytes)
+        except Exception as e:
+            logger.error(f"Failed to save screenshot: {e}")
+            await self.app.snack_bar.show_snack_bar(self._["screenshot_failed"])
+            return
+
+        logger.info(f"Screenshot saved: {file_path}")
+        await self.app.snack_bar.show_snack_bar(
+            f"{self._['screenshot_success']}", bgcolor=ft.Colors.PRIMARY, duration=3000
+        )
 
     async def preview_video(self, source: str, is_file_path: bool = True, room_url: str | None = None):
         """
@@ -128,14 +158,15 @@ class VideoPlayer:
             if not utils.is_valid_video_file(source):
                 logger.warning(f"unsupported file type: {Path(source).suffix.lower()}")
                 await self.app.snack_bar.show_snack_bar(
-                    self._["unsupported_file_type"] + ":" + os.path.basename(source))
+                    self._["unsupported_file_type"] + ":" + os.path.basename(source)
+                )
                 return
             title = os.path.basename(source)
         else:
             parsed = urlparse(source)
             params = parse_qs(parsed.query)
-            filename = params.get('filename', [''])[0]
-            sub_folder = params.get('subfolder', [''])[0]
+            filename = params.get("filename", [""])[0]
+            sub_folder = params.get("subfolder", [""])[0]
             if filename:
                 title = self._["previewing"] + ": " + (f"{sub_folder}/{filename}" if sub_folder else filename)
                 if Path(filename).suffix.lower() != ".mp4":

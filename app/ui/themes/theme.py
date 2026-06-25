@@ -6,8 +6,8 @@ class PopupColorItem(ft.PopupMenuItem):
         super().__init__()
         self.content = ft.Row(
             controls=[
-                ft.Icon(name=ft.Icons.COLOR_LENS_OUTLINED, color=color),
-                ft.Text(name),
+                ft.Icon(icon=ft.Icons.COLOR_LENS_OUTLINED, color=color),
+                ft.Text(name, color=ft.Colors.PRIMARY),
             ],
         )
         self.on_click = lambda e: self.seed_color_changed(e)
@@ -17,6 +17,7 @@ class PopupColorItem(ft.PopupMenuItem):
         page = e.page
         page.theme.color_scheme_seed = self.data
         page.theme.color_scheme = ft.ColorScheme(primary=self.data)
+        page.theme.use_material3 = True
         page.update()
         self.save_theme_color(e)
 
@@ -24,11 +25,11 @@ class PopupColorItem(ft.PopupMenuItem):
         page = e.page
         app = page.data
         app.settings.user_config["theme_color"] = self.data
-        page.run_task(app.config_manager.save_user_config, app.settings.user_config)
+        app.services.run_coro(app.config_manager.save_user_config(app.settings.user_config))
 
 
 def create_light_theme(custom_font: str) -> ft.Theme:
-    """Define light colored theme"""
+    "Define light colored theme"
     return ft.Theme(
         font_family=custom_font,
         text_theme=ft.TextTheme(
@@ -47,11 +48,12 @@ def create_light_theme(custom_font: str) -> ft.Theme:
             label_medium=ft.TextStyle(color=ft.Colors.BLACK, font_family=custom_font),
             label_large=ft.TextStyle(color=ft.Colors.BLACK, font_family=custom_font),
         ),
+        use_material3=True,
     )
 
 
 def create_dark_theme(custom_font: str) -> ft.Theme:
-    """Define dark theme"""
+    "Define dark theme"
     return ft.Theme(
         font_family=custom_font,
         text_theme=ft.TextTheme(
@@ -70,4 +72,5 @@ def create_dark_theme(custom_font: str) -> ft.Theme:
             label_medium=ft.TextStyle(color=ft.Colors.WHITE, font_family=custom_font),
             label_large=ft.TextStyle(color=ft.Colors.WHITE, font_family=custom_font),
         ),
+        use_material3=True,
     )

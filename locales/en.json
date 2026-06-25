@@ -243,6 +243,7 @@
     "login_required_disabled": "Secure login disabled",
     "current_username": "Current Username",
     "old_password": "Old Password",
+    "default_old_password": "default: admin",
     "new_password": "New Password",
     "confirm_password": "Confirm Password",
     "change_password": "Change Password",
@@ -455,7 +456,10 @@
     "stream_source": "Stream Source",
     "previewing": "Previewing",
     "view_stream_source_now": "Accessing live stream source",
-    "unsupported_play_on_web": "Only MP4 files can be previewed on the web ⚠️ "
+    "unsupported_play_on_web": "Only MP4 files can be previewed on the web ⚠️ ",
+    "screenshot": "Screenshot",
+    "screenshot_success": "Screenshot saved",
+    "screenshot_failed": "Screenshot failed ⚠️"
   },
   "update": {
     "new_version": "New Version {version} Available",
