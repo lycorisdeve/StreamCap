@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import os
 from typing import Any
+
+from ..runtime.paths import default_recordings_dir
 
 
 class SettingsConfig:
@@ -38,7 +39,7 @@ class SettingsConfig:
     def get_video_save_path(self) -> str:
         live_save_path = self.get_config_value("live_save_path")
         if not live_save_path:
-            live_save_path = os.path.join(self.services.run_path, "downloads")
+            live_save_path = str(default_recordings_dir)
         return live_save_path
 
     def adopt_user_config(self, user_config: dict) -> None:

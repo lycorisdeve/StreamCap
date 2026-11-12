@@ -5,7 +5,7 @@ from typing import cast
 
 import flet as ft
 
-from ..themes import PopupColorItem, ThemeManager
+from ..themes import ThemeManager
 
 
 class ControlGroup:
@@ -21,14 +21,15 @@ class NavigationItem(ft.Container):
     def __init__(self, destination: ControlGroup, item_clicked: Callable[[ft.Event[ft.Container]], None]):
         super().__init__()
         self.ink = True
-        self.padding = 10
-        self.border_radius = 5
+        self.padding = ft.Padding.symmetric(horizontal=12, vertical=10)
+        self.margin = ft.Margin.symmetric(horizontal=8, vertical=2)
+        self.border_radius = 12
         self.destination = destination
         self.icon = destination.icon
         self.text = destination.label
-        self.icon_control = ft.Icon(destination.icon, color=ft.Colors.PRIMARY)
-        self.label_control = ft.Text(destination.label, color=ft.Colors.PRIMARY)
-        self.content = ft.Row([self.icon_control, self.label_control])
+        self.icon_control = ft.Icon(destination.icon, color=ft.Colors.PRIMARY, size=21)
+        self.label_control = ft.Text(destination.label, color=ft.Colors.PRIMARY, size=14)
+        self.content = ft.Row([self.icon_control, self.label_control], spacing=12)
         self.on_click = item_clicked
 
 
@@ -44,6 +45,11 @@ class NavigationColumn(ft.Column):
         self.app = app
         self.navigation_items = self.get_navigation_items()
         self.controls = cast(list[ft.Control], self.navigation_items)
+        current_page = getattr(self.app, "current_page", None)
+        if current_page is not None:
+            self.select_page(current_page.page_name)
+        else:
+            self.update_selected_item()
 
     def get_navigation_items(self) -> list[NavigationItem]:
         return [
@@ -60,10 +66,23 @@ class NavigationColumn(ft.Column):
         for item in self.navigation_items:
             item.bgcolor = None
             item.icon_control.icon = item.destination.icon
+            item.icon_control.color = ft.Colors.PRIMARY
+            item.label_control.color = ft.Colors.PRIMARY
+            item.label_control.weight = None
         if 0 <= self.selected_index < len(self.navigation_items):
             selected_item = self.navigation_items[self.selected_index]
             selected_item.bgcolor = ft.Colors.SECONDARY_CONTAINER
             selected_item.icon_control.icon = selected_item.destination.selected_icon
+            selected_item.icon_control.color = ft.Colors.PRIMARY
+            selected_item.label_control.color = ft.Colors.PRIMARY
+            selected_item.label_control.weight = ft.FontWeight.W_600
+
+    def select_page(self, page_name: str):
+        for item in self.navigation_items:
+            if item.destination.name == page_name:
+                self.selected_index = item.destination.index
+                break
+        self.update_selected_item()
 
 
 class LeftNavigationMenu(ft.Column):
@@ -86,6 +105,18 @@ class LeftNavigationMenu(ft.Column):
         self._ = self.app.language_manager.language.get("sidebar")
         self.rail = NavigationColumn(sidebar=self.sidebar, page=self.flet_page, app=self.app)
 
+        brand_header = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Image(src="images/logo-mark.svg", width=38, height=38, fit=ft.BoxFit.CONTAIN),
+                    ft.Text("StreamCap", size=18, weight=ft.FontWeight.BOLD),
+                ],
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding.only(left=14, right=12, top=18, bottom=18),
+        )
+
         if self.flet_page.theme_mode == ft.ThemeMode.DARK:
             self.dark_light_text = ft.Text(self._["dark_theme"], color=ft.Colors.PRIMARY)
             self.dark_light_icon = ft.IconButton(
@@ -103,23 +134,6 @@ class LeftNavigationMenu(ft.Column):
                 icon_color=ft.Colors.PRIMARY,
             )
 
-        colors_list = [
-            ("deeppurple", "Deep purple"),
-            ("purple", "Purple"),
-            ("indigo", "Indigo"),
-            ("blue", "Blue"),
-            ("teal", "Teal"),
-            ("deeporange", "Deep orange"),
-            ("orange", "Orange"),
-            ("pink", "Pink"),
-            ("brown", "Brown"),
-            ("bluegrey", "Blue Grey"),
-            ("green", "Green"),
-            ("cyan", "Cyan"),
-            ("lightblue", "Light Blue"),
-            ("", "Default"),
-        ]
-
         self.bottom_controls = ft.Column(
             controls=[
                 ft.Row(
@@ -129,29 +143,18 @@ class LeftNavigationMenu(ft.Column):
                     ],
                     alignment=ft.MainAxisAlignment.START,
                 ),
-                ft.Row(
-                    controls=[
-                        ft.PopupMenuButton(
-                            icon=ft.Icons.COLOR_LENS_OUTLINED,
-                            icon_color=ft.Colors.PRIMARY,
-                            tooltip=self._["colors"],
-                            items=[PopupColorItem(color=color, name=name) for color, name in colors_list],
-                        ),
-                        ft.Text(self._["theme_color"], color=ft.Colors.PRIMARY),
-                    ],
-                    alignment=ft.MainAxisAlignment.START,
-                ),
             ],
             alignment=ft.MainAxisAlignment.END,
         )
 
         self.controls = [
+            brand_header,
             self.rail,
             ft.Container(expand=True),
-            self.bottom_controls,
+            ft.Container(content=self.bottom_controls, padding=ft.Padding.only(left=6, bottom=12)),
         ]
 
-        self.width = 160
+        self.width = 192
         self.spacing = 0
         self.alignment = ft.MainAxisAlignment.START
 

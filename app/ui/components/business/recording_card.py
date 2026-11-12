@@ -200,6 +200,8 @@ class RecordingCardManager:
 
     async def update_card(self, recording):
         """Update only the recordings cards in the scrollable content area."""
+        self.app.record_manager.sort_recordings()
+        self.reorder_recording_cards()
         if recording.rec_id in self.cards_obj:
             try:
                 recording_card = self.cards_obj[recording.rec_id]
@@ -328,15 +330,17 @@ class RecordingCardManager:
             logger.debug(f"Ignore recording toggle immediately after pin click: {recording.rec_id}")
             return
 
+        if recording and recording.recording_start_pending:
+            return
+
         if recording and self.app.recording_enabled:
             if recording.is_recording:
                 self.app.record_manager.stop_recording(recording, manually_stopped=True)
                 await self.app.snack_bar.show_snack_bar(self._["stop_record_tip"])
             else:
                 if recording.monitor_status:
-                    await self.app.record_manager.check_if_live(recording)
-                    if recording.is_live:
-                        self.app.record_manager.start_update(recording)
+                    await self.app.record_manager.request_recording_start(recording)
+                    if recording.is_recording:
                         await self.app.snack_bar.show_snack_bar(self._["pre_record_tip"], bgcolor=ft.Colors.PRIMARY)
                     else:
                         await self.app.snack_bar.show_snack_bar(self._["is_not_live_tip"])
@@ -437,7 +441,10 @@ class RecordingCardManager:
                 ordered_ids.add(card_info["card"].key)
 
         remaining_cards = [control for control in controls if getattr(control, "key", None) not in ordered_ids]
-        controls[:] = ordered_cards + remaining_cards
+        new_controls = ordered_cards + remaining_cards
+        if len(controls) == len(new_controls) and all(a is b for a, b in zip(controls, new_controls)):
+            return
+        controls[:] = new_controls
         try:
             recording_card_area.update()
         except (ft.FletPageDisconnectedException, AssertionError) as e:
@@ -447,8 +454,6 @@ class RecordingCardManager:
         recording._ignore_record_button_until = time.monotonic() + 1.0
         pinned = await self.app.record_manager.toggle_pin_recording(recording)
         await self.update_card(recording)
-        if not recording.is_recording:
-            self.reorder_recording_cards()
         self.app.page.pubsub.send_others_on_topic("update", recording)
         message_key = "pin_record_success_tip" if pinned else "unpin_record_success_tip"
         await self.app.snack_bar.show_snack_bar(self._[message_key], bgcolor=ft.Colors.PRIMARY, duration=1500)
@@ -597,8 +602,6 @@ class RecordingCardManager:
 
     async def subscribe_update_card(self, _, recording: Recording):
         await self.update_card(recording)
-        if not recording.is_recording:
-            self.reorder_recording_cards()
 
     async def subscribe_remove_cards(self, _, recordings: list[Recording]):
         await self.remove_recording_card(recordings)

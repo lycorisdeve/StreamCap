@@ -54,7 +54,7 @@ class VideoPlayer:
             await self.app.snack_bar.show_snack_bar(self._["copy_success"])
 
         async def open_in_browser(_):
-            self.app.page.launch_url(room_url)
+            await self.app.page.launch_url(room_url)
 
         async def take_screenshot(_):
             await self._take_screenshot(video, video_source, is_file_path)

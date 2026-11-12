@@ -2,7 +2,6 @@ import asyncio
 import hashlib
 import logging
 import os
-import re
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -15,6 +14,17 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.core.runtime.paths import default_recordings_dir
+
+from .video_stream_utils import (
+    STREAM_CHUNK_SIZE,
+    InvalidByteRangeError,
+    InvalidVideoPathError,
+    file_sender_range,
+    parse_range_header,
+    resolve_video_path,
+)
+
 dotenv_path = find_dotenv()
 load_dotenv(dotenv_path)
 CUSTOM_VIDEO_ROOT_DIR = os.getenv("CUSTOM_VIDEO_ROOT_DIR")
@@ -23,12 +33,11 @@ VIDEO_API_PORT = os.getenv("VIDEO_API_PORT") or 6007
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DEFAULT_VIDEO_ROOT_DIR = Path(os.path.split(os.path.realpath(sys.argv[0]))[0]).parent.parent / "downloads"
+DEFAULT_VIDEO_ROOT_DIR = default_recordings_dir
 VIDEO_DIR = Path(CUSTOM_VIDEO_ROOT_DIR or DEFAULT_VIDEO_ROOT_DIR)
 os.makedirs(VIDEO_DIR, exist_ok=True)
 
 VIDEO_META_CACHE = TTLCache(maxsize=50, ttl=300)
-CHUNK_CACHE = TTLCache(maxsize=25, ttl=60)
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -54,11 +63,6 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-def validate_filename(filename: str):
-    if re.search(r"[\\/]", filename):
-        raise HTTPException(status_code=400, detail="Invalid filename")
-
-
 @app.get("/api/videos")
 async def get_video(request: Request, filename: str = Query(...), subfolder: str | None = None):
 
@@ -76,26 +80,14 @@ async def get_video(request: Request, filename: str = Query(...), subfolder: str
                 return Response(status_code=304)
 
     try:
-        validate_filename(filename)
-        if subfolder:
-            video_path = VIDEO_DIR / subfolder / filename
-        else:
-            video_path = VIDEO_DIR / filename
-
-    except Exception as e:
-        logger.exception("Invalid filename or subfolder")
-        raise e
+        video_path = resolve_video_path(VIDEO_DIR, filename, subfolder)
+    except InvalidVideoPathError as exc:
+        logger.warning("Invalid video path: %s/%s", subfolder, filename)
+        raise HTTPException(status_code=400, detail="Invalid file path") from exc
 
     if not video_path.is_file():
         logger.error(f"File not found: {video_path}")
         raise HTTPException(status_code=404, detail="Video file not found")
-
-    # Prevent path traversal attacks
-    try:
-        video_path.relative_to(VIDEO_DIR)
-    except ValueError:
-        logger.exception(f"Path traversal attempt: {video_path}")
-        raise HTTPException(status_code=400, detail="Invalid file path")
 
     stat = video_path.stat()
     file_size = stat.st_size
@@ -107,13 +99,14 @@ async def get_video(request: Request, filename: str = Query(...), subfolder: str
     # Parse Range header
     range_header = request.headers.get("Range")
     if range_header:
-        start, end = range_header.replace("bytes=", "").split("-")
-        start = int(start)
-        end = int(end) if end else file_size - 1
-
-        if start >= file_size or end >= file_size:
-            logger.error(f"Invalid range request: {range_header}, file size: {file_size}")
-            raise HTTPException(status_code=416, detail="Requested range not satisfiable")
+        try:
+            start, end = parse_range_header(range_header, file_size)
+        except InvalidByteRangeError as exc:
+            raise HTTPException(
+                status_code=416,
+                detail="Requested range not satisfiable",
+                headers={"Content-Range": f"bytes */{file_size}"},
+            ) from exc
 
         headers = {
             "Content-Range": f"bytes {start}-{end}/{file_size}",
@@ -131,6 +124,7 @@ async def get_video(request: Request, filename: str = Query(...), subfolder: str
     headers = {
         "Content-Length": str(file_size),
         "Content-Type": "video/mp4",
+        "Accept-Ranges": "bytes",
         "Cache-Control": "public, max-age=300",
         "ETag": etag,
         "Last-Modified": datetime.fromisoformat(last_modified).strftime("%a, %d %b %Y %H:%M:%S GMT"),
@@ -146,35 +140,10 @@ async def get_video(request: Request, filename: str = Query(...), subfolder: str
 async def file_sender(video_path: Path):
     async with aiofiles.open(video_path, "rb") as file:
         while True:
-            chunk = await file.read(65536)
+            chunk = await file.read(STREAM_CHUNK_SIZE)
             if not chunk:
                 break
             yield chunk
-
-
-# Async file sender (range content)
-async def file_sender_range(video_path: Path, start: int, end: int):
-    cache_key = f"{video_path.name}-{start}-{end}"
-
-    if cached := CHUNK_CACHE.get(cache_key):
-        yield cached
-        return
-
-    async with aiofiles.open(video_path, "rb") as file:
-        await file.seek(start)
-        chunks = []
-        while start <= end:
-            chunk_size = min(65536, end - start + 1)
-            chunk = await file.read(chunk_size)
-            if not chunk:
-                break
-            chunks.append(chunk)
-            start += len(chunk)
-
-        full_chunk = b"".join(chunks)
-        if len(full_chunk) < 1024 * 1024:
-            CHUNK_CACHE[cache_key] = full_chunk
-        yield full_chunk
 
 
 if __name__ == "__main__":
