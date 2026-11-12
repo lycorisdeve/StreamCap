@@ -26,6 +26,7 @@ class Recording:
         last_recorded_at=None,
         last_record_file=None,
         last_live_title=None,
+        video_bitrate=None,
     ):
         """
         Initialize a recording object.
@@ -45,6 +46,7 @@ class Recording:
         :param enabled_message_push: Whether to enable message push.
         :param only_notify_no_record: Whether to only notify when no record is made.
         :param flv_use_direct_download: Whether to use direct downloader to cache FLV stream.
+        :param video_bitrate: Custom output video bitrate in kbps, or None to copy the source video stream.
         """
 
         self.rec_id = rec_id
@@ -70,11 +72,15 @@ class Recording:
         self.last_recorded_at = last_recorded_at
         self.last_record_file = last_record_file
         self.last_live_title = last_live_title
+        self.video_bitrate = video_bitrate
         self.scheduled_time_range = None
         self.title = f"{streamer_name} - {self.quality}"
         self.speed = "X KB/s"
         self.is_live = False
         self.is_recording = False
+        self.recording_start_pending = False
+        self.recording_sort_time = 0
+        self.monitor_generation = 0
         self.start_time = None
         self.manually_stopped = False
         self.force_stop = False
@@ -126,6 +132,7 @@ class Recording:
             "last_recorded_at": self.last_recorded_at,
             "last_record_file": self.last_record_file,
             "last_live_title": self.last_live_title,
+            "video_bitrate": self.video_bitrate,
         }
 
     @classmethod
@@ -154,6 +161,7 @@ class Recording:
             data.get("last_recorded_at"),
             data.get("last_record_file"),
             data.get("last_live_title"),
+            data.get("video_bitrate"),
         )
         recording.title = data.get("title", recording.title)
         recording.display_title = data.get("display_title", recording.title)

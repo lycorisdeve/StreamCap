@@ -3,17 +3,17 @@ import os
 import platform
 import re
 import subprocess
-import sys
 import zipfile
 from pathlib import Path
 
 import httpx
 
+from ..core.runtime.paths import user_data_dir
 from ..utils.logger import logger
 from ..utils.utils import get_startup_info
 
 current_platform = platform.system()
-execute_dir = os.path.split(os.path.realpath(sys.argv[0]))[0]
+execute_dir = str(user_data_dir)
 ffmpeg_path = os.path.join(execute_dir, "ffmpeg")
 startupinfo = get_startup_info()
 

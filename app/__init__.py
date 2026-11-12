@@ -1,8 +1,9 @@
-import os
-import sys
-
+from .core.runtime.paths import prepare_user_data_dir, resource_dir, user_data_dir
 from .initialization.installation_manager import InstallationManager
 
-execute_dir = os.path.split(os.path.realpath(sys.argv[0]))[0]
+prepare_user_data_dir()
 
-__all__ = ["InstallationManager", "execute_dir"]
+execute_dir = str(user_data_dir)
+resource_dir = str(resource_dir)
+
+__all__ = ["InstallationManager", "execute_dir", "resource_dir"]

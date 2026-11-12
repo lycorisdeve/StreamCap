@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import re
 import smtplib
@@ -68,34 +69,41 @@ class NotificationService:
         content: str,
         smtp_port: str | None = None,
         open_ssl: bool = True,
+        timeout: float = 15.0,
     ) -> dict[str, Any]:
-        receivers = to_email.replace("，", ",").split(",") if to_email.strip() else []
-        results = {"success": [], "error": []}
+        receivers = [address.strip() for address in (to_email or "").replace("，", ",").split(",") if address.strip()]
+        if not receivers:
+            return {"success": [], "error": []}
+
+        message = MIMEMultipart()
+        send_name = base64.b64encode((sender_name or "").encode("utf-8")).decode()
+        message["From"] = f"=?UTF-8?B?{send_name}?= <{sender_email}>"
+        message["To"] = ", ".join(receivers)
+        message["Subject"] = Header(title, "utf-8")
+        message.attach(MIMEText(content, "plain", "utf-8"))
+
+        def send_sync() -> dict[str, list[str]]:
+            port = int(smtp_port or (465 if open_ssl else 25))
+            smtp_class = smtplib.SMTP_SSL if open_ssl else smtplib.SMTP
+            with smtp_class(email_host, port, timeout=timeout) as smtp_obj:
+                smtp_obj.login(login_email, password)
+                refused = smtp_obj.sendmail(sender_email, receivers, message.as_string())
+
+            refused_recipients = set(refused)
+            return {
+                "success": [receiver for receiver in receivers if receiver not in refused_recipients],
+                "error": [receiver for receiver in receivers if receiver in refused_recipients],
+            }
+
         try:
-            message = MIMEMultipart()
-            send_name = base64.b64encode(sender_name.encode("utf-8")).decode()
-            message["From"] = f"=?UTF-8?B?{send_name}?= <{sender_email}>"
-            message["Subject"] = Header(title, "utf-8")
-            if len(receivers) == 1:
-                message["To"] = receivers[0]
+            overall_timeout = max(timeout * 4, timeout + 5)
+            return await asyncio.wait_for(asyncio.to_thread(send_sync), timeout=overall_timeout)
+        except asyncio.TimeoutError:
+            logger.error(f"Email push timed out, SMTP server: {email_host}")
+        except (smtplib.SMTPException, OSError, ValueError) as e:
+            logger.error(f"Email push failed, SMTP server: {email_host}, Error message: {e}")
 
-            t_apart = MIMEText(content, "plain", "utf-8")
-            message.attach(t_apart)
-
-            if open_ssl:
-                smtp_port = smtp_port or 465
-                smtp_obj = smtplib.SMTP_SSL(email_host, int(smtp_port))
-            else:
-                smtp_port = smtp_port or 25
-                smtp_obj = smtplib.SMTP(email_host, int(smtp_port))
-            smtp_obj.login(login_email, password)
-            smtp_obj.sendmail(sender_email, receivers, message.as_string())
-            results["success"] = receivers
-
-        except smtplib.SMTPException as e:
-            logger.info(f"Email push failed, push email: {to_email},  Error message: {e}")
-            results["error"] = receivers
-        return results
+        return {"success": [], "error": receivers}
 
     async def send_to_telegram(
         self, chat_id: int, token: str, content: str, proxy: Optional[str] = None

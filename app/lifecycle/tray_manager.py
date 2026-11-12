@@ -13,14 +13,13 @@ class TrayManager:
         self.icon_path = None
         self.tray_thread = None
         self.is_running = False
-        self.execute_dir = getattr(app, "run_path", os.getcwd())
-        self.assets_dir = "assets"
+        self.assets_dir = getattr(app, "assets_dir", os.path.join(os.getcwd(), "assets"))
 
     def create_image(self):
         try:
             from PIL import Image
 
-            self.icon_path = os.path.join(self.execute_dir, self.assets_dir, "icons", "tray_icon.ico")
+            self.icon_path = os.path.join(self.assets_dir, "icons", "tray_icon.ico")
             if os.path.exists(self.icon_path):
                 return Image.open(self.icon_path)
         except Exception as e:

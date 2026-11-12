@@ -165,6 +165,8 @@ class BackendServices:
             return list(self._ui_bridges)
 
     def broadcast_card_update(self, recording) -> None:
+        if self.recording_manager is not None:
+            self.recording_manager.sort_recordings()
         for bridge in self.snapshot_bridges():
             try:
                 bridge.schedule_card_update(recording)

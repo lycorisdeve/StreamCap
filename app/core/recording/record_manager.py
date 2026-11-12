@@ -1,6 +1,7 @@
 import asyncio
 import os
 import threading
+import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -110,16 +111,42 @@ class RecordingManager:
             recording.updated_at = self.repository.now_iso()
             self.services.run_coro(self.persist_recordings())
 
+    @staticmethod
+    def recording_sort_key(rec):
+        if rec.pinned_at is not None:
+            return (3, int(rec.pin_order or 0), "", "")
+        if rec.is_recording or rec.recording_start_pending:
+            return (2, rec.recording_sort_time, "", "")
+        if rec.monitor_status:
+            return (1, 0, rec.last_recorded_at or rec.created_at or "", "")
+        return (0, int(bool(rec.last_recorded_at)), rec.last_recorded_at or "", rec.created_at or "")
+
     def sort_recordings(self):
         with GlobalRecordingState.lock:
-            GlobalRecordingState.recordings.sort(
-                key=lambda rec: (
-                    rec.pinned_at is not None,
-                    int(rec.pin_order or 0),
-                    rec.last_recorded_at or rec.created_at or "",
-                ),
-                reverse=True,
-            )
+            GlobalRecordingState.recordings.sort(key=self.recording_sort_key, reverse=True)
+
+    async def request_recording_start(self, recording):
+        """Promote a manual request before its first network wait."""
+        if (
+            recording.recording_start_pending
+            or recording.is_recording
+            or recording.stopping_in_progress
+            or not recording.monitor_status
+            or not self.services.recording_enabled
+        ):
+            return
+        recording.recording_start_pending = True
+        request_time = time.monotonic_ns()
+        recording.recording_sort_time = request_time
+        self.sort_recordings()
+        self.services.broadcast_card_update(recording)
+        try:
+            await self.check_if_live(recording)
+        finally:
+            if recording.recording_sort_time == request_time:
+                recording.recording_start_pending = False
+            self.sort_recordings()
+            self.services.broadcast_card_update(recording)
 
     async def toggle_pin_recording(self, recording: Recording) -> bool:
         now = self.repository.now_iso()
@@ -200,6 +227,9 @@ class RecordingManager:
             recording.last_recorded_at = None
             recording.last_record_file = None
             recording.last_live_title = None
+        self.sort_recordings()
+        for recording in self.recordings:
+            self.services.broadcast_card_update(recording)
         return removed_count
 
     @staticmethod
@@ -367,6 +397,7 @@ class RecordingManager:
     async def check_if_live(self, recording: Recording):
         """Check if the live stream is available, fetch stream data and update is_live status."""
 
+        monitor_generation = recording.monitor_generation
         recording.manually_stopped = False
         if recording.is_recording or recording.stopping_in_progress:
             logger.debug(f"Skip check_if_live because recording is busy: {recording.url}")
@@ -436,6 +467,7 @@ class RecordingManager:
             "segment_time": recording.segment_time,
             "save_format": recording.record_format,
             "quality": recording.quality,
+            "video_bitrate": recording.video_bitrate,
         }
 
         semaphore = self.platform_semaphores[platform_key]
@@ -443,6 +475,9 @@ class RecordingManager:
         async with semaphore:
             stream_info = await recorder.fetch_stream()
             logger.info(f"Stream Data: {stream_info}")
+        if not recording.monitor_status or recording.monitor_generation != monitor_generation:
+            recording.is_checking = False
+            return
         if not stream_info or not stream_info.anchor_name:
             logger.error(f"Fetch stream data failed: {recording.url}")
             recording.is_checking = False
@@ -540,6 +575,8 @@ class RecordingManager:
     def start_update(recording: Recording):
         """Start the recording process."""
         if recording.is_live and not recording.is_recording:
+            if not recording.recording_start_pending:
+                recording.recording_sort_time = time.monotonic_ns()
             # Reset cumulative and last durations for a fresh start
             recording.update(
                 {
@@ -553,6 +590,8 @@ class RecordingManager:
 
     def stop_recording(self, recording: Recording, manually_stopped: bool = True):
         """Stop the recording process."""
+        recording.monitor_generation += 1
+        recording.recording_start_pending = False
         recording.is_live = False
         if recording.is_recording:
             recording.stopping_in_progress = True
@@ -583,6 +622,9 @@ class RecordingManager:
             logger.info(f"Stopped recording for {recording.title}")
 
             self.services.run_coro(self._reset_stopping_flag(recording))
+
+        self.sort_recordings()
+        self.services.broadcast_card_update(recording)
 
     def get_duration(self, recording: Recording):
         """Get the duration of the current recording session in a formatted string."""

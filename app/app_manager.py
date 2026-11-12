@@ -4,8 +4,9 @@ import time
 
 import flet as ft
 
-from . import execute_dir
+from . import execute_dir, resource_dir
 from .core.runtime.backend_services import BackendServices
+from .core.runtime.scheduled_shutdown import ScheduledShutdownManager
 from .core.update.update_checker import UpdateChecker
 from .initialization.installation_manager import InstallationManager
 from .ui.components.business.recording_card import RecordingCardManager
@@ -32,7 +33,7 @@ class App:
         self.services = services
 
         self.run_path = execute_dir
-        self.assets_dir = os.path.join(execute_dir, "assets")
+        self.assets_dir = os.path.join(resource_dir, "assets")
 
         self.config_manager = services.config_manager
         self.process_manager = services.process_manager
@@ -78,6 +79,7 @@ class App:
         )
         self.snack_bar = ShowSnackBar(self)
         self.subprocess_start_up_info = services.subprocess_start_up_info
+        self.shutdown_manager = ScheduledShutdownManager(self)
         self.record_card_manager = RecordingCardManager(self)
         self.current_page = None
         self._loading_page = False
@@ -89,6 +91,7 @@ class App:
         self.page.run_task(self._check_for_updates)
 
         services.register_ui_bridge(self)
+        self.page.run_task(self.shutdown_manager.reschedule)
 
     @property
     def recording_enabled(self):
@@ -173,6 +176,9 @@ class App:
             if page := self.pages.get(page_name):
                 await self.settings.is_changed()
                 self.current_page = page
+                rail = getattr(self.left_navigation_menu, "rail", None)
+                if rail is not None:
+                    rail.select_page(page_name)
                 await page.load()
         finally:
             self._loading_page = False
@@ -183,6 +189,7 @@ class App:
 
     async def cleanup(self):
         self.services.unregister_ui_bridge(self)
+        await self.shutdown_manager.stop()
 
         if not self.is_web_mode:
             try:

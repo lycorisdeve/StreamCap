@@ -1,4 +1,6 @@
 import os
+import threading
+import weakref
 
 from ...utils.logger import logger
 from .config_manager import ConfigManager
@@ -10,7 +12,7 @@ class LanguageManager:
     """
 
     def __init__(self, app):
-        self._observers = []
+        self._initialize_observer_registry()
         self.language = {}
         self.app = app
         self.services = getattr(app, "services", None) if app is not None else None
@@ -20,13 +22,17 @@ class LanguageManager:
     @classmethod
     def create_headless(cls, services) -> "LanguageManager":
         instance = cls.__new__(cls)
-        instance._observers = []
+        instance._initialize_observer_registry()
         instance.language = {}
         instance.app = None
         instance.services = services
         instance.run_path = services.run_path
         instance.load()
         return instance
+
+    def _initialize_observer_registry(self) -> None:
+        self._observers: list[weakref.ReferenceType] = []
+        self._observers_lock = threading.RLock()
 
     def _resolve_language_code(self) -> str:
         services = self.services
@@ -56,21 +62,45 @@ class LanguageManager:
 
     def add_observer(self, observer):
         """Add an observer that will be notified when the language changes."""
-        for existing in self._observers:
-            if id(existing) == id(observer):
-                return
-        self._observers.append(observer)
+        observer_ref = weakref.ref(observer)
+        with self._observers_lock:
+            alive_refs = []
+            already_registered = False
+            for existing_ref in self._observers:
+                existing = existing_ref()
+                if existing is None:
+                    continue
+                alive_refs.append(existing_ref)
+                if existing is observer:
+                    already_registered = True
+
+            self._observers = alive_refs
+            if not already_registered:
+                self._observers.append(observer_ref)
 
     def remove_observer(self, observer):
         """Remove an observer."""
-        for existing in self._observers:
-            if id(existing) == id(observer):
-                self._observers.remove(existing)
-                return
+        with self._observers_lock:
+            self._observers = [
+                observer_ref
+                for observer_ref in self._observers
+                if (existing := observer_ref()) is not None and existing is not observer
+            ]
 
     def notify_observers(self):
         """Notify all observers that the language has changed."""
-        for observer in self._observers:
+        with self._observers_lock:
+            observers = []
+            alive_refs = []
+            for observer_ref in self._observers:
+                observer = observer_ref()
+                if observer is None:
+                    continue
+                alive_refs.append(observer_ref)
+                observers.append(observer)
+            self._observers = alive_refs
+
+        for observer in observers:
             if hasattr(observer, "page_name"):
                 observer.load_language()
             else:

@@ -44,6 +44,7 @@ class RecordingRepository:
         "last_recorded_at",
         "last_record_file",
         "last_live_title",
+        "video_bitrate",
     ]
 
     HISTORY_COLUMNS = [
@@ -310,7 +311,10 @@ class RecordingRepository:
             )
             """
         )
-        conn.execute("INSERT OR REPLACE INTO recording_meta (key, value) VALUES ('schema_version', '1')")
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(recording_rooms)")}
+        if "video_bitrate" not in columns:
+            conn.execute("ALTER TABLE recording_rooms ADD COLUMN video_bitrate INTEGER")
+        conn.execute("INSERT OR REPLACE INTO recording_meta (key, value) VALUES ('schema_version', '2')")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_recording_history_rec_id ON recording_history(rec_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_recording_history_ended_at ON recording_history(ended_at)")
 
