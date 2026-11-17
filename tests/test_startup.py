@@ -1,7 +1,14 @@
 import asyncio
+import os
 import shutil
+import socket
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
@@ -77,3 +84,67 @@ class StartupTests(unittest.IsolatedAsyncioTestCase):
             assert runner.call_args.kwargs["view"] == ft.AppView.FLET_APP_HIDDEN
             main.run_flet_app(main=main.main, view=ft.AppView.WEB_BROWSER, host="127.0.0.1", port=6006)
             assert runner.call_args.kwargs["port"] == 6006
+
+
+class WebProcessTests(unittest.TestCase):
+    def test_cli_web_server_starts_and_serves_http(self):
+        """Exercise the same Flet/FastAPI/Uvicorn startup path as CI."""
+        source_root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "config").mkdir()
+            (root / "assets").mkdir()
+            for name in ("default_settings.json", "version.json", "language.json"):
+                shutil.copy2(source_root / "config" / name, root / "config" / name)
+            shutil.copytree(source_root / "locales", root / "locales")
+            launcher = root / "main.py"
+            launcher.write_text(
+                "import sys\n"
+                f"sys.path.insert(0, {str(source_root)!r})\n"
+                "from pathlib import Path\n"
+                f"exec(compile(Path({str(source_root / 'main.py')!r}).read_text(encoding='utf-8'), "
+                f"{str(source_root / 'main.py')!r}, 'exec'))\n",
+                encoding="utf-8",
+            )
+            with socket.socket() as sock:
+                sock.bind(("127.0.0.1", 0))
+                port = sock.getsockname()[1]
+            env = {**os.environ, "FLET_FORCE_WEB_SERVER": "true", "PLATFORM": "web"}
+            for name in ("FLET_SERVER_PORT", "FLET_SERVER_IP", "FLET_SERVER_UDS_PATH"):
+                env.pop(name, None)
+            with (root / "server.log").open("w+", encoding="utf-8") as output:
+                process = subprocess.Popen(
+                    [sys.executable, str(launcher), "--web", "--host", "127.0.0.1", "--port", str(port)],
+                    cwd=root,
+                    env=env,
+                    stdout=output,
+                    stderr=subprocess.STDOUT,
+                )
+                try:
+                    deadline = time.monotonic() + 30
+                    while time.monotonic() < deadline and process.poll() is None:
+                        try:
+                            with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1) as response:
+                                assert response.status == 200
+                                assert b"flutter" in response.read().lower()
+                                return
+                        except (urllib.error.URLError, TimeoutError):
+                            time.sleep(0.2)
+                    output.seek(0)
+                    raise AssertionError(f"Web server failed to start:\n{output.read()}")
+                finally:
+                    if process.poll() is None:
+                        if sys.platform == "win32":
+                            subprocess.run(
+                                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                                check=True,
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.PIPE,
+                            )
+                        else:
+                            process.terminate()
+                    try:
+                        process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait(timeout=5)

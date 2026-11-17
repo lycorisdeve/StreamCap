@@ -44,18 +44,12 @@ def artifact_name(target_platform: str) -> str:
 def prepare_flet_archive(target_platform: str, refresh: bool) -> Path:
     version = get_flet_version()
     name = artifact_name(target_platform)
-    target_dir = FLET_ARCHIVE_DIR / target_platform
+    target_dir = FLET_ARCHIVE_DIR / version / target_platform
     archive_path = target_dir / name
-    legacy_archive_path = FLET_ARCHIVE_DIR / name
 
     target_dir.mkdir(parents=True, exist_ok=True)
     if archive_path.exists() and not refresh:
         print(f"Using cached Flet desktop archive: {archive_path}")
-        return target_dir
-
-    if legacy_archive_path.exists() and not refresh:
-        shutil.copy2(legacy_archive_path, archive_path)
-        print(f"Copied cached Flet desktop archive: {archive_path}")
         return target_dir
 
     url = f"https://github.com/flet-dev/flet/releases/download/v{version}/{name}"

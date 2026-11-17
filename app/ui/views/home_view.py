@@ -78,7 +78,7 @@ class HomePage(PageBase):
                         self._["tagline"],
                         size=18,
                         color=(
-                            ft.Colors.BLACK87 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE70
+                            ft.Colors.BLACK_87 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE_70
                         ),
                         text_align=ft.TextAlign.CENTER,
                     ),
@@ -86,7 +86,7 @@ class HomePage(PageBase):
                         self._["version"] + ":" + self.app.about.about_config["version_updates"][0]["version"],
                         size=14,
                         color=(
-                            ft.Colors.BLACK54 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE60
+                            ft.Colors.BLACK_54 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE_60
                         ),
                         text_align=ft.TextAlign.CENTER,
                     ),
@@ -292,9 +292,9 @@ class HomePage(PageBase):
                                     content,
                                     size=14,
                                     color=(
-                                        ft.Colors.BLACK87
+                                        ft.Colors.BLACK_87
                                         if self.app.page.theme_mode == ft.ThemeMode.LIGHT
-                                        else ft.Colors.WHITE70
+                                        else ft.Colors.WHITE_70
                                     ),
                                 ),
                                 margin=ft.Margin.only(left=34),
@@ -420,7 +420,7 @@ class HomePage(PageBase):
                     self._["no_recordings"],
                     size=14,
                     italic=True,
-                    color=ft.Colors.BLACK45 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE60,
+                    color=ft.Colors.BLACK_45 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE_60,
                 )
             )
 
@@ -563,9 +563,9 @@ class HomePage(PageBase):
                                 size=13,
                                 text_align=ft.TextAlign.CENTER,
                                 color=(
-                                    ft.Colors.BLACK54
+                                    ft.Colors.BLACK_54
                                     if self.app.page.theme_mode == ft.ThemeMode.LIGHT
-                                    else ft.Colors.WHITE70
+                                    else ft.Colors.WHITE_70
                                 ),
                             ),
                         ],
@@ -665,17 +665,17 @@ class HomePage(PageBase):
         )
 
     async def on_start_recording_click(self, _):
-        self.app.page.go("/recordings")
+        await self.app.page.push_route("/recordings")
         await self.app.recordings.add_recording_on_click(None)
 
     async def on_browse_recordings_click(self, _):
-        self.app.page.go("/recordings")
+        await self.app.page.push_route("/recordings")
 
     async def on_manage_storage_click(self, _):
-        self.app.page.go("/storage")
+        await self.app.page.push_route("/storage")
 
     async def on_settings_click(self, _):
-        self.app.page.go("/settings")
+        await self.app.page.push_route("/settings")
 
     async def on_about_click(self, _):
-        self.app.page.go("/about")
+        await self.app.page.push_route("/about")

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import cast
 
 import flet as ft
@@ -18,7 +18,7 @@ class ControlGroup:
 
 
 class NavigationItem(ft.Container):
-    def __init__(self, destination: ControlGroup, item_clicked: Callable[[ft.Event[ft.Container]], None]):
+    def __init__(self, destination: ControlGroup, item_clicked: Callable[[ft.Event[ft.Container]], Awaitable[None]]):
         super().__init__()
         self.ink = True
         self.padding = ft.Padding.symmetric(horizontal=12, vertical=10)
@@ -56,11 +56,11 @@ class NavigationColumn(ft.Column):
             NavigationItem(destination, item_clicked=self.item_clicked) for destination in self.sidebar.control_groups
         ]
 
-    def item_clicked(self, e: ft.Event[ft.Container]):
+    async def item_clicked(self, e: ft.Event[ft.Container]):
         control = cast(NavigationItem, e.control)
         self.selected_index = control.destination.index
         self.update_selected_item()
-        self.flet_page.go(f"/{control.destination.name}")
+        await self.flet_page.push_route(f"/{control.destination.name}")
 
     def update_selected_item(self):
         for item in self.navigation_items:

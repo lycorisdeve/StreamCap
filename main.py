@@ -16,7 +16,7 @@ from app.core.runtime.paths import prepend_user_bin_dirs, resource_dir
 from app.lifecycle.app_close_handler import handle_app_close
 from app.lifecycle.tray_manager import TrayManager
 from app.ui.components.common.save_progress_overlay import SaveProgressOverlay
-from app.ui.layout.responsive_layout import setup_responsive_layout
+from app.ui.layout.responsive_layout import is_mobile_device, setup_responsive_layout
 from app.ui.views.login_view import LoginPage
 from app.utils.logger import logger
 
@@ -150,7 +150,10 @@ def handle_page_resize(page: ft.Page, app: App) -> Callable:
     """handle page resize"""
 
     def on_resize(_: ft.ControlEvent) -> None:
+        if app.is_mobile == is_mobile_device(page):
+            return
         setup_responsive_layout(page, app)
+        page.controls[:] = [app.complete_page]
         page.update()
 
     return on_resize
@@ -229,7 +232,7 @@ async def main(page: ft.Page) -> None:
         login_required = app.settings.get_config_value("login_required", False)
 
         if login_required:
-            session_token = await page.shared_preferences.get("session_token")
+            session_token = await ft.SharedPreferences().get("session_token")
             if not session_token or not auth_manager.validate_session(session_token):
 
                 async def on_login_success(token):

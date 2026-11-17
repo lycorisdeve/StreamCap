@@ -268,7 +268,9 @@ class UpdateChecker:
             ),
             actions=[
                 ft.TextButton(_["later"], on_click=lambda _: self.close_dialog()),
-                ft.TextButton(_["download"], on_click=lambda _: self.open_download_page(update_info)),
+                ft.TextButton(
+                    _["download"], on_click=lambda _: self.app.page.run_task(self.open_download_page, update_info)
+                ),
             ],
         )
 
@@ -281,7 +283,7 @@ class UpdateChecker:
             self.app.dialog_area.content.open = False
             self.app.dialog_area.update()
 
-    def open_download_page(self, update_info: dict[str, Any]) -> None:
+    async def open_download_page(self, update_info: dict[str, Any]) -> None:
         import platform
 
         url = update_info.get("download_url", "https://github.com/ihmily/StreamCap/releases/latest")
@@ -296,5 +298,5 @@ class UpdateChecker:
             elif system == "linux" and "linux" in download_urls:
                 url = download_urls["linux"]
 
-        self.app.page.launch_url(url)
+        await ft.UrlLauncher().launch_url(url)
         self.close_dialog()

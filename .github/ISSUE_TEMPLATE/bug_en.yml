@@ -31,8 +31,6 @@ body:
       label: 🐍 If running with source code, please select your Python environment version
       description: Please select the Python version you used to run the program.
       options:
-        - Python 3.10
-        - Python 3.11
         - Python 3.12
         - Python 3.13
         - Other (please specify in the issue)

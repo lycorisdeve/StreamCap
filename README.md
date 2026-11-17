@@ -2,7 +2,7 @@
   <img src="./assets/images/logo.svg" alt="StreamCap" />
 </div>
 <p align="center">
-  <img alt="Python version" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
+  <img alt="Python version" src="https://img.shields.io/badge/python-3.12%2B-blue.svg">
   <a href="https://github.com/ihmily/StreamCap">
       <img alt="Supported Platforms" src="https://img.shields.io/badge/Platforms-Win%20%7C%20Mac%20%7C%20Linux-6B5BFF.svg"></a>
     <a href="https://hub.docker.com/r/ihmily/streamcap/tags">
@@ -45,7 +45,7 @@ StreamCap 是一个基于FFmpeg和StreamGet的多平台直播流录制客户端�
 
 ### 2.从源代码运行
 
-确保已安装 **Python 3.10** 或更高版本。💥
+确保已安装 **Python 3.12** 或更高版本。💥
 
 1.**克隆项目代码**：
 

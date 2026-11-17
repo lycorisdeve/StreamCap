@@ -276,7 +276,7 @@ class AboutPage(PageBase):
                         shadow=ft.BoxShadow(
                             spread_radius=1,
                             blur_radius=10,
-                            color=ft.Colors.BLACK26,
+                            color=ft.Colors.BLACK_26,
                             offset=ft.Offset(0, 4),
                         ),
                     ),
@@ -297,7 +297,7 @@ class AboutPage(PageBase):
                         shadow=ft.BoxShadow(
                             spread_radius=1,
                             blur_radius=10,
-                            color=ft.Colors.BLACK26,
+                            color=ft.Colors.BLACK_26,
                             offset=ft.Offset(0, 4),
                         ),
                     ),
@@ -323,7 +323,7 @@ class AboutPage(PageBase):
                         shadow=ft.BoxShadow(
                             spread_radius=1,
                             blur_radius=10,
-                            color=ft.Colors.BLACK26,
+                            color=ft.Colors.BLACK_26,
                             offset=ft.Offset(0, 4),
                         ),
                     ),
@@ -352,7 +352,7 @@ class AboutPage(PageBase):
                         shadow=ft.BoxShadow(
                             spread_radius=1,
                             blur_radius=10,
-                            color=ft.Colors.BLACK26,
+                            color=ft.Colors.BLACK_26,
                             offset=ft.Offset(0, 4),
                         ),
                     ),
@@ -372,12 +372,12 @@ class AboutPage(PageBase):
     @staticmethod
     async def open_update_page(e):
         url = "https://github.com/ihmily/StreamCap/releases"
-        await e.page.launch_url(url)
+        await ft.UrlLauncher().launch_url(url)
 
     @staticmethod
     async def open_dos_page(e):
         url = "https://github.com/ihmily/StreamCap/wiki"
-        await e.page.launch_url(url)
+        await ft.UrlLauncher().launch_url(url)
 
     async def on_keyboard(self, e: ft.KeyboardEvent):
         if e.alt and e.key == "H":

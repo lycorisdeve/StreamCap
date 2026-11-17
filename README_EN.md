@@ -2,7 +2,7 @@
   <img src="./assets/images/logo.svg" alt="StreamCap" />
 </div>
 <p align="center">
-  <img alt="Python version" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
+  <img alt="Python version" src="https://img.shields.io/badge/python-3.12%2B-blue.svg">
   <a href="https://github.com/ihmily/StreamCap">
       <img alt="Supported Platforms" src="https://img.shields.io/badge/Platforms-Win%20%7C%20Mac%20%7C%20Linux-6B5BFF.svg"></a>
     <a href="https://hub.docker.com/r/ihmily/streamcap/tags">
@@ -44,7 +44,7 @@ Visit the [StreamCap Releases](https://github.com/ihmily/StreamCap/releases/late
 
 ### 2. Running from Source Code
 
-Ensure you have **Python 3.10** or a higher version installed.💥
+Ensure you have **Python 3.12** or a higher version installed.💥
 
 1.**Clone the Project Code**:
 

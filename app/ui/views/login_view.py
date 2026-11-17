@@ -161,7 +161,7 @@ class LoginPage:
 
         if success:
             logger.info(f"Login successful: {username}")
-            await self.page.shared_preferences.set("session_token", token)
+            await ft.SharedPreferences().set("session_token", token)
             await self.on_login_success(token)
             self.page.title = "StreamCap"
         else:

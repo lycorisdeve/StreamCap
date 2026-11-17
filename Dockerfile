@@ -5,6 +5,7 @@ WORKDIR /app
 # Install system dependencies for build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -25,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
     curl \
     gnupg \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
