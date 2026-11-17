@@ -245,14 +245,20 @@ class PersistenceTests(unittest.TestCase):
             (root / "_internal").mkdir()
             (root / "data/database").mkdir(parents=True)
             (root / "data/database/recordings.db").touch()
-            with (
-                patch.object(paths.sys, "frozen", True, create=True),
-                patch.object(paths.sys, "platform", "win32"),
-                patch.object(paths.sys, "executable", str(root / "StreamCap.exe")),
-            ):
-                values = runpy.run_path(paths.__file__)
-            assert values["user_data_dir"] == root
-            assert values["resource_dir"] == root / "_internal"
+            for installation in (root, root / ".." / root.name):
+                with (
+                    self.subTest(installation=installation),
+                    patch.object(paths.sys, "frozen", True, create=True),
+                    patch.object(paths.sys, "platform", "win32"),
+                    patch.object(paths.sys, "executable", str(installation / "StreamCap.exe")),
+                ):
+                    values = runpy.run_path(paths.__file__)
+                    # Windows runners can expose the temp directory through an 8.3 alias.
+                    assert values["user_data_dir"].samefile(installation)
+                    assert values["resource_dir"].samefile(installation / "_internal")
+                    assert (values["user_data_dir"] / "data/database/recordings.db").samefile(
+                        root / "data/database/recordings.db"
+                    )
 
     def test_bundled_defaults_do_not_overwrite_user_config(self):
         with tempfile.TemporaryDirectory() as directory:
