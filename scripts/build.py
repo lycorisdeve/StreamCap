@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import platform
 import plistlib
@@ -8,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import urllib.request
+import zipfile
 from pathlib import Path
 
 APP_NAME = "StreamCap"
@@ -173,7 +175,54 @@ def run_build(args: argparse.Namespace) -> None:
         print(f"Built app: {app_path}")
         print(f"Run with: open {app_path}")
     else:
+        arrange_windows_package(ROOT / "dist" / APP_NAME)
         print(f"Built app: {ROOT / 'dist' / APP_NAME / f'{APP_NAME}.exe'}")
+
+
+def arrange_windows_package(package: Path) -> None:
+    """Separate application files from PyInstaller's private dependencies."""
+    package = package.resolve()
+    for source, destination in (
+        ("config", "config"),
+        ("assets", "resources"),
+        ("locales", "resources/locales"),
+        ("ffmpeg", "runtime/ffmpeg"),
+        ("node", "runtime/node"),
+    ):
+        origin = (package / "_internal" / source).resolve()
+        target = (package / destination).resolve()
+        if not origin.is_relative_to(package) or not target.is_relative_to(package):
+            raise ValueError("Package path escaped its root")
+        if origin.is_dir():
+            if target.exists():
+                raise FileExistsError(f"Refusing to merge package directories: {target}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(origin), str(target))
+
+    archive = package / "_internal/flet_desktop/app/flet-windows.zip"
+    with zipfile.ZipFile(archive) as client:
+        runtime = package / "runtime"
+        for entry in client.infolist():
+            if not (runtime / entry.filename).resolve().is_relative_to(runtime):
+                raise ValueError("Invalid desktop runtime archive path")
+        client.extractall(runtime)
+    archive.unlink()
+    for directory in (
+        "logs/archive",
+        "data/database",
+        "data/cache",
+        "data/temp",
+        "data/exports",
+        "data/backups",
+        "data/recordings",
+        "resources/templates",
+        "resources/styles",
+        "runtime/drivers",
+        "runtime/plugins",
+    ):
+        (package / directory).mkdir(parents=True, exist_ok=True)
+    version = json.loads((package / "config/version.json").read_text(encoding="utf-8"))["version_updates"][0]["version"]
+    (package / "version.txt").write_text(version + "\n", encoding="utf-8")
 
 
 def hide_launcher_dock_icon(app_path: Path) -> None:

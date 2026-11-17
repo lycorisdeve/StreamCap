@@ -157,6 +157,11 @@ def setup_bundled_flet_view() -> None:
         # Flet client cache, then launch the discovered .app bundle.
         return
 
+    portable_view = Path(sys.executable).parent / "runtime/flet"
+    if (portable_view / "flet.exe").is_file():
+        os.environ["FLET_VIEW_PATH"] = str(portable_view)
+        return
+
     if hasattr(sys, "_MEIPASS"):
         # noinspection PyProtectedMember
         base = Path(sys._MEIPASS)

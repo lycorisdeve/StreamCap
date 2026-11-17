@@ -3,6 +3,7 @@ import threading
 import weakref
 
 from ...utils.logger import logger
+from ..runtime.paths import locales_dir, windows_package_layout
 from .config_manager import ConfigManager
 
 
@@ -57,6 +58,8 @@ class LanguageManager:
         logger.info(f"Language Code: {language_code}")
         i18n_filename = f"{language_code}.json"
         i18n_file_path = os.path.join(run_path, "locales", i18n_filename)
+        if windows_package_layout:
+            i18n_file_path = str(locales_dir / i18n_filename)
         self.language = config_manager.load_i18n_config(i18n_file_path)
         return self.language
 

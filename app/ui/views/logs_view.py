@@ -5,7 +5,7 @@ from collections import deque
 
 import flet as ft
 
-from ...utils.logger import logger
+from ...utils.logger import app_log_path, logger
 from ..base_page import PageBase as BasePage
 
 
@@ -217,7 +217,7 @@ class LogsPage(BasePage):
             pass
 
     def read_text_logs(self) -> list[str]:
-        log_path = os.path.join(self.app.run_path, "log", "streamget.log")
+        log_path = app_log_path
         if not os.path.exists(log_path):
             return []
 
@@ -517,7 +517,7 @@ class LogsPage(BasePage):
         await self.refresh_logs()
 
     def remove_text_log_lines(self, keywords: tuple[str, ...]) -> int:
-        log_path = os.path.join(self.app.run_path, "log", "streamget.log")
+        log_path = app_log_path
         if not os.path.exists(log_path):
             return 0
 

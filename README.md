@@ -99,28 +99,17 @@ python main.py --web
 
 ### 1.Windows 打包为 exe
 
-本项目基于 Flet，桌面端推荐使用 `flet pack` 生成 Windows 可执行程序。打包前请先安装桌面端依赖，并确认 FFmpeg 已安装或已加入系统环境变量。
+Windows 使用统一构建脚本生成包含 FFmpeg、Node.js 和 Flet 客户端的安装包。
 
 ```powershell
 # 安装桌面端依赖
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
-# 首次打包前准备环境配置
-copy .env.example .env
-
-# 生成 onedir 形式的 Windows 程序，输出目录为 dist\StreamCap
-flet pack main.py -D -n StreamCap -i assets/icon.ico --distpath dist -y
-
-# 将运行时需要的资源目录复制到 exe 同级目录
-xcopy assets dist\StreamCap\assets /E /I /Y
-xcopy locales dist\StreamCap\locales /E /I /Y
-copy .env dist\StreamCap\.env
-
-# 复制基础配置文件，避免首次启动缺少语言和版本配置
-mkdir dist\StreamCap\config
-copy config\default_settings.json dist\StreamCap\config\default_settings.json
-copy config\version.json dist\StreamCap\config\version.json
-copy config\language.json dist\StreamCap\config\language.json
+python scripts/download_ffmpeg.py --platform windows
+python scripts/download_nodejs.py --platform windows --windows-arch x64
+python scripts/build.py --platform windows
+python scripts/smoke_desktop.py dist/StreamCap
 ```
 
 打包完成后运行：
@@ -131,11 +120,11 @@ dist\StreamCap\StreamCap.exe
 
 说明：
 
-- 程序运行时会在 exe 同级目录创建或使用 `config`、`log`、`data/database`、`downloads` 等目录。
+- 包根目录包含 `StreamCap.exe`、`version.txt`、`config`、`logs`、`data`、`resources`、`runtime` 和 `_internal`。
+- 新安装使用程序旁的配置和数据，默认录制目录为 `data/recordings`。已有便携数据、用户目录数据和录制路径保留原位。
 - `data/database/recordings.db` 用于保存录制房间和录制历史；通用配置、Cookie、账号配置等仍保留 JSON 文件。
 - 如果希望发布压缩包，建议将 `dist\StreamCap` 整个目录压缩，而不是只复制单个 exe。
-- `flet pack` 生成的是桌面端 exe，不建议用该 exe 启动 Web 服务；Web 部署请使用下方 `python main.py --web` 或 Docker 方式。
-- 如需使用 Flet 官方构建流程，也可以尝试 `flet build windows --module-name main --output build\windows --product StreamCap --artifact StreamCap --yes`，但完整录制能力仍依赖本机 FFmpeg 和运行时配置目录。
+- 目录结构、兼容规则与验证方式见 [Windows 运行说明](docs/windows-runtime.md)。Web 部署也可使用下方源码或 Docker 方式。
 
 ### 2.Web 方式运行
 

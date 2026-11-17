@@ -13,7 +13,7 @@ from app.app_manager import App, execute_dir
 from app.auth.auth_manager import AuthManager
 from app.core.runtime.backend_services import BackendServices
 from app.core.runtime.bundled_env import patch_macos_flet_launcher, setup_bundled_flet_view
-from app.core.runtime.paths import prepend_user_bin_dirs, resource_dir
+from app.core.runtime.paths import assets_dir, prepend_user_bin_dirs
 from app.lifecycle.app_close_handler import handle_app_close
 from app.lifecycle.tray_manager import TrayManager
 from app.ui.components.common.save_progress_overlay import SaveProgressOverlay
@@ -27,7 +27,6 @@ MACOS_WINDOW_SCALE = 0.56
 WINDOWS_WINDOW_SCALE = 0.68
 MIN_WIDTH = 950
 MIN_HEIGHT = 620
-ASSETS_DIR = "assets"
 
 
 class ClientDisconnectLogFilter(logging.Filter):
@@ -62,7 +61,7 @@ async def setup_desktop_window(page: ft.Page, app: App) -> None:
     if page.web:
         return
 
-    page.window.icon = os.path.join(resource_dir, ASSETS_DIR, "icon.ico")
+    page.window.icon = str(assets_dir / "icon.ico")
     page.window.skip_task_bar = False
     page.window.always_on_top = False
     page.focused = True
@@ -361,10 +360,10 @@ def run_application(args, instance=None):
             view=ft.AppView.WEB_BROWSER,
             host=args.host,
             port=args.port,
-            assets_dir=os.path.join(resource_dir, ASSETS_DIR),
+            assets_dir=str(assets_dir),
             web_renderer=ft.WebRenderer.CANVAS_KIT,
         )
     else:
         setup_bundled_flet_view()
         patch_macos_flet_launcher()
-        run_flet_app(main=main, view=ft.AppView.FLET_APP_HIDDEN, assets_dir=os.path.join(resource_dir, ASSETS_DIR))
+        run_flet_app(main=main, view=ft.AppView.FLET_APP_HIDDEN, assets_dir=str(assets_dir))

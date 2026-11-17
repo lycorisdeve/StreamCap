@@ -8,13 +8,13 @@ from pathlib import Path
 
 import httpx
 
-from ..core.runtime.paths import user_data_dir
+from ..core.runtime.paths import runtime_dir
 from ..utils.logger import logger
 from ..utils.utils import get_startup_info
 
 current_platform = platform.system()
-execute_dir = str(user_data_dir)
-ffmpeg_path = os.path.join(execute_dir, "ffmpeg")
+execute_dir = str(runtime_dir)
+ffmpeg_path = str(runtime_dir / "ffmpeg")
 startupinfo = get_startup_info()
 
 

@@ -1,11 +1,11 @@
 import asyncio
-import os
 import time
 
 import flet as ft
 
-from . import execute_dir, resource_dir
+from . import execute_dir
 from .core.runtime.backend_services import BackendServices
+from .core.runtime.paths import assets_dir
 from .core.runtime.scheduled_shutdown import ScheduledShutdownManager
 from .core.update.update_checker import UpdateChecker
 from .initialization.installation_manager import InstallationManager
@@ -33,7 +33,7 @@ class App:
         self.services = services
 
         self.run_path = execute_dir
-        self.assets_dir = os.path.join(resource_dir, "assets")
+        self.assets_dir = str(assets_dir)
 
         self.config_manager = services.config_manager
         self.process_manager = services.process_manager

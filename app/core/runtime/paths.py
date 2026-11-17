@@ -28,6 +28,9 @@ def _macos_bundle_contents_dir(executable_dir: Path) -> Path | None:
 
 _EXECUTABLE_DIR = _executable_dir()
 _CONTENTS_DIR = _macos_bundle_contents_dir(_EXECUTABLE_DIR)
+windows_package_layout = (
+    getattr(sys, "frozen", False) and sys.platform == "win32" and (_EXECUTABLE_DIR / "resources").is_dir()
+)
 
 if _CONTENTS_DIR is not None:
     resource_dir = _CONTENTS_DIR / "Resources"
@@ -36,6 +39,17 @@ elif getattr(sys, "frozen", False) and sys.platform == "win32":
     internal_dir = _EXECUTABLE_DIR / "_internal"
     resource_dir = internal_dir if (internal_dir / "config/default_settings.json").is_file() else _EXECUTABLE_DIR
     user_data_dir = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / APP_NAME
+    if windows_package_layout:
+        resource_dir = _EXECUTABLE_DIR
+        if not any(
+            (user_data_dir / name).is_file()
+            for name in (
+                "config/user_settings.json",
+                "config/recordings.db",
+                "data/database/recordings.db",
+            )
+        ):
+            user_data_dir = _EXECUTABLE_DIR
 else:
     resource_dir = _EXECUTABLE_DIR
     user_data_dir = _EXECUTABLE_DIR
@@ -49,8 +63,15 @@ if getattr(sys, "frozen", False) and any(
 
 if getattr(sys, "frozen", False) and sys.platform == "win32":
     default_recordings_dir = _EXECUTABLE_DIR / "downloads"
+    if windows_package_layout and user_data_dir == _EXECUTABLE_DIR and not default_recordings_dir.exists():
+        default_recordings_dir = user_data_dir / "data/recordings"
 else:
     default_recordings_dir = user_data_dir / "downloads"
+
+assets_dir = resource_dir / "resources" if windows_package_layout else resource_dir / "assets"
+locales_dir = assets_dir / "locales" if windows_package_layout else user_data_dir / "locales"
+runtime_dir = _EXECUTABLE_DIR / "runtime" if windows_package_layout else user_data_dir
+log_dir = user_data_dir / ("logs" if windows_package_layout else "log")
 
 
 def prepare_user_data_dir() -> None:
@@ -60,16 +81,22 @@ def prepare_user_data_dir() -> None:
             "config/default_settings.json",
             "config/language.json",
             "config/version.json",
-            "locales",
-            "assets",
         ):
             if not (resource_dir / relative).exists():
                 raise FileNotFoundError(f"Incomplete StreamCap package: {resource_dir / relative}")
+        for path in (assets_dir, assets_dir / "locales" if windows_package_layout else resource_dir / "locales"):
+            if not path.is_dir():
+                raise FileNotFoundError(f"Incomplete StreamCap package: {path}")
     user_data_dir.mkdir(parents=True, exist_ok=True)
+    if windows_package_layout:
+        for directory in ("logs/archive", "data/cache", "data/temp", "data/exports", "data/backups"):
+            (user_data_dir / directory).mkdir(parents=True, exist_ok=True)
     if user_data_dir == resource_dir:
         return
 
     for directory in ("config", "locales"):
+        if windows_package_layout and directory == "locales":
+            continue
         source = resource_dir / directory
         target = user_data_dir / directory
         if source.is_dir():
@@ -82,8 +109,9 @@ def prepare_user_data_dir() -> None:
                 target_file.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source_file, target_file)
 
-    prepare_bundled_ffmpeg()
-    prepare_bundled_node()
+    if not windows_package_layout:
+        prepare_bundled_ffmpeg()
+        prepare_bundled_node()
 
 
 def prepare_bundled_ffmpeg() -> None:
@@ -117,6 +145,6 @@ def prepare_bundled_node() -> None:
 
 
 def prepend_user_bin_dirs() -> None:
-    for directory in (user_data_dir / "ffmpeg", user_data_dir / "node"):
+    for directory in (runtime_dir / "ffmpeg", runtime_dir / "node"):
         if directory.is_dir():
             os.environ["PATH"] = str(directory) + os.pathsep + os.environ.get("PATH", "")

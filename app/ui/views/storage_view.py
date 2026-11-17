@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import flet as ft
 from dotenv import find_dotenv, load_dotenv
 
+from ...core.runtime.paths import log_dir
 from ...utils.logger import logger
 from ..base_page import PageBase as BasePage
 
@@ -229,7 +230,7 @@ class StoragePage(BasePage):
             "original_size": 0,
             "original_files": 0,
             "empty_dirs": 0,
-            "logs_size": self.get_directory_size(os.path.join(self.app.run_path, "log")),
+            "logs_size": self.get_directory_size(log_dir),
             "database_size": self.get_directory_size(os.path.join(self.app.run_path, "data", "database")),
         }
 
@@ -795,7 +796,7 @@ class StoragePage(BasePage):
         await self.refresh_storage()
 
     def cleanup_logs_sync(self):
-        logs_dir = os.path.realpath(os.path.join(self.app.run_path, "log"))
+        logs_dir = os.path.realpath(log_dir)
         if not os.path.exists(logs_dir):
             return 0, 0
 

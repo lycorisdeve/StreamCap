@@ -46,12 +46,14 @@ def run(package):
     package = Path(package).resolve()
     for relative in (
         "config/default_settings.json",
-        "assets/icon.ico",
-        "ffmpeg/ffmpeg.exe",
-        "node/node.exe",
-        "flet_desktop/app/flet-windows.zip",
+        "resources/icon.ico",
+        "resources/locales/zh_CN.json",
+        "runtime/ffmpeg/ffmpeg.exe",
+        "runtime/node/node.exe",
+        "runtime/flet/flet.exe",
+        "version.txt",
     ):
-        assert (package / "_internal" / relative).is_file(), f"Missing bundled resource: {relative}"
+        assert (package / relative).is_file(), f"Missing bundled resource: {relative}"
     api = WindowsAPI()
     with tempfile.TemporaryDirectory(prefix="StreamCap 桌面 ") as directory:
         root = Path(directory)
@@ -62,7 +64,7 @@ def run(package):
         shutil.copytree(package, second_copy)
         independent = subprocess.Popen(
             [
-                str(copied / "_internal/ffmpeg/ffmpeg.exe"),
+                str(copied / "runtime/ffmpeg/ffmpeg.exe"),
                 "-v",
                 "error",
                 "-re",
@@ -97,8 +99,10 @@ def run(package):
                     HTTPS_PROXY="http://127.0.0.1:1",
                     NO_PROXY="127.0.0.1,localhost",
                 )
-                data = profile / "Roaming/StreamCap"
+                data = copied
                 marker = data / "desktop-ready.json"
+                marker.unlink(missing_ok=True)
+                (data / "desktop-stop").unlink(missing_ok=True)
                 process = subprocess.Popen([str(executable), "--smoke-test"], cwd=root, env=env)
                 handles = []
                 try:
@@ -107,12 +111,16 @@ def run(package):
                         time.sleep(0.1)
                     if not marker.exists():
                         logs = []
-                        for log in profile.rglob("*.log"):
+                        for log in root.rglob("*.log"):
                             logs.append(log.read_text(encoding="utf-8", errors="replace")[-6000:])
                         raise AssertionError(f"{scenario}: startup failed ({process.poll()}): {logs}")
                     state = json.loads(marker.read_text(encoding="utf-8"))
                     assert state["ready"], state
-                    assert list(profile.glob(".flet/client/*")), "Did not provision Flet in isolated profile"
+                    assert not (profile / ".flet/client").exists(), "Unexpected external Flet client cache"
+                    assert (data / "data/database/recordings.db").is_file()
+                    assert (data / "logs/app.log").is_file()
+                    assert not (data / "assets").exists()
+                    assert not (data / "ffmpeg").exists()
                     frontend = visible_window()
                     assert len(frontend) == 1, f"Expected one visible StreamCap window: {frontend}"
                     for pid in [*state["children"], *frontend]:
@@ -142,7 +150,7 @@ def run(package):
                             assert media.stat().st_size > 1000
                             subprocess.run(
                                 [
-                                    str(copied / "_internal/ffmpeg/ffmpeg.exe"),
+                                    str(copied / "runtime/ffmpeg/ffmpeg.exe"),
                                     "-v",
                                     "error",
                                     "-i",

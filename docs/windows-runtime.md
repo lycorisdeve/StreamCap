@@ -27,12 +27,43 @@ Windows 后台异常退出时，内核关闭 Job Object 句柄并终止其子进
 
 ## 包结构与数据
 
-Windows 包位于 `dist/StreamCap`。资源、默认配置、FFmpeg、Node.js 和 Flet 桌面运行时
-归入 `_internal`，不要把资源目录移动到根目录。构建只包含三个默认 JSON，不包含本地
-账户、Cookies 或录制数据库。
+Windows 包位于 `dist/StreamCap`，目录如下。构建只包含三个默认 JSON，不包含本地账户、
+Cookies 或录制数据库；用户配置、数据库和日志在运行时生成。保留 JSON 配置格式和现有
+SQLite 文件名，不使用示例 INI 配置，也不自动迁移数据库。
 
-新安装使用 `%APPDATA%/StreamCap` 保存配置。检测到 EXE 旁已有便携配置或 SQLite 数据时
-继续使用原位置。旧包把资源移到根目录的布局仍可读取。启动异常日志位于
+```text
+StreamCap/
+├── StreamCap.exe
+├── version.txt
+├── config/                 # 默认配置及运行时生成的用户配置
+├── logs/                   # app.log、error.log、play_url.log
+│   └── archive/            # 预留历史日志归档目录
+├── data/
+│   ├── database/           # recordings.db，运行时生成
+│   ├── recordings/         # 新安装默认录制目录
+│   ├── cache/
+│   ├── temp/
+│   ├── exports/
+│   └── backups/
+├── resources/              # 图标、图片、语言文件及其他静态资源
+│   ├── icons/
+│   ├── images/
+│   ├── locales/
+│   ├── templates/          # 预留
+│   └── styles/             # 预留
+├── runtime/
+│   ├── ffmpeg/
+│   ├── node/
+│   ├── flet/               # 已解压的桌面客户端，无需首次联网下载
+│   ├── drivers/            # 预留
+│   └── plugins/            # 预留
+└── _internal/              # Python DLL 和 PyInstaller 收集的 Python 依赖
+```
+
+新安装把配置、数据和日志放在 EXE 旁，因此需解压到当前用户可写目录。
+若检测到 `%APPDATA%/StreamCap` 已有用户配置或数据库，继续使用原位置；EXE 旁已有便携数据
+时优先使用便携数据。保留已配置的录制路径和已有 `downloads` 目录。旧包把资源放在
+`_internal` 或根目录的布局仍可读取。启动异常日志仍位于
 `%LOCALAPPDATA%/StreamCap/runtime/startup-error.log`。
 
 ## 构建与检查
@@ -49,9 +80,10 @@ python scripts/build.py --platform windows
 python scripts/smoke_desktop.py dist/StreamCap
 ```
 
-桌面检查复制真实安装包到含中文和空格的临时目录，使用全新配置与 Flet 缓存、移除开发机
+桌面检查复制真实安装包到含中文和空格的临时目录，使用隔离用户环境、移除开发机
 工具路径、设置不可用的 HTTP 代理，然后启动 EXE。检查主页已加载、窗口可见、重复启动
-不多开，以及正常退出、前端强退、后台强退后的子进程退出。独立的 FFmpeg 必须继续运行，
+不多开，新配置、数据库和日志位于便携目录，不创建外部 Flet 缓存，以及正常退出、前端强退、
+后台强退后的子进程退出。独立的 FFmpeg 必须继续运行，
 正常退出生成的媒体文件必须能解码。检查通过才允许 CI 上传 Windows 包和发布 beta。
 
 隐藏参数 `--smoke-test` 仅供构建验证：禁用真实直播录制、安装检查、更新和定时关机，
