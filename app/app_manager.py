@@ -85,13 +85,15 @@ class App:
         self._loading_page = False
         self.install_manager = InstallationManager(self)
         self.update_checker = UpdateChecker(self)
-        self.page.run_task(self.install_manager.check_env)
-        if self.record_manager is not None:
-            self.page.run_task(self.record_manager.check_free_space)
-        self.page.run_task(self._check_for_updates)
+        if not services.smoke_test:
+            self.page.run_task(self.install_manager.check_env)
+            if self.record_manager is not None:
+                self.page.run_task(self.record_manager.check_free_space)
+            self.page.run_task(self._check_for_updates)
 
         services.register_ui_bridge(self)
-        self.page.run_task(self.shutdown_manager.reschedule)
+        if not services.smoke_test:
+            self.page.run_task(self.shutdown_manager.reschedule)
 
     @property
     def recording_enabled(self):
@@ -192,12 +194,7 @@ class App:
         await self.shutdown_manager.stop()
 
         if not self.is_web_mode:
-            try:
-                await self.process_manager.cleanup()
-            except ConnectionError:
-                logger.warning("Connection lost, process may have terminated")
-            except Exception as e:
-                logger.error(f"Error during cleanup: {e}")
+            await self.services.shutdown()
 
     def add_ffmpeg_process(self, process):
         self.process_manager.add_process(process)
@@ -224,7 +221,7 @@ class App:
 
     async def start_periodic_tasks(self):
         rm = self.record_manager
-        if rm is None:
+        if rm is None or self.services.smoke_test:
             return
         interval = int(rm.loop_time_seconds or 180)
         await rm.setup_periodic_live_check(interval)

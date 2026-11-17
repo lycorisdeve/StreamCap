@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import flet as ft
 import httpx
 
-import main
+import application as main
 from app.core.recording.record_manager import GlobalRecordingState
 from app.core.runtime.backend_services import BackendServices
 
@@ -39,17 +39,8 @@ class StartupTests(unittest.IsolatedAsyncioTestCase):
                     await asyncio.wrap_future(ready)
                     assert services.backend_loop.is_running()
                 finally:
-
-                    async def cancel_background_tasks():
-                        tasks = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
-                        for task in tasks:
-                            task.cancel()
-                        await asyncio.gather(*tasks, return_exceptions=True)
-
-                    cancelled = asyncio.run_coroutine_threadsafe(cancel_background_tasks(), services.backend_loop)
-                    await asyncio.wrap_future(cancelled)
-                    services.stop_background_loop()
-                    await asyncio.to_thread(services._backend_thread.join, 5)
+                    await services.shutdown()
+                    await services.shutdown()
                 assert not services._backend_thread.is_alive()
 
     async def test_desktop_and_web_window_setup(self):
@@ -78,11 +69,28 @@ class StartupTests(unittest.IsolatedAsyncioTestCase):
             assert logo.status_code == 200
             assert "<svg" in logo.text
 
+    async def test_monitor_failure_still_reveals_desktop_window(self):
+        page = SimpleNamespace(
+            web=False,
+            platform=SimpleNamespace(value="windows"),
+            window=SimpleNamespace(center=AsyncMock(), to_front=AsyncMock()),
+            update=Mock(),
+        )
+        with patch.object(main, "get_monitors", side_effect=RuntimeError("No display metadata")):
+            await main.setup_desktop_window(page, SimpleNamespace(settings=SimpleNamespace(user_config={})))
+        assert page.window.visible
+        assert page.window.width == main.MIN_WIDTH
+        page.update.assert_called()
+
     async def test_flet_launch_entrypoints_without_native_window(self):
-        with patch.object(main.ft, "run") as runner:
-            main.run_flet_app(main=main.main, view=ft.AppView.FLET_APP_HIDDEN, assets_dir="assets")
+        with patch.object(main.ft, "run_async", new_callable=AsyncMock) as runner:
+            await asyncio.to_thread(
+                main.run_flet_app, main=main.main, view=ft.AppView.FLET_APP_HIDDEN, assets_dir="assets"
+            )
             assert runner.call_args.kwargs["view"] == ft.AppView.FLET_APP_HIDDEN
-            main.run_flet_app(main=main.main, view=ft.AppView.WEB_BROWSER, host="127.0.0.1", port=6006)
+            await asyncio.to_thread(
+                main.run_flet_app, main=main.main, view=ft.AppView.WEB_BROWSER, host="127.0.0.1", port=6006
+            )
             assert runner.call_args.kwargs["port"] == 6006
 
 

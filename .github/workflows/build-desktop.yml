@@ -60,6 +60,9 @@ jobs:
           }
           python scripts/build.py @buildArgs
 
+      - name: Test packaged desktop startup
+        run: python scripts/smoke_desktop.py dist/StreamCap
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7.0.2
         with:

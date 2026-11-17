@@ -41,6 +41,13 @@ class BackendServices:
         self.process_manager = AsyncProcessManager()
         self.subprocess_start_up_info = utils.get_startup_info()
         self.recording_enabled = True
+        self.closing = False
+        self.startup_blocked = False
+        self.legacy_processes = []
+        self.instance = None
+        self.smoke_test = False
+        self._shutdown_task = None
+        self._tasks = set()
 
         # Filled in by ``bootstrap``.
         self.recording_manager: RecordingManager | None = None
@@ -56,6 +63,54 @@ class BackendServices:
         self._backend_loop: asyncio.AbstractEventLoop | None = None
         self._backend_thread: threading.Thread | None = None
         self._loop_ready = threading.Event()
+
+    @property
+    def recording_enabled(self):
+        return self._recording_enabled and not self.closing and not self.startup_blocked and not self.smoke_test
+
+    @recording_enabled.setter
+    def recording_enabled(self, enabled):
+        self._recording_enabled = enabled
+
+    async def shutdown(self):
+        loop = self.backend_loop
+        if loop is not None and loop.is_running() and loop is not asyncio.get_running_loop():
+            await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(self._shutdown(), loop))
+            self.stop_background_loop()
+            await asyncio.to_thread(self._backend_thread.join, 5)
+        else:
+            await self._shutdown()
+
+    async def _shutdown(self):
+        if self._shutdown_task is None:
+            self._shutdown_task = asyncio.create_task(self._cleanup())
+        await asyncio.shield(self._shutdown_task)
+
+    async def _cleanup(self):
+        self.closing = True
+        self.recording_enabled = False
+        manager = self.recording_manager
+        downloads = []
+        if manager is not None:
+            for rec in manager.recordings:
+                rec.monitor_generation += 1
+                rec.recording_start_pending = False
+                rec.force_stop = True
+            for recorder in list(manager.active_recorders.values()):
+                recorder.should_stop = True
+                if recorder.direct_downloader is not None:
+                    downloads.append(recorder.direct_downloader.stop_download())
+        await asyncio.gather(self.process_manager.cleanup(timeout=12), *downloads, return_exceptions=True)
+        tasks = [asyncio.wrap_future(task) for task in list(self._tasks)]
+        if tasks:
+            _, pending = await asyncio.wait(tasks, timeout=3)
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+        if self.tray_manager is not None:
+            self.tray_manager.stop()
+        if manager is not None:
+            await manager.persist_recordings()
 
     @classmethod
     def get(cls) -> BackendServices:
@@ -103,6 +158,10 @@ class BackendServices:
                 logger.error(f"BackendServices loop crashed: {exc}")
             finally:
                 try:
+                    tasks = asyncio.all_tasks(loop)
+                    for task in tasks:
+                        task.cancel()
+                    loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
                     loop.close()
                 except Exception:
                     pass
@@ -130,10 +189,15 @@ class BackendServices:
         if coro is None:
             return None
 
+        def track(task):
+            self._tasks.add(task)
+            task.add_done_callback(self._tasks.discard)
+            return task
+
         loop = self._backend_loop
         if loop is not None and loop.is_running():
             try:
-                return asyncio.run_coroutine_threadsafe(coro, loop)
+                return track(asyncio.run_coroutine_threadsafe(coro, loop))
             except Exception as exc:
                 logger.warning(f"run_coro: backend loop refused task: {exc}")
                 try:
@@ -143,7 +207,7 @@ class BackendServices:
                 return None
         try:
             current = asyncio.get_running_loop()
-            return current.create_task(coro)
+            return track(current.create_task(coro))
         except RuntimeError:
             logger.warning("run_coro: no running loop available, dropping coroutine")
             try:

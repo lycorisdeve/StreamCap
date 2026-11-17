@@ -41,23 +41,16 @@ jobs:
           echo "HOST=127.0.0.1" >> .env
           echo "PORT=6006" >> .env
 
+      - name: Prepare bundled runtimes
+        run: |
+          python scripts/download_ffmpeg.py --platform windows
+          python scripts/download_nodejs.py --platform windows --windows-arch x64
+
       - name: Build Windows executable
-        run: |
-          pyinstaller --noconfirm --onedir --windowed --icon "assets/icon.ico" --name "StreamCap" --add-data "assets;assets/" --add-data "config;config/" --add-data "locales;locales/" --hidden-import "flet.matplotlib_chart" --hidden-import "flet.plotly_chart" --hidden-import "flet.video" --collect-all "streamget" main.py
+        run: python scripts/build.py --platform windows
 
-      - name: Fix Windows package structure
-        run: |
-          mv dist/StreamCap/_internal/config dist/StreamCap/
-          mv dist/StreamCap/_internal/locales dist/StreamCap/
-          mv dist/StreamCap/_internal/assets dist/StreamCap/
-          echo "Folders moved successfully."
-
-      - name: Verify Windows executable
-        run: |
-          if (!(Test-Path "dist/StreamCap/StreamCap.exe")) {
-            throw "StreamCap.exe was not generated."
-          }
-          & "dist/StreamCap/StreamCap.exe" --help
+      - name: Test packaged desktop startup
+        run: python scripts/smoke_desktop.py dist/StreamCap
 
       - name: Package Windows build
         run: |

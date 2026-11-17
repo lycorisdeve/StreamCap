@@ -1,12 +1,29 @@
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from scripts import build
 
 
 class DesktopArchiveTests(unittest.TestCase):
+    def test_package_includes_defaults_and_never_local_user_data(self):
+        args = SimpleNamespace(bundle_ffmpeg=False, bundle_node=False, clean=False)
+        command = build.pyinstaller_command(args, "windows")
+        data = [command[index + 1] for index, value in enumerate(command) if value == "--add-data"]
+        config = [item for item in data if item.endswith(";config")]
+        assert len(config) == 3
+        assert all(
+            Path(item.split(";")[0]).name
+            in {
+                "default_settings.json",
+                "language.json",
+                "version.json",
+            }
+            for item in config
+        )
+
     def test_upgrade_does_not_reuse_legacy_archive(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

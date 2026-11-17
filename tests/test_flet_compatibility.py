@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import flet as ft
 
-import main
+import application as main
 from app.ui.layout.responsive_layout import setup_responsive_layout
 from app.ui.navigation.sidebar import ControlGroup, NavigationColumn
 from app.ui.views.home_view import HomePage

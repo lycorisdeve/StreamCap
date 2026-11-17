@@ -34,7 +34,7 @@ if _CONTENTS_DIR is not None:
     user_data_dir = Path.home() / "Library" / "Application Support" / APP_NAME
 elif getattr(sys, "frozen", False) and sys.platform == "win32":
     internal_dir = _EXECUTABLE_DIR / "_internal"
-    resource_dir = internal_dir if internal_dir.is_dir() else _EXECUTABLE_DIR
+    resource_dir = internal_dir if (internal_dir / "config/default_settings.json").is_file() else _EXECUTABLE_DIR
     user_data_dir = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / APP_NAME
 else:
     resource_dir = _EXECUTABLE_DIR
@@ -55,6 +55,16 @@ else:
 
 def prepare_user_data_dir() -> None:
     """Copy bundled defaults to the writable user data directory when needed."""
+    if getattr(sys, "frozen", False):
+        for relative in (
+            "config/default_settings.json",
+            "config/language.json",
+            "config/version.json",
+            "locales",
+            "assets",
+        ):
+            if not (resource_dir / relative).exists():
+                raise FileNotFoundError(f"Incomplete StreamCap package: {resource_dir / relative}")
     user_data_dir.mkdir(parents=True, exist_ok=True)
     if user_data_dir == resource_dir:
         return

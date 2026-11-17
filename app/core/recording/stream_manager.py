@@ -16,7 +16,6 @@ from ..media import ffmpeg_builders
 from ..media.direct_downloader import DirectStreamDownloader
 from ..platforms import platform_handlers
 from ..platforms.platform_handlers import StreamData
-from ..runtime.process_manager import BackgroundService
 
 T = TypeVar("T")
 
@@ -465,9 +464,11 @@ class LiveStreamRecorder:
         stderr_task = None
 
         try:
+            if not self.services.recording_enabled:
+                return False
             save_file_path = ffmpeg_command[-1]
 
-            process = await asyncio.create_subprocess_exec(
+            process = await self.services.process_manager.create_process(
                 *ffmpeg_command,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.DEVNULL,
@@ -476,7 +477,6 @@ class LiveStreamRecorder:
             )
             stderr_task = asyncio.create_task(self._capture_stream_tail(process.stderr))
 
-            self.services.process_manager.add_process(process)
             self.recording.status_info = RecordingStatus.RECORDING
             self.recording.record_url = record_url
             logger.info(f"Recording in Progress: {live_url}")
@@ -489,6 +489,10 @@ class LiveStreamRecorder:
                     logger.info(f"Preparing to End Recording: {live_url}")
                     await self.remove_active_recorder()
                     self.recording.is_recording = False
+                    if self.services.closing:
+                        await process.wait()
+                        self.recording.force_stop = False
+                        break
                     try:
                         if os.name == "nt":
                             if process.stdin:
@@ -552,7 +556,7 @@ class LiveStreamRecorder:
                     self.recording.status_info = RecordingStatus.NOT_RECORDING_SPACE
                     self.services.run_coro(self.stop_recording_notify())
 
-                if not self.recording.manually_stopped:
+                if not self.recording.manually_stopped and not self.services.closing:
                     await self.recheck_live_status()
 
                 if self.user_config.get("convert_to_mp4") and self.save_format == "ts":
@@ -619,23 +623,9 @@ class LiveStreamRecorder:
         return True
 
     async def converts_mp4(self, converts_file_path: str, is_original_delete: bool = True) -> None:
-        """Asynchronous transcoding method, can be added to the background service to continue execution"""
         if not self.services.recording_enabled:
-            logger.info(f"Application is closing, adding transcoding task to background service: {converts_file_path}")
-            BackgroundService.get_instance().add_task(self.converts_mp4_sync, converts_file_path, is_original_delete)
             return
-
-        # Otherwise, execute transcoding normally
         await self._do_converts_mp4(converts_file_path, is_original_delete)
-
-    def converts_mp4_sync(self, converts_file_path: str, is_original_delete: bool = True) -> None:
-        """Synchronous version of the transcoding method, used for background service"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(self._do_converts_mp4(converts_file_path, is_original_delete))
-        finally:
-            loop.close()
 
     async def _do_converts_mp4(self, converts_file_path: str, is_original_delete: bool = True) -> None:
         """Actual execution method for transcoding"""
@@ -657,7 +647,7 @@ class LiveStreamRecorder:
                     "mp4",
                     save_path,
                 ]
-                process = await asyncio.create_subprocess_exec(
+                process = await self.services.process_manager.create_process(
                     *ffmpeg_command,
                     stdin=asyncio.subprocess.PIPE,
                     stdout=asyncio.subprocess.PIPE,
@@ -665,12 +655,13 @@ class LiveStreamRecorder:
                     startupinfo=self.subprocess_start_info,
                 )
 
-                self.services.process_manager.add_process(process)
                 task = asyncio.create_task(process.communicate())
                 _, stderr = await task
-                if process.returncode == 0:
+                if process.returncode == 0 and not self.services.closing:
                     converts_success = True
                     logger.info(f"Video transcoding completed: {save_path}")
+                elif self.services.closing:
+                    logger.info(f"Transcoding interrupted by shutdown; keeping original file: {converts_file_path}")
                 else:
                     logger.error(
                         f"Video transcoding failed! Error message: {stderr.decode() if stderr else 'Unknown error'}"
@@ -706,7 +697,6 @@ class LiveStreamRecorder:
         split_video_by_time: bool,
         converts_to_mp4: bool,
     ):
-        from ..runtime.process_manager import BackgroundService
 
         if "python" in script_command:
             params = [
@@ -727,25 +717,12 @@ class LiveStreamRecorder:
         script_command = script_command.strip() + " " + " ".join(params)
 
         if not self.services.recording_enabled:
-            logger.info("Application is closing, adding script execution task to background service")
-            BackgroundService.get_instance().add_task(self.run_script_sync, script_command)
-        else:
-            self.services.run_coro(self.run_script_async(script_command))
-
-        logger.success("Script command execution initiated!")
-
-    def run_script_sync(self, command: str) -> None:
-        """Synchronous version of the script execution method, used for background service"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(self.run_script_async(command))
-        finally:
-            loop.close()
+            return
+        self.services.run_coro(self.run_script_async(script_command))
 
     async def run_script_async(self, command: str) -> None:
         try:
-            process = await asyncio.create_subprocess_exec(
+            process = await self.services.process_manager.create_process(
                 *command.split(),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,

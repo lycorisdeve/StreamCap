@@ -1,20 +1,6 @@
-import os
-import threading
-import time
-
 import flet as ft
 
-from ..utils.logger import logger
 from .tray_manager import TrayManager
-
-
-async def _safe_destroy_window(page):
-    try:
-        await page.window.destroy()
-    except Exception as ex:
-        logger.error(f"close window error: {ex}")
-    finally:
-        os._exit(0)
 
 
 async def handle_app_close(page: ft.Page, app, save_progress_overlay) -> None:
@@ -32,56 +18,21 @@ async def handle_app_close(page: ft.Page, app, save_progress_overlay) -> None:
         await close_dialog(e)
 
     async def close_dialog_dismissed(e):
-        app.recording_enabled = False
-
+        if app.services.closing:
+            return
+        app.services.closing = True
         app.settings.user_config["last_route"] = page.route
         await app.config_manager.save_user_config(app.settings.user_config)
-        logger.info(f"Saved last route: {page.route}")
-
-        # check if there are active recordings
-        active_recordings = [p for p in app.process_manager.ffmpeg_processes if p.returncode is None]
-        active_recordings_count = len(active_recordings)
-
-        if active_recordings_count > 0:
-            save_progress_overlay.show(
-                _["saving_recordings"].format(active_recordings_count=active_recordings_count), cancellable=True
-            )
-            page.update()
-
-            def close_app():
-                try:
-                    # adjust wait time based on the number of recordings, at least 2 seconds
-                    base_wait_time = max(2, min(active_recordings_count, 10))
-                    logger.info(
-                        f"waiting for {active_recordings_count} recordings to finish, waiting {base_wait_time} seconds"
-                    )
-
-                    time.sleep(base_wait_time)
-
-                    # check again if there are active processes
-                    remaining = len([p for p in app.process_manager.ffmpeg_processes if p.returncode is None])
-                    if remaining > 0:
-                        logger.info(f"still {remaining} recordings are not finished, waiting for extra time")
-                        time.sleep(min(remaining, 5))
-
-                    time.sleep(0.5)
-
-                except Exception as ex:
-                    logger.error(f"close window error: {ex}")
-                finally:
-                    if not getattr(app, "is_web_mode", False) and hasattr(app, "tray_manager"):
-                        app.tray_manager.stop()
-                    page.run_task(page.window.destroy)
-                    time.sleep(0.3)
-                    os._exit(0)
-
-            threading.Thread(target=close_app, daemon=True).start()
-        else:
-            if not getattr(app, "is_web_mode", False) and hasattr(app, "tray_manager"):
-                app.tray_manager.stop()
-            await _safe_destroy_window(page)
-
         await close_dialog(e)
+        active = sum(p.returncode is None for p in app.process_manager.ffmpeg_processes)
+        if active:
+            save_progress_overlay.show(_["saving_recordings"].format(active_recordings_count=active), cancellable=False)
+            page.update()
+        try:
+            await app.cleanup()
+            await app.services.shutdown()
+        finally:
+            await page.window.destroy()
 
     async def close_dialog(_):
         close_confirm_dialog.open = False

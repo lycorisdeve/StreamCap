@@ -91,8 +91,6 @@ def pyinstaller_command(args: argparse.Namespace, target_platform: str) -> list[
         "--contents-directory",
         contents_directory,
         "--add-data",
-        add_data_arg(str(ROOT / "config"), "config", target_platform),
-        "--add-data",
         add_data_arg(str(ROOT / "locales"), "locales", target_platform),
         "--add-data",
         add_data_arg(str(ROOT / "assets"), "assets", target_platform),
@@ -111,17 +109,20 @@ def pyinstaller_command(args: argparse.Namespace, target_platform: str) -> list[
         "--noconfirm",
     ]
 
+    for filename in ("default_settings.json", "language.json", "version.json"):
+        command.extend(["--add-data", add_data_arg(str(ROOT / "config" / filename), "config", target_platform)])
+
     ffmpeg_source = bundled_ffmpeg_source(target_platform)
     if args.bundle_ffmpeg and ffmpeg_source.is_file():
         command.extend(["--add-data", add_data_arg(str(ffmpeg_source), "ffmpeg", target_platform)])
     elif args.bundle_ffmpeg:
-        print(f"Bundled FFmpeg not found, skipping: {ffmpeg_source}")
+        raise SystemExit(f"Bundled FFmpeg missing; run scripts/download_ffmpeg.py: {ffmpeg_source}")
 
     node_source = bundled_node_source(target_platform)
     if args.bundle_node and node_source.is_file():
         command.extend(["--add-data", add_data_arg(str(node_source), "node", target_platform)])
     elif args.bundle_node:
-        print(f"Bundled Node.js not found, skipping: {node_source}")
+        raise SystemExit(f"Bundled Node.js missing; run scripts/download_nodejs.py: {node_source}")
 
     if args.clean:
         command.append("--clean")

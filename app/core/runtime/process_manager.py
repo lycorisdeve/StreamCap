@@ -1,5 +1,4 @@
 import asyncio
-import os
 import threading
 
 from ...utils.logger import logger
@@ -31,7 +30,7 @@ class BackgroundService:
             return
 
         self.is_running = True
-        self.worker_thread = threading.Thread(target=self._process_tasks, daemon=False)
+        self.worker_thread = threading.Thread(target=self._process_tasks, daemon=True)
         self.worker_thread.start()
         logger.info("Background service started")
 
@@ -52,33 +51,61 @@ class BackgroundService:
 class AsyncProcessManager:
     def __init__(self):
         self.ffmpeg_processes = []
+        self.closing = False
+        self._launches = set()
+        self._cleanup_task = None
 
     def add_process(self, process):
         self.ffmpeg_processes.append(process)
 
-    async def cleanup(self):
-        for process in self.ffmpeg_processes[:]:
+    async def create_process(self, *args, **kwargs):
+        if self.closing:
+            raise RuntimeError("Application is shutting down")
+
+        async def spawn():
+            process = await asyncio.create_subprocess_exec(*args, **kwargs)
+            self.add_process(process)
+            return process
+
+        task = asyncio.create_task(spawn())
+        self._launches.add(task)
+        try:
+            return await asyncio.shield(task)
+        finally:
+            task.add_done_callback(self._launches.discard)
+
+    async def cleanup(self, timeout=15.0):
+        if self._cleanup_task is None:
+            self.closing = True
+            self._cleanup_task = asyncio.create_task(self._cleanup(timeout))
+        await asyncio.shield(self._cleanup_task)
+
+    async def _cleanup(self, timeout):
+        if self._launches:
+            await asyncio.gather(*list(self._launches), return_exceptions=True)
+
+        async def stop(process):
             try:
                 if process.returncode is None:
-                    logger.debug(f"Terminating process {process.pid}")
-                    if os.name == "nt":
-                        if process.stdin:
-                            process.stdin.write(b"q")
-                            await process.stdin.drain()
-                    else:
-                        process.terminate()
-
                     try:
-                        await asyncio.wait_for(process.wait(), timeout=5.0)
+                        async with asyncio.timeout(timeout):
+                            try:
+                                if process.stdin:
+                                    process.stdin.write(b"q\n")
+                                    await process.stdin.drain()
+                                else:
+                                    process.terminate()
+                            except (BrokenPipeError, ConnectionResetError, ProcessLookupError):
+                                pass
+                            await process.wait()
                     except TimeoutError:
-                        logger.warning(f"Process {process.pid} did not terminate, killing it")
                         process.kill()
                         await process.wait()
-
-                self.ffmpeg_processes.remove(process)
-            except Exception as e:
-                logger.error(f"Error cleaning up process: {e}")
+            except ProcessLookupError:
+                pass
+            finally:
                 if process in self.ffmpeg_processes:
                     self.ffmpeg_processes.remove(process)
 
-        logger.debug("All processes cleaned up")
+        await asyncio.gather(*(stop(process) for process in self.ffmpeg_processes[:]))
+        logger.debug("All owned processes stopped")

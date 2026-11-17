@@ -242,7 +242,8 @@ class PersistenceTests(unittest.TestCase):
     def test_existing_portable_installation_keeps_data_directory(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "_internal").mkdir()
+            (root / "_internal/config").mkdir(parents=True)
+            (root / "_internal/config/default_settings.json").write_text("{}")
             (root / "data/database").mkdir(parents=True)
             (root / "data/database/recordings.db").touch()
             for installation in (root, root / ".." / root.name):
