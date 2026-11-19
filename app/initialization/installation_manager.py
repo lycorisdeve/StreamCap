@@ -125,7 +125,7 @@ class InstallationManager:
 
         dialog_content = ft.Column(
             controls=[
-                ft.Icon(ft.Icons.DOWNLOADING, size=40, color=ft.Colors.BLUE_700),
+                ft.Icon(ft.Icons.DOWNLOADING, size=40, color=ft.Colors.PRIMARY),
                 ft.Text(self._["install_guide"], size=20),
                 ft.Divider(height=20),
                 ft.Text(self._["install_tip"], size=14),
@@ -149,9 +149,7 @@ class InstallationManager:
                 ft.TextButton(
                     text=self._["install_now"],
                     icon=ft.Icons.DOWNLOAD,
-                    style=ft.ButtonStyle(
-                        color=ft.Colors.WHITE, bgcolor=ft.Colors.BLUE_600, overlay_color=ft.Colors.BLUE_800
-                    ),
+                    style=ft.ButtonStyle(color=ft.Colors.ON_PRIMARY, bgcolor=ft.Colors.PRIMARY),
                     on_click=self.on_install_clicked,
                 ),
                 ft.TextButton(

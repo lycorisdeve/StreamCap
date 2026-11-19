@@ -23,20 +23,9 @@ class AboutPage(PageBase):
 
         is_mobile = self.app.is_mobile
 
-        # Dynamically set colors based on the current theme mode
-        theme_mode = self.page.theme_mode
-        if theme_mode == ft.ThemeMode.DARK:
-            card_bg_color = None
-            text_color = None
-            text_color_500 = None
-            text_color_600 = None
-            text_color_700 = None
-        else:
-            card_bg_color = ft.Colors.WHITE
-            text_color = ft.Colors.GREY_800
-            text_color_500 = ft.Colors.GREY_500
-            text_color_600 = ft.Colors.GREY_600
-            text_color_700 = ft.Colors.GREY_700
+        card_bg_color = ft.Colors.SURFACE
+        text_color = ft.Colors.ON_SURFACE
+        text_color_500 = text_color_600 = text_color_700 = ft.Colors.ON_SURFACE_VARIANT
 
         language_code = self.app.language_code
         version_updates = self.about_config["version_updates"][0]
@@ -49,7 +38,7 @@ class AboutPage(PageBase):
                         controls=[
                             ft.Column(
                                 controls=[
-                                    ft.Icon(ft.Icons.VIDEO_LIBRARY, color=ft.Colors.BLUE),
+                                    ft.Icon(ft.Icons.VIDEO_LIBRARY, color=ft.Colors.PRIMARY),
                                     ft.Text(
                                         self._["support_platforms"],
                                         size=12,
@@ -63,7 +52,7 @@ class AboutPage(PageBase):
                             ),
                             ft.Column(
                                 controls=[
-                                    ft.Icon(ft.Icons.SETTINGS, color=ft.Colors.GREEN),
+                                    ft.Icon(ft.Icons.SETTINGS, color=ft.Colors.PRIMARY),
                                     ft.Text(
                                         self._["customize_recording"],
                                         size=12,
@@ -77,7 +66,7 @@ class AboutPage(PageBase):
                             ),
                             ft.Column(
                                 controls=[
-                                    ft.Icon(ft.Icons.LIGHTBULB, color=ft.Colors.ORANGE),
+                                    ft.Icon(ft.Icons.LIGHTBULB, color=ft.Colors.PRIMARY),
                                     ft.Text(
                                         self._["open_source"],
                                         size=12,
@@ -97,7 +86,7 @@ class AboutPage(PageBase):
                         controls=[
                             ft.Column(
                                 controls=[
-                                    ft.Icon(ft.Icons.AUTORENEW, color=ft.Colors.PURPLE),
+                                    ft.Icon(ft.Icons.AUTORENEW, color=ft.Colors.PRIMARY),
                                     ft.Text(
                                         self._["automatic_transcoding"],
                                         size=12,
@@ -111,7 +100,7 @@ class AboutPage(PageBase):
                             ),
                             ft.Column(
                                 controls=[
-                                    ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=ft.Colors.RED),
+                                    ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=ft.Colors.PRIMARY),
                                     ft.Text(
                                         self._["status_push"],
                                         size=12,
@@ -136,35 +125,35 @@ class AboutPage(PageBase):
                 controls=[
                     ft.Column(
                         controls=[
-                            ft.Icon(ft.Icons.VIDEO_LIBRARY, color=ft.Colors.BLUE),
+                            ft.Icon(ft.Icons.VIDEO_LIBRARY, color=ft.Colors.PRIMARY),
                             ft.Text(self._["support_platforms"], size=14, color=text_color_700),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     ft.Column(
                         controls=[
-                            ft.Icon(ft.Icons.SETTINGS, color=ft.Colors.GREEN),
+                            ft.Icon(ft.Icons.SETTINGS, color=ft.Colors.PRIMARY),
                             ft.Text(self._["customize_recording"], size=14, color=text_color_700),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     ft.Column(
                         controls=[
-                            ft.Icon(ft.Icons.LIGHTBULB, color=ft.Colors.ORANGE),
+                            ft.Icon(ft.Icons.LIGHTBULB, color=ft.Colors.PRIMARY),
                             ft.Text(self._["open_source"], size=14, color=text_color_700),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     ft.Column(
                         controls=[
-                            ft.Icon(ft.Icons.AUTORENEW, color=ft.Colors.PURPLE),
+                            ft.Icon(ft.Icons.AUTORENEW, color=ft.Colors.PRIMARY),
                             ft.Text(self._["automatic_transcoding"], size=14, color=text_color_700),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     ft.Column(
                         controls=[
-                            ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=ft.Colors.RED),
+                            ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=ft.Colors.PRIMARY),
                             ft.Text(self._["status_push"], size=14, color=text_color_700),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -307,7 +296,7 @@ class AboutPage(PageBase):
                             controls=[
                                 ft.Text(self._["developer"], size=20, weight=ft.FontWeight.W_600, color=text_color),
                                 ft.ListTile(
-                                    leading=ft.Icon(ft.Icons.PERSON, color=ft.Colors.GREY_800),
+                                    leading=ft.Icon(ft.Icons.PERSON, color=ft.Colors.ON_SURFACE),
                                     title=ft.Text("Hmily", size=18, weight=ft.FontWeight.W_500, color=text_color_700),
                                     subtitle=ft.Text(self._["author"], size=14, color=text_color_500),
                                 ),

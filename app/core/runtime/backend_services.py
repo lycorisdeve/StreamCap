@@ -28,6 +28,8 @@ class UIBridge(Protocol):
 
     def schedule_pubsub(self, topic: str, payload: Any) -> None: ...
 
+    def schedule_theme_update(self, config: dict, revision: int) -> None: ...
+
 
 class BackendServices:
     _instance: BackendServices | None = None
@@ -36,6 +38,12 @@ class BackendServices:
         self.run_path = run_path
         self.config_manager = ConfigManager(run_path)
         self.settings_config = SettingsConfig(self)
+        from ...ui.themes.theme_tokens import normalize_appearance
+
+        self._appearance = normalize_appearance(self.settings_config.user_config)
+        self._appearance_revision = 0
+        self._appearance_state_lock = threading.Lock()
+        self._appearance_commit_lock = threading.Lock()
         self.language_manager = LanguageManager.create_headless(self)
 
         self.process_manager = AsyncProcessManager()
@@ -219,6 +227,41 @@ class BackendServices:
     def register_ui_bridge(self, bridge: UIBridge) -> None:
         with self._bridges_lock:
             self._ui_bridges.add(bridge)
+
+    def snapshot_appearance(self) -> tuple[dict, int]:
+        with self._appearance_state_lock:
+            return dict(self._appearance), self._appearance_revision
+
+    async def commit_appearance(self, patch: dict) -> tuple[dict, int]:
+        """Serialize commits across session loops; broadcast only successfully saved values."""
+        from ...ui.themes.theme_tokens import normalize_hex
+
+        patch = dict(patch)
+        if set(patch) - set(ConfigManager.APPEARANCE_KEYS):
+            raise ValueError("Unknown appearance setting")
+        if "theme_color" in patch:
+            patch["theme_color"] = normalize_hex(patch["theme_color"])
+        if "theme_mode" in patch and patch["theme_mode"] not in ("light", "dark", "system"):
+            raise ValueError("Unknown theme mode")
+
+        def commit():
+            with self._appearance_commit_lock:
+                current, _ = self.snapshot_appearance()
+                current.update(patch)
+                saved = self.config_manager._save_appearance_config_sync(current)
+                with self._appearance_state_lock:
+                    self._appearance = saved
+                    self._appearance_revision += 1
+                    revision = self._appearance_revision
+                    self.settings_config.user_config.update(saved)
+                for bridge in self.snapshot_bridges():
+                    try:
+                        bridge.schedule_theme_update(dict(saved), revision)
+                    except Exception as error:
+                        logger.debug(f"Theme update dropped: {error}")
+                return dict(saved), revision
+
+        return await asyncio.to_thread(commit)
 
     def unregister_ui_bridge(self, bridge: UIBridge) -> None:
         with self._bridges_lock:

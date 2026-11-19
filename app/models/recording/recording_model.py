@@ -27,6 +27,7 @@ class Recording:
         last_record_file=None,
         last_live_title=None,
         video_bitrate=None,
+        skip_current_live=False,
     ):
         """
         Initialize a recording object.
@@ -75,7 +76,10 @@ class Recording:
         self.video_bitrate = video_bitrate
         self.scheduled_time_range = None
         self.title = f"{streamer_name} - {self.quality}"
-        self.speed = "X KB/s"
+        self.speed = "—"
+        self.skip_current_live = bool(skip_current_live)
+        self.offline_confirmation_count = 0
+        self.last_offline_confirmation_at = None
         self.is_live = False
         self.is_recording = False
         self.recording_start_pending = False
@@ -133,6 +137,7 @@ class Recording:
             "last_record_file": self.last_record_file,
             "last_live_title": self.last_live_title,
             "video_bitrate": self.video_bitrate,
+            "skip_current_live": self.skip_current_live,
         }
 
     @classmethod
@@ -162,6 +167,7 @@ class Recording:
             data.get("last_record_file"),
             data.get("last_live_title"),
             data.get("video_bitrate"),
+            data.get("skip_current_live", False),
         )
         recording.title = data.get("title", recording.title)
         recording.display_title = data.get("display_title", recording.title)

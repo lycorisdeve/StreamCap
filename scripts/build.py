@@ -207,20 +207,10 @@ def arrange_windows_package(package: Path) -> None:
                 raise ValueError("Invalid desktop runtime archive path")
         client.extractall(runtime)
     archive.unlink()
-    for directory in (
-        "logs/archive",
-        "data/database",
-        "data/cache",
-        "data/temp",
-        "data/exports",
-        "data/backups",
-        "data/recordings",
-        "resources/templates",
-        "resources/styles",
-        "runtime/drivers",
-        "runtime/plugins",
-    ):
-        (package / directory).mkdir(parents=True, exist_ok=True)
+    # The archive was the only application data collected for flet_desktop.
+    for directory in (archive.parent, archive.parent.parent):
+        if not any(directory.iterdir()):
+            directory.rmdir()
     version = json.loads((package / "config/version.json").read_text(encoding="utf-8"))["version_updates"][0]["version"]
     (package / "version.txt").write_text(version + "\n", encoding="utf-8")
 

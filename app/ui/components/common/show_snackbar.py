@@ -9,13 +9,13 @@ class ShowSnackBar:
         self, message, bgcolor=None, duration=1500, action=None, emoji=None, show_close_icon=False
     ):
         """Helper method to show a snack bar with optional emoji."""
-
+        foreground = ft.Colors.ON_PRIMARY if bgcolor == ft.Colors.PRIMARY else ft.Colors.ON_SURFACE
         message_row = ft.Row(
             controls=[
-                ft.Icon(icon=ft.Icons.NOTIFICATIONS, color=ft.Colors.ON_SURFACE_VARIANT, size=18)
+                ft.Icon(icon=ft.Icons.NOTIFICATIONS, color=foreground, size=18)
                 if not emoji
                 else ft.Text(emoji, size=20, no_wrap=False),
-                ft.Text(message, size=14, no_wrap=False),
+                ft.Text(message, size=14, no_wrap=False, color=foreground),
             ],
             spacing=10,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -36,13 +36,10 @@ class ShowSnackBar:
             ),
             behavior=ft.SnackBarBehavior.FLOATING,
             action=action,
-            bgcolor=bgcolor,
+            bgcolor=bgcolor or ft.Colors.SURFACE,
             duration=duration,
             show_close_icon=show_close_icon,
         )
-
-        if self.app.page.theme_mode == ft.ThemeMode.DARK:
-            snack_bar.bgcolor = "#F5F5F5"
 
         if not self.app.is_mobile:
             snack_bar_width = 350

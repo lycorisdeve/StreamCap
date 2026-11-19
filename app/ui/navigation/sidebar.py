@@ -5,8 +5,6 @@ from typing import cast
 
 import flet as ft
 
-from ..themes import ThemeManager
-
 
 class ControlGroup:
     def __init__(self, icon, label: str, index: int, name: str, selected_icon):
@@ -96,10 +94,11 @@ class LeftNavigationMenu(ft.Column):
         self.dark_light_icon = None
         self.bottom_controls = None
         self.first_run = True
-        self.theme_manager = ThemeManager(self.app)
+        self.theme_manager = self.app.theme_manager
         self.app.language_manager.add_observer(self)
         self._ = {}
         self.load()
+        self.theme_manager.subscribe(self.refresh_theme)
 
     def load(self):
         self._ = self.app.language_manager.language.get("sidebar")
@@ -157,31 +156,30 @@ class LeftNavigationMenu(ft.Column):
         self.width = 192
         self.spacing = 0
         self.alignment = ft.MainAxisAlignment.START
+        self.refresh_theme()
+
+    def refresh_theme(self):
+        self.rail.update_selected_item()
+        appearance = self.theme_manager.draft or self.theme_manager.committed
+        dark = self.theme_manager.tokens.is_dark
+        language = self.app.language_manager.language.get("appearance_settings", {})
+        self.dark_light_text.value = (
+            language.get("system", "System")
+            if appearance["theme_mode"] == "system"
+            else self._["dark_theme" if dark else "light_theme"]
+        )
+        self.dark_light_icon.icon = ft.Icons.BRIGHTNESS_HIGH_OUTLINED if dark else ft.Icons.BRIGHTNESS_2_OUTLINED
+        self.dark_light_icon.tooltip = self._["toggle_day_theme" if dark else "toggle_night_theme"]
 
     async def theme_changed(self, _):
-        page = self.app.page
-        self._ = self.app.language_manager.language.get("sidebar")
-        if page.theme_mode == ft.ThemeMode.LIGHT:
-            page.theme_mode = ft.ThemeMode.DARK
-            self.dark_light_text.value = self._["dark_theme"]
-            self.dark_light_icon.icon = ft.Icons.BRIGHTNESS_HIGH_OUTLINED
-            self.dark_light_icon.tooltip = self._["toggle_day_theme"]
-            self.app.settings.user_config["theme_mode"] = "dark"
-        else:
-            page.theme_mode = ft.ThemeMode.LIGHT
-            self.dark_light_text.value = self._["light_theme"]
-            self.dark_light_icon.icon = ft.Icons.BRIGHTNESS_2_OUTLINED
-            self.dark_light_icon.tooltip = self._["toggle_night_theme"]
-            self.app.settings.user_config["theme_mode"] = "light"
-        self.app.services.run_coro(self.app.config_manager.save_user_config(self.app.settings.user_config))
-        await self.on_theme_change()
-        page.update()
+        try:
+            await self.theme_manager.toggle_mode()
+        except Exception as exc:
+            from ...utils.logger import logger
 
-    async def on_theme_change(self):
-        """When the theme changes, recreate the content and update the page"""
-        page_list = ["home", "about"]
-        if self.app.current_page.page_name in page_list:
-            await self.app.current_page.load()
+            logger.error(f"Failed to save appearance: {exc}")
+            language = self.app.language_manager.language.get("appearance_settings", {})
+            await self.app.snack_bar.show_snack_bar(language.get("save_failed", "Could not save appearance"))
 
 
 class NavigationSidebar:

@@ -10,6 +10,7 @@ def is_mobile_device(page: ft.Page) -> bool:
 
 def setup_responsive_layout(page: ft.Page, app: App) -> None:
     _ = app.language_manager.language.get("sidebar", {})
+    content = getattr(app, "content_surface", app.content_area)
 
     if is_mobile_device(page):
         logger.info("mobile device detected, enable mobile layout")
@@ -39,7 +40,7 @@ def setup_responsive_layout(page: ft.Page, app: App) -> None:
         app.complete_page = ft.Column(
             expand=True,
             spacing=0,
-            controls=[app.content_area, app.bottom_navigation, app.dialog_area, app.snack_bar_area],
+            controls=[content, app.bottom_navigation, app.dialog_area, app.snack_bar_area],
         )
     else:
         logger.info("desktop device detected, enable desktop layout")
@@ -50,7 +51,7 @@ def setup_responsive_layout(page: ft.Page, app: App) -> None:
             controls=[
                 app.left_navigation_menu,
                 ft.VerticalDivider(width=1),
-                app.content_area,
+                content,
                 app.dialog_area,
                 app.snack_bar_area,
             ],

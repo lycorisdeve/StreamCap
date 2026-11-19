@@ -84,7 +84,7 @@ class LogsPage(BasePage):
         self.load_language()
         self.recording_log_list = ft.ListView(expand=True, spacing=8, padding=0)
         self.history_list = ft.ListView(expand=True, spacing=10, padding=0)
-        self.summary_text = ft.Text("", size=13, color=ft.Colors.GREY_600)
+        self.summary_text = ft.Text("", size=13, color=ft.Colors.ON_SURFACE_VARIANT)
 
         tabs = ft.Tabs(
             content=ft.Column(
@@ -277,8 +277,8 @@ class LogsPage(BasePage):
             padding=20,
             content=ft.Row(
                 controls=[
-                    ft.Icon(icon, color=ft.Colors.GREY_500),
-                    ft.Text(text, size=14, color=ft.Colors.GREY_600),
+                    ft.Icon(icon, color=ft.Colors.ON_SURFACE_VARIANT),
+                    ft.Text(text, size=14, color=ft.Colors.ON_SURFACE_VARIANT),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
@@ -289,11 +289,11 @@ class LogsPage(BasePage):
         display_line, raw_message = self.format_log_line(line)
         message_controls = [ft.Text(display_line, size=12, selectable=True, expand=True)]
         if raw_message and raw_message != display_line:
-            message_controls.append(ft.Text(raw_message, size=11, color=ft.Colors.GREY_500, selectable=True))
+            message_controls.append(ft.Text(raw_message, size=11, color=ft.Colors.ON_SURFACE_VARIANT, selectable=True))
 
         return ft.Container(
             padding=10,
-            border=ft.Border.all(1, ft.Colors.GREY_300),
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             border_radius=6,
             content=ft.Row(
                 controls=[
@@ -352,17 +352,17 @@ class LogsPage(BasePage):
             controls=[
                 event_chip,
                 ft.Text(streamer_name, size=14, weight=ft.FontWeight.BOLD, expand=True),
-                ft.Text(event_time, size=12, color=ft.Colors.GREY_600),
+                ft.Text(event_time, size=12, color=ft.Colors.ON_SURFACE_VARIANT),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         meta_controls = [
-            ft.Text(platform, size=12, color=ft.Colors.GREY_600),
+            ft.Text(platform, size=12, color=ft.Colors.ON_SURFACE_VARIANT),
         ]
         if event_type == "stop":
             meta_controls.extend(
                 [
-                    ft.Text(f"{self._['duration']}: {duration}", size=12, color=ft.Colors.GREY_700),
+                    ft.Text(f"{self._['duration']}: {duration}", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
                 ]
             )
         details = [
@@ -379,7 +379,7 @@ class LogsPage(BasePage):
         return ft.Container(
             height=96,
             padding=12,
-            border=ft.Border.all(1, ft.Colors.GREY_300),
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             border_radius=6,
             content=ft.Column(tight=True, spacing=7, controls=details),
         )

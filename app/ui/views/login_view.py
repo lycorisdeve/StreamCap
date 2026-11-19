@@ -24,12 +24,12 @@ class LoginPage:
             width=320,
             border_radius=8,
             prefix_icon=ft.Icons.PERSON,
-            focused_border_color="#0078d4",
-            focused_color="#0078d4",
-            border_color="#d0d0d0",
-            bgcolor="#f5f5f5",
-            color="#333333",
-            label_style=ft.TextStyle(color="#666666"),
+            focused_border_color=ft.Colors.PRIMARY,
+            focused_color=ft.Colors.PRIMARY,
+            border_color=ft.Colors.OUTLINE,
+            bgcolor=ft.Colors.SURFACE,
+            color=ft.Colors.ON_SURFACE,
+            label_style=ft.TextStyle(color=ft.Colors.ON_SURFACE_VARIANT),
         )
 
         self.password_field = ft.TextField(
@@ -39,12 +39,12 @@ class LoginPage:
             width=320,
             border_radius=8,
             prefix_icon=ft.Icons.LOCK_OUTLINE,
-            focused_border_color="#0078d4",
-            focused_color="#0078d4",
-            border_color="#d0d0d0",
-            bgcolor="#f5f5f5",
-            color="#333333",
-            label_style=ft.TextStyle(color="#666666"),
+            focused_border_color=ft.Colors.PRIMARY,
+            focused_color=ft.Colors.PRIMARY,
+            border_color=ft.Colors.OUTLINE,
+            bgcolor=ft.Colors.SURFACE,
+            color=ft.Colors.ON_SURFACE,
+            label_style=ft.TextStyle(color=ft.Colors.ON_SURFACE_VARIANT),
         )
 
         self.login_button = ft.Button(
@@ -53,8 +53,8 @@ class LoginPage:
             on_click=self.handle_login,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
-                color="#ffffff",
-                bgcolor="#0078d4",
+                color=ft.Colors.ON_PRIMARY,
+                bgcolor=ft.Colors.PRIMARY,
                 elevation=0,
                 padding=ft.Padding.symmetric(horizontal=10, vertical=4),
                 animation_duration=300,
@@ -85,13 +85,13 @@ class LoginPage:
                     "StreamCap",
                     size=28,
                     weight=ft.FontWeight.BOLD,
-                    color="#0078d4",
+                    color=ft.Colors.PRIMARY,
                     text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Text(
                     self._["login_subtitle"],
                     size=16,
-                    color="#666666",
+                    color=ft.Colors.ON_SURFACE_VARIANT,
                     text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Container(height=20),
@@ -109,7 +109,7 @@ class LoginPage:
                 ft.Text(
                     self._["default_account_tip"],
                     size=12,
-                    color="#999999",
+                    color=ft.Colors.ON_SURFACE_VARIANT,
                     text_align=ft.TextAlign.CENTER,
                 ),
             ],
@@ -123,7 +123,7 @@ class LoginPage:
             width=400,
             height=600,
             padding=30,
-            bgcolor=ft.Colors.WHITE,
+            bgcolor=ft.Colors.SURFACE,
             border_radius=12,
             shadow=ft.BoxShadow(
                 spread_radius=1,
@@ -137,7 +137,7 @@ class LoginPage:
             content=self.login_card,
             alignment=ft.alignment.Alignment.CENTER,
             expand=True,
-            bgcolor="#f0f2f5",
+            bgcolor=ft.Colors.SURFACE,
         )
 
     async def handle_login(self, e):

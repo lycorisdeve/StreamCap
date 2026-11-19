@@ -30,7 +30,7 @@ class SaveProgressOverlay:
             self._["saving_recording"],
             size=18,
             weight=ft.FontWeight.W_500,
-            color=ft.Colors.WHITE,
+            color=ft.Colors.ON_SURFACE,
             text_align=ft.TextAlign.CENTER,
         )
 
@@ -51,14 +51,16 @@ class SaveProgressOverlay:
         self.warning_text = ft.Text(
             self._["force_close_warning"],
             size=12,
-            color=ft.Colors.with_opacity(0.7, ft.Colors.WHITE),
+            color=ft.Colors.ON_SURFACE_VARIANT,
             text_align=ft.TextAlign.CENTER,
             visible=False,
         )
 
-        self.progress_ring = ft.ProgressRing(width=60, height=60, stroke_width=4, color="#2196F3", value=0.7)
+        self.progress_ring = ft.ProgressRing(width=60, height=60, stroke_width=4, color=ft.Colors.PRIMARY, value=0.7)
 
-        self.simple_progress_ring = ft.ProgressRing(width=50, height=50, stroke_width=3, color="#2196F3", value=0.8)
+        self.simple_progress_ring = ft.ProgressRing(
+            width=50, height=50, stroke_width=3, color=ft.Colors.PRIMARY, value=0.8
+        )
 
         self.content_container = ft.Container(
             content=ft.Column(
@@ -78,7 +80,7 @@ class SaveProgressOverlay:
             height=280,
             padding=ft.Padding.all(30),
             alignment=ft.alignment.Alignment.CENTER,
-            bgcolor=ft.Colors.with_opacity(0.95, "#212121"),
+            bgcolor=ft.Colors.SURFACE,
             border_radius=16,
             shadow=ft.BoxShadow(
                 spread_radius=0,
@@ -102,7 +104,7 @@ class SaveProgressOverlay:
             height=180,
             padding=ft.Padding.all(25),
             alignment=ft.alignment.Alignment.CENTER,
-            bgcolor=ft.Colors.with_opacity(0.95, "#212121"),
+            bgcolor=ft.Colors.SURFACE,
             border_radius=16,
             shadow=ft.BoxShadow(
                 spread_radius=0,

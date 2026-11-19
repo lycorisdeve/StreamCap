@@ -54,6 +54,16 @@ def run(package):
         "version.txt",
     ):
         assert (package / relative).is_file(), f"Missing bundled resource: {relative}"
+    for relative in (
+        "logs",
+        "data",
+        "resources/templates",
+        "resources/styles",
+        "runtime/drivers",
+        "runtime/plugins",
+        "_internal/flet_desktop/app",
+    ):
+        assert not (package / relative).exists(), f"Unexpected placeholder directory: {relative}"
     api = WindowsAPI()
     with tempfile.TemporaryDirectory(prefix="StreamCap 桌面 ") as directory:
         root = Path(directory)

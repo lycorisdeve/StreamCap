@@ -12,8 +12,9 @@ from ...models.media.video_quality_model import VideoQuality
 from ...utils.delay import DelayedTaskExecutor
 from ...utils.logger import logger
 from ..base_page import PageBase
+from ..components.common.appearance_settings import AppearanceSettings
 from ..components.dialogs.help_dialog import HelpDialog
-from ..themes import PopupColorItem
+from ..themes.theme_tokens import DEFAULT_COLOR
 
 
 class SettingsPage(PageBase):
@@ -36,6 +37,7 @@ class SettingsPage(PageBase):
         self.tab_cookies = None
         self.tab_accounts = None
         self.tab_security = None
+        self.tab_appearance = None
         self.has_unsaved_changes = {}
         self.delay_handler = DelayedTaskExecutor(self.app, self)
         self.load_language()
@@ -43,6 +45,8 @@ class SettingsPage(PageBase):
         self.page.on_keyboard_event = self.on_keyboard
 
     async def load(self):
+        if self.tab_appearance is not None:
+            self.tab_appearance.dispose()
         self.content_area.controls.clear()
         language = self.app.language_manager.language
         self._ = language["settings_page"] | language["video_quality"] | language["base"] | language["sidebar"]
@@ -50,16 +54,19 @@ class SettingsPage(PageBase):
         self.tab_push = self.create_push_settings_tab()
         self.tab_cookies = self.create_cookies_settings_tab()
         self.tab_accounts = self.create_accounts_settings_tab()
+        self.tab_appearance = AppearanceSettings(self.app)
         self.page.on_keyboard_event = self.on_keyboard
 
         tab_labels = [
             ft.Tab(label=self._["recording_settings"]),
+            ft.Tab(label=language["appearance_settings"]["title"]),
             ft.Tab(label=self._["push_settings"]),
             ft.Tab(label=self._["cookies_settings"]),
             ft.Tab(label=self._["accounts_settings"]),
         ]
         tab_contents = [
             self.tab_recording,
+            ft.Container(content=self.tab_appearance, padding=16, expand=True),
             self.tab_push,
             self.tab_cookies,
             self.tab_accounts,
@@ -136,6 +143,14 @@ class SettingsPage(PageBase):
         """Restore settings to their default values."""
 
         async def confirm_dlg(_):
+            self.app.theme_manager.preview(color=DEFAULT_COLOR, mode="light")
+            try:
+                await self.app.theme_manager.commit_preview()
+            except Exception:
+                await self.app.snack_bar.show_snack_bar(
+                    self.app.language_manager.language["appearance_settings"]["save_failed"], bgcolor=ft.Colors.RED
+                )
+                return
             ui_language = self.user_config["language"]
             self.user_config = self.default_config.copy()
             self.user_config["language"] = ui_language
@@ -270,33 +285,6 @@ class SettingsPage(PageBase):
                                 on_select=self.on_change,
                                 data="language",
                                 tooltip=self._["switch_language"],
-                            ),
-                        ),
-                        self.create_setting_row(
-                            self._["theme_color"],
-                            ft.PopupMenuButton(
-                                icon=ft.Icons.COLOR_LENS_OUTLINED,
-                                icon_color=ft.Colors.PRIMARY,
-                                tooltip=self._["colors"],
-                                items=[
-                                    PopupColorItem(color=color, name=name)
-                                    for color, name in [
-                                        ("deeppurple", "Deep purple"),
-                                        ("purple", "Purple"),
-                                        ("indigo", "Indigo"),
-                                        ("blue", "Blue"),
-                                        ("teal", "Teal"),
-                                        ("deeporange", "Deep orange"),
-                                        ("orange", "Orange"),
-                                        ("pink", "Pink"),
-                                        ("brown", "Brown"),
-                                        ("bluegrey", "Blue Grey"),
-                                        ("green", "Green"),
-                                        ("cyan", "Cyan"),
-                                        ("lightblue", "Light Blue"),
-                                        ("", "Default"),
-                                    ]
-                                ],
                             ),
                         ),
                         self.create_setting_row(

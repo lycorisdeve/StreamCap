@@ -53,6 +53,7 @@ class CardDialog(ft.AlertDialog):
 
         dialog_content = ft.Column(
             [
+                ft.Text(self._["skip_condition"], visible=recording.skip_current_live, size=14),
                 ft.Text(f"{self._['anchor_name']}: {anchor_name}", size=14, selectable=True),
                 ft.Text(f"{self._['platform_name']}: {platform_name}", size=14, selectable=True),
                 ft.Text(f"{self._['live_link']}: {live_link}", size=14, selectable=True),

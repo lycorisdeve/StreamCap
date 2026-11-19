@@ -62,7 +62,7 @@ class StoragePage(BasePage):
         self.path_display = ft.Text(
             self._["storage_path"] + ": " + self.current_path,
             size=14,
-            color=ft.Colors.GREY_600,
+            color=ft.Colors.ON_SURFACE_VARIANT,
             selectable=True,
         )
         self.summary_area = ft.Row(wrap=True, spacing=8, run_spacing=8)
@@ -73,7 +73,7 @@ class StoragePage(BasePage):
 
         header_panel = ft.Container(
             padding=12,
-            border=ft.Border.all(1, ft.Colors.GREY_300),
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             border_radius=8,
             content=ft.Column(
                 tight=True,
@@ -208,7 +208,7 @@ class StoragePage(BasePage):
                 .replace("{empty_dirs}", str(self.storage_stats["empty_dirs"]))
                 .replace("{logs_size}", self.format_size(self.storage_stats["logs_size"])),
                 size=12,
-                color=ft.Colors.GREY_600,
+                color=ft.Colors.ON_SURFACE_VARIANT,
             )
         )
 
@@ -394,7 +394,9 @@ class StoragePage(BasePage):
     def update_recent_recordings(self):
         recent_items = self.get_recent_history_items(limit=5)
         if not recent_items:
-            self.recent_area.controls.append(ft.Text(self._["empty_recent_files"], size=12, color=ft.Colors.GREY_600))
+            self.recent_area.controls.append(
+                ft.Text(self._["empty_recent_files"], size=12, color=ft.Colors.ON_SURFACE_VARIANT)
+            )
             return
 
         for item in recent_items:
@@ -409,7 +411,7 @@ class StoragePage(BasePage):
             self.recent_area.controls.append(
                 ft.ListTile(
                     dense=True,
-                    leading=ft.Icon(ft.Icons.VIDEO_FILE, color=ft.Colors.BLUE),
+                    leading=ft.Icon(ft.Icons.VIDEO_FILE, color=ft.Colors.PRIMARY),
                     title=ft.Text(title, size=13),
                     subtitle=ft.Text(subtitle, size=11),
                     trailing=ft.Row(
@@ -437,13 +439,13 @@ class StoragePage(BasePage):
     def create_panel(title: str, content, icon=None, height: int | None = None):
         title_controls = []
         if icon:
-            title_controls.append(ft.Icon(icon, size=18, color=ft.Colors.BLUE))
+            title_controls.append(ft.Icon(icon, size=18, color=ft.Colors.PRIMARY))
         title_controls.append(ft.Text(title, size=15, weight=ft.FontWeight.BOLD))
 
         return ft.Container(
             height=height,
             padding=12,
-            border=ft.Border.all(1, ft.Colors.GREY_300),
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             border_radius=8,
             content=ft.Column(
                 expand=bool(height),
@@ -465,7 +467,7 @@ class StoragePage(BasePage):
             width=250,
             height=112,
             padding=10,
-            border=ft.Border.all(1, ft.Colors.GREY_300),
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             border_radius=6,
             content=ft.Column(
                 tight=True,
@@ -480,7 +482,7 @@ class StoragePage(BasePage):
                                 tight=True,
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                 controls=[
-                                    ft.Text(row_label, size=12, color=ft.Colors.GREY_600, expand=True),
+                                    ft.Text(row_label, size=12, color=ft.Colors.ON_SURFACE_VARIANT, expand=True),
                                     ft.Text(
                                         row_value, size=12, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.RIGHT
                                     ),
@@ -510,7 +512,7 @@ class StoragePage(BasePage):
                 )
                 if self.app.is_mobile:
                     back_item = ft.ListTile(
-                        leading=ft.Icon(ft.Icons.ARROW_BACK, color=ft.Colors.BLUE),
+                        leading=ft.Icon(ft.Icons.ARROW_BACK, color=ft.Colors.PRIMARY),
                         title=ft.Text(self._["go_back"]),
                         on_click=lambda _: self.app.page.run_task(self.navigate_to_parent),
                     )
@@ -562,7 +564,9 @@ class StoragePage(BasePage):
         is_mobile = self.app.is_mobile
         for name, is_dir, full_path in items:
             if is_mobile:
-                icon = ft.Icon(ft.Icons.FOLDER, color=ft.Colors.BLUE) if is_dir else ft.Icon(ft.Icons.INSERT_DRIVE_FILE)
+                icon = (
+                    ft.Icon(ft.Icons.FOLDER, color=ft.Colors.PRIMARY) if is_dir else ft.Icon(ft.Icons.INSERT_DRIVE_FILE)
+                )
                 item = ft.ListTile(
                     leading=icon,
                     title=ft.Text(name),

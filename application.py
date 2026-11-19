@@ -141,6 +141,9 @@ def handle_disconnect(page: ft.Page, app: App) -> Callable:
 
     async def disconnect(_: ft.ControlEvent) -> None:
         page.pubsub.unsubscribe_all()
+        app.recordings.dispose()
+        app.record_card_manager.dispose()
+        app.theme_manager.dispose()
         app.settings.user_config["last_route"] = page.route
         await app.config_manager.save_user_config(app.settings.user_config)
         logger.info(f"Saved last route: {page.route}")
@@ -171,6 +174,8 @@ async def _load_main(page: ft.Page) -> None:
     app = App(page, services=_services)
     page.data = app
     app.is_web_mode = page.web
+    if page.web:
+        page.on_disconnect = handle_disconnect(page, app)
     app.is_mobile = False
     await setup_desktop_window(page, app)
 
@@ -180,12 +185,6 @@ async def _load_main(page: ft.Page) -> None:
             logger.info("Tray manager initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize tray manager: {e}")
-
-    theme_mode = app.settings.user_config.get("theme_mode", "light")
-    if theme_mode == "dark":
-        page.theme_mode = ft.ThemeMode.DARK
-    else:
-        page.theme_mode = ft.ThemeMode.LIGHT
 
     save_progress_overlay = SaveProgressOverlay(app)
     page.overlay.append(save_progress_overlay.overlay)

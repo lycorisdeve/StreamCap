@@ -77,17 +77,13 @@ class HomePage(PageBase):
                     ft.Text(
                         self._["tagline"],
                         size=18,
-                        color=(
-                            ft.Colors.BLACK_87 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE_70
-                        ),
+                        color=(ft.Colors.ON_SURFACE_VARIANT),
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Text(
                         self._["version"] + ":" + self.app.about.about_config["version_updates"][0]["version"],
                         size=14,
-                        color=(
-                            ft.Colors.BLACK_54 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE_60
-                        ),
+                        color=(ft.Colors.ON_SURFACE_VARIANT),
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ],
@@ -115,7 +111,7 @@ class HomePage(PageBase):
                                 self.create_action_button(
                                     self._["start_recording"],
                                     ft.Icons.PLAY_CIRCLE_FILL_ROUNDED,
-                                    ft.Colors.GREEN,
+                                    ft.Colors.PRIMARY,
                                     self.on_start_recording_click,
                                     width=button_width,
                                     height=button_height,
@@ -123,7 +119,7 @@ class HomePage(PageBase):
                                 self.create_action_button(
                                     self._["recording_list"],
                                     ft.Icons.STORAGE_ROUNDED,
-                                    ft.Colors.BLUE,
+                                    ft.Colors.PRIMARY,
                                     self.on_browse_recordings_click,
                                     width=button_width,
                                     height=button_height,
@@ -138,7 +134,7 @@ class HomePage(PageBase):
                                 self.create_action_button(
                                     self._["browse_recordings"],
                                     ft.Icons.FOLDER_OPEN_ROUNDED,
-                                    ft.Colors.AMBER,
+                                    ft.Colors.PRIMARY,
                                     self.on_manage_storage_click,
                                     width=button_width,
                                     height=button_height,
@@ -146,7 +142,7 @@ class HomePage(PageBase):
                                 self.create_action_button(
                                     self._["settings"],
                                     ft.Icons.SETTINGS_ROUNDED,
-                                    ft.Colors.GREY,
+                                    ft.Colors.PRIMARY,
                                     self.on_settings_click,
                                     width=button_width,
                                     height=button_height,
@@ -160,7 +156,7 @@ class HomePage(PageBase):
                             content=self.create_action_button(
                                 self._["about"],
                                 ft.Icons.INFO_ROUNDED,
-                                ft.Colors.PURPLE,
+                                ft.Colors.PRIMARY,
                                 self.on_about_click,
                                 width=button_width,
                                 height=button_height,
@@ -184,7 +180,7 @@ class HomePage(PageBase):
                                     self.create_action_button(
                                         self._["start_recording"],
                                         ft.Icons.PLAY_CIRCLE_FILL_ROUNDED,
-                                        ft.Colors.GREEN,
+                                        ft.Colors.PRIMARY,
                                         self.on_start_recording_click,
                                         width=button_width,
                                         height=button_height,
@@ -192,7 +188,7 @@ class HomePage(PageBase):
                                     self.create_action_button(
                                         self._["recording_list"],
                                         ft.Icons.STORAGE_ROUNDED,
-                                        ft.Colors.BLUE,
+                                        ft.Colors.PRIMARY,
                                         self.on_browse_recordings_click,
                                         width=button_width,
                                         height=button_height,
@@ -209,7 +205,7 @@ class HomePage(PageBase):
                                     self.create_action_button(
                                         self._["browse_recordings"],
                                         ft.Icons.FOLDER_OPEN_ROUNDED,
-                                        ft.Colors.AMBER,
+                                        ft.Colors.PRIMARY,
                                         self.on_manage_storage_click,
                                         width=button_width,
                                         height=button_height,
@@ -217,7 +213,7 @@ class HomePage(PageBase):
                                     self.create_action_button(
                                         self._["settings"],
                                         ft.Icons.SETTINGS_ROUNDED,
-                                        ft.Colors.GREY,
+                                        ft.Colors.PRIMARY,
                                         self.on_settings_click,
                                         width=button_width,
                                         height=button_height,
@@ -225,7 +221,7 @@ class HomePage(PageBase):
                                     self.create_action_button(
                                         self._["about"],
                                         ft.Icons.INFO_ROUNDED,
-                                        ft.Colors.PURPLE,
+                                        ft.Colors.PRIMARY,
                                         self.on_about_click,
                                         width=button_width,
                                         height=button_height,
@@ -248,10 +244,10 @@ class HomePage(PageBase):
         return ft.Button(
             content=ft.Row(
                 controls=[
-                    ft.Icon(icon, color=ft.Colors.WHITE),
+                    ft.Icon(icon, color=ft.Colors.ON_PRIMARY if color == ft.Colors.PRIMARY else ft.Colors.WHITE),
                     ft.Text(
                         text,
-                        color=ft.Colors.WHITE,
+                        color=ft.Colors.ON_PRIMARY if color == ft.Colors.PRIMARY else ft.Colors.WHITE,
                         size=14,
                         weight=ft.FontWeight.W_500,
                     ),
@@ -291,11 +287,7 @@ class HomePage(PageBase):
                                 content=ft.Text(
                                     content,
                                     size=14,
-                                    color=(
-                                        ft.Colors.BLACK_87
-                                        if self.app.page.theme_mode == ft.ThemeMode.LIGHT
-                                        else ft.Colors.WHITE_70
-                                    ),
+                                    color=(ft.Colors.ON_SURFACE_VARIANT),
                                 ),
                                 margin=ft.Margin.only(left=34),
                             ),
@@ -326,7 +318,7 @@ class HomePage(PageBase):
                 announcement_list[2]["title"],
                 announcement_list[2]["content"],
                 ft.Icons.UPCOMING_ROUNDED,
-                ft.Colors.BLUE,
+                ft.Colors.PRIMARY,
             ),
         ]
 
@@ -420,7 +412,7 @@ class HomePage(PageBase):
                     self._["no_recordings"],
                     size=14,
                     italic=True,
-                    color=ft.Colors.BLACK_45 if self.app.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.WHITE_60,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
                 )
             )
 
@@ -460,7 +452,7 @@ class HomePage(PageBase):
                         self._["total_rooms"],
                         total_recordings,
                         ft.Icons.VIDEO_FILE_ROUNDED,
-                        ft.Colors.BLUE,
+                        ft.Colors.PRIMARY,
                     ),
                     create_stat_item(
                         self._["active_recordings"],
@@ -501,7 +493,7 @@ class HomePage(PageBase):
                         self._["total_rooms"],
                         total_recordings,
                         ft.Icons.VIDEO_FILE_ROUNDED,
-                        ft.Colors.BLUE,
+                        ft.Colors.PRIMARY,
                     ),
                     create_stat_item(
                         self._["active_recordings"],
@@ -562,11 +554,7 @@ class HomePage(PageBase):
                                 description,
                                 size=13,
                                 text_align=ft.TextAlign.CENTER,
-                                color=(
-                                    ft.Colors.BLACK_54
-                                    if self.app.page.theme_mode == ft.ThemeMode.LIGHT
-                                    else ft.Colors.WHITE_70
-                                ),
+                                color=(ft.Colors.ON_SURFACE_VARIANT),
                             ),
                         ],
                         spacing=8,
@@ -594,13 +582,13 @@ class HomePage(PageBase):
                         self._["feature_title_2"],
                         self._["feature_desc_2"],
                         ft.Icons.MESSAGE_ROUNDED,
-                        ft.Colors.BLUE,
+                        ft.Colors.PRIMARY,
                     ),
                     create_feature_card(
                         self._["feature_title_3"],
                         self._["feature_desc_3"],
                         ft.Icons.QUEUE_ROUNDED,
-                        ft.Colors.PURPLE,
+                        ft.Colors.PRIMARY,
                     ),
                     create_feature_card(
                         self._["feature_title_4"],
@@ -625,13 +613,13 @@ class HomePage(PageBase):
                         self._["feature_title_2"],
                         self._["feature_desc_2"],
                         ft.Icons.NOTIFICATIONS_ACTIVE_ROUNDED,
-                        ft.Colors.BLUE,
+                        ft.Colors.PRIMARY,
                     ),
                     create_feature_card(
                         self._["feature_title_3"],
                         self._["feature_desc_3"],
                         ft.Icons.QUEUE_ROUNDED,
-                        ft.Colors.PURPLE,
+                        ft.Colors.PRIMARY,
                     ),
                     create_feature_card(
                         self._["feature_title_4"],

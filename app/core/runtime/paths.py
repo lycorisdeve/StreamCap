@@ -88,9 +88,6 @@ def prepare_user_data_dir() -> None:
             if not path.is_dir():
                 raise FileNotFoundError(f"Incomplete StreamCap package: {path}")
     user_data_dir.mkdir(parents=True, exist_ok=True)
-    if windows_package_layout:
-        for directory in ("logs/archive", "data/cache", "data/temp", "data/exports", "data/backups"):
-            (user_data_dir / directory).mkdir(parents=True, exist_ok=True)
     if user_data_dir == resource_dir:
         return
 

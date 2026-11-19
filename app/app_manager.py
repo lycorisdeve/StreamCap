@@ -12,6 +12,7 @@ from .initialization.installation_manager import InstallationManager
 from .ui.components.business.recording_card import RecordingCardManager
 from .ui.components.common.show_snackbar import ShowSnackBar
 from .ui.navigation.sidebar import LeftNavigationMenu, NavigationSidebar
+from .ui.themes import ThemeManager
 from .ui.views.about_view import AboutPage
 from .ui.views.home_view import HomePage
 from .ui.views.logs_view import LogsPage
@@ -56,6 +57,7 @@ class App:
         services.settings_config.adopt_accounts_config(self.settings.accounts_config)
         services.settings_config.language_code = self.settings.language_code or services.settings_config.language_code
         self.language_code = self.settings.language_code
+        self.theme_manager = ThemeManager(self)
         self.about = AboutPage(self)
         self.recordings = RecordingsPage(self)
         self.home = HomePage(self)
@@ -67,12 +69,15 @@ class App:
 
         self.snack_bar_area = ft.Container()
         self.dialog_area = ft.Container()
+        self.content_surface = ft.Container(content=self.content_area, expand=True, padding=12)
+        self.theme_manager.subscribe(self.update_theme_surface)
+        self.update_theme_surface()
         self.complete_page = ft.Row(
             expand=True,
             controls=[
                 self.left_navigation_menu,
                 ft.VerticalDivider(width=1),
-                self.content_area,
+                self.content_surface,
                 self.dialog_area,
                 self.snack_bar_area,
             ],
@@ -92,6 +97,7 @@ class App:
             self.page.run_task(self._check_for_updates)
 
         services.register_ui_bridge(self)
+        self.theme_manager.receive_committed(*services.snapshot_appearance())
         if not services.smoke_test:
             self.page.run_task(self.shutdown_manager.reschedule)
 
@@ -158,6 +164,19 @@ class App:
         except Exception as exc:
             logger.debug(f"schedule_pubsub dropped: {exc}")
 
+    def schedule_theme_update(self, config, revision) -> None:
+        loop = self._get_session_loop()
+        if loop is not None:
+            loop.call_soon_threadsafe(self.theme_manager.receive_committed, config, revision)
+
+    def update_theme_surface(self):
+        tokens = self.theme_manager.tokens
+        self.content_surface.gradient = ft.LinearGradient(
+            begin=ft.Alignment.TOP_LEFT,
+            end=ft.Alignment.BOTTOM_RIGHT,
+            colors=[tokens.background, tokens.surface],
+        )
+
     def initialize_pages(self):
         return {
             "settings": self.settings,
@@ -174,6 +193,8 @@ class App:
         self._loading_page = True
 
         try:
+            if self.current_page is self.settings and page_name != "settings":
+                self.theme_manager.cancel_preview()
             await self.clear_content_area()
             if page := self.pages.get(page_name):
                 await self.settings.is_changed()
@@ -190,6 +211,9 @@ class App:
         self.content_area.update()
 
     async def cleanup(self):
+        self.recordings.dispose()
+        self.record_card_manager.dispose()
+        self.theme_manager.dispose()
         self.services.unregister_ui_bridge(self)
         await self.shutdown_manager.stop()
 

@@ -10,15 +10,13 @@ from ...utils.logger import logger
 from ..base_page import PageBase
 from ..components.business.recording_dialog import RecordingDialog
 from ..components.dialogs.help_dialog import HelpDialog
-from ..components.dialogs.search_dialog import SearchDialog
 from ..filters import RecordingFilters
 
 
 class RecordingsPage(PageBase):
-    CARD_MIN_WIDTH = 320
-    MOBILE_CARD_MIN_WIDTH = 250
-    CARD_ASPECT_RATIO = 2.55
-    MOBILE_CARD_ASPECT_RATIO = 2.3
+    CARD_MIN_WIDTH = 280
+    CARD_HEIGHT = 120
+    CARD_SPACING = 12
 
     def __init__(self, app):
         super().__init__(app)
@@ -26,13 +24,21 @@ class RecordingsPage(PageBase):
         self.recording_card_area = None
         self.add_recording_dialog = None
         self.is_grid_view = app.settings.user_config.get("is_grid_view", True)
+        self._grid_width = 0
         self.loading_indicator = None
         self.app.language_manager.add_observer(self)
         self.load_language()
         self.current_filter = "all"
         self.current_platform_filter = "all"
         self.platform_buttons = {}
+        self.search_query = ""
+        self.search_field = None
+        self._search_task = None
+        self._search_revision = 0
+        self._filter_buttons = {}
         self.init()
+        theme_manager = getattr(self.app, "theme_manager", None)
+        self._unsubscribe_theme = theme_manager.subscribe(self.refresh_theme) if theme_manager else None
 
     def load_language(self):
         language = self.app.language_manager.language
@@ -46,15 +52,21 @@ class RecordingsPage(PageBase):
             initial_content = ft.GridView(
                 expand=True,
                 runs_count=1,
-                spacing=10,
-                run_spacing=10,
-                child_aspect_ratio=self.CARD_ASPECT_RATIO,
+                spacing=self.CARD_SPACING,
+                run_spacing=self.CARD_SPACING,
+                child_aspect_ratio=self.CARD_MIN_WIDTH / self.CARD_HEIGHT,
+                padding=0,
                 controls=[],
             )
         else:
             initial_content = ft.Column(controls=[], spacing=5, expand=True)
 
-        self.recording_card_area = ft.Container(content=initial_content, expand=True)
+        self.recording_card_area = ft.Container(
+            content=initial_content,
+            expand=True,
+            on_size_change=self.update_grid_layout,
+            size_change_interval=50,
+        )
         self.add_recording_dialog = RecordingDialog(self.app, self.add_recording)
         self.pubsub_subscribe()
 
@@ -76,7 +88,6 @@ class RecordingsPage(PageBase):
             await self.recalculate_grid_columns()
 
         self.page.on_keyboard_event = self.on_keyboard
-        self.page.on_resize = self.update_grid_layout
 
     def pubsub_subscribe(self):
         self.app.page.pubsub.subscribe_topic("add", self.subscribe_add_cards)
@@ -94,9 +105,10 @@ class RecordingsPage(PageBase):
             new_content = ft.GridView(
                 expand=True,
                 runs_count=runs_count,
-                spacing=10,
-                run_spacing=10,
+                spacing=self.CARD_SPACING,
+                run_spacing=self.CARD_SPACING,
                 child_aspect_ratio=child_aspect_ratio,
+                padding=0,
                 controls=current_controls,
             )
         else:
@@ -109,221 +121,235 @@ class RecordingsPage(PageBase):
         )
         self.content_area.update()
 
+        if self.is_grid_view:
+            await self.recalculate_grid_columns()
+
         self.app.settings.user_config["is_grid_view"] = self.is_grid_view
         self.app.services.run_coro(self.app.config_manager.save_user_config(self.app.settings.user_config))
 
+    def theme_color(self, name, fallback):
+        manager = getattr(self.app, "theme_manager", None)
+        return getattr(manager.tokens, name, fallback) if manager else fallback
+
     def create_recordings_title_area(self):
-        toggle_view_mode_button = ft.IconButton(
-            icon=ft.Icons.GRID_VIEW if self.is_grid_view else ft.Icons.LIST,
-            icon_color=ft.Colors.PRIMARY,
-            tooltip=self._["toggle_view"],
-            on_click=self.toggle_view_mode,
-        )
-
-        title_controls = [
-            ft.Text(self._["recording_list"], theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
-            ft.Container(expand=True),
-        ]
-
-        if not self.app.is_mobile:
-            title_controls.append(toggle_view_mode_button)
-
-        batch_controls = [
-            ft.IconButton(
-                icon=ft.Icons.SEARCH,
-                icon_color=ft.Colors.PRIMARY,
-                tooltip=self._["search"],
-                on_click=self.search_on_click,
-            ),
-            ft.IconButton(
-                icon=ft.Icons.ADD,
-                icon_color=ft.Colors.PRIMARY,
-                tooltip=self._["add_record"],
-                on_click=self.add_recording_on_click,
-            ),
-            ft.IconButton(
-                icon=ft.Icons.REFRESH,
-                icon_color=ft.Colors.PRIMARY,
-                tooltip=self._["refresh"],
-                on_click=self.refresh_cards_on_click,
-            ),
-            ft.IconButton(
-                icon=ft.Icons.PLAY_ARROW,
-                icon_color=ft.Colors.PRIMARY,
-                tooltip=self._["batch_start"],
-                on_click=self.start_monitor_recordings_on_click,
-            ),
-            ft.IconButton(
-                icon=ft.Icons.STOP,
-                icon_color=ft.Colors.PRIMARY,
-                tooltip=self._["batch_stop"],
-                on_click=self.stop_monitor_recordings_on_click,
-            ),
-            ft.IconButton(
-                icon=ft.Icons.DELETE_SWEEP,
-                icon_color=ft.Colors.PRIMARY,
-                tooltip=self._["batch_delete"],
-                on_click=self.delete_monitor_recordings_on_click,
-            ),
-        ]
-
-        if self.app.is_mobile:
-            first_row = ft.Row(
-                title_controls,
-                alignment=ft.MainAxisAlignment.START,
-            )
-            second_row = ft.Row(
-                [
-                    ft.Text(self._["operations"] + ":", size=14),
-                    *batch_controls,
-                ],
-                alignment=ft.MainAxisAlignment.START,
-                spacing=2,
-                scroll=ft.ScrollMode.HIDDEN,
-            )
-
-            return ft.Column(
-                [first_row, second_row],
-                spacing=5,
+        if self.search_field is None:
+            self.search_field = ft.TextField(
+                value=self.search_query,
+                prefix_icon=ft.Icons.SEARCH,
+                hint_text=self._["search_placeholder"],
+                on_change=self.on_search_change,
+                on_submit=self.on_search_submit,
+                height=40,
+                text_size=13,
+                dense=True,
+                content_padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+                border_radius=8,
+                border_color=ft.Colors.OUTLINE_VARIANT,
+                focused_border_color=self.theme_color("focus_ring", ft.Colors.PRIMARY),
+                expand=True,
             )
         else:
-            return ft.Row(
-                [*title_controls, *batch_controls],
-                alignment=ft.MainAxisAlignment.START,
-            )
-
-    def create_filter_area(self):
-        """Create the filter area"""
-
-        filter_buttons = [
-            ft.Text(self._["status_filter"] + ":" if not self.app.is_mobile else self._["filter"] + ":", size=14),
-            ft.Button(
-                self._["filter_all"],
-                on_click=self.filter_all_on_click,
-                bgcolor=ft.Colors.PRIMARY if self.current_filter == "all" else None,
-                color=ft.Colors.WHITE if self.current_filter == "all" else None,
-                style=ft.ButtonStyle(
-                    shape=ft.RoundedRectangleBorder(radius=5),
-                    padding=ft.Padding.symmetric(horizontal=10, vertical=4),
-                ),
+            self.search_field.hint_text = self._["search_placeholder"]
+        actions = [
+            ft.FilledButton(self._["toolbar_add"], icon=ft.Icons.ADD, on_click=self.add_recording_on_click),
+            ft.OutlinedButton(
+                self._["toolbar_start_all"], icon=ft.Icons.PLAY_ARROW, on_click=self.start_monitor_recordings_on_click
             ),
-            ft.Button(
-                self._["filter_recording"],
-                on_click=self.filter_recording_on_click,
-                bgcolor=ft.Colors.GREEN if self.current_filter == "recording" else None,
-                color=ft.Colors.WHITE if self.current_filter == "recording" else None,
-                style=ft.ButtonStyle(
-                    shape=ft.RoundedRectangleBorder(radius=5),
-                    padding=ft.Padding.symmetric(horizontal=10, vertical=4),
-                ),
+            ft.OutlinedButton(
+                self._["toolbar_stop_all"], icon=ft.Icons.STOP, on_click=self.stop_monitor_recordings_on_click
             ),
-            ft.Button(
-                self._["filter_living"],
-                on_click=self.filter_living_on_click,
-                bgcolor=ft.Colors.BLUE if self.current_filter == "living" else None,
-                color=ft.Colors.WHITE if self.current_filter == "living" else None,
-                style=ft.ButtonStyle(
-                    shape=ft.RoundedRectangleBorder(radius=5),
-                    padding=ft.Padding.symmetric(horizontal=10, vertical=4),
-                ),
-            ),
-            ft.Button(
-                self._["filter_offline"],
-                on_click=self.filter_offline_on_click,
-                bgcolor=ft.Colors.AMBER if self.current_filter == "offline" else None,
-                color=ft.Colors.WHITE if self.current_filter == "offline" else None,
-                style=ft.ButtonStyle(
-                    shape=ft.RoundedRectangleBorder(radius=5),
-                    padding=ft.Padding.symmetric(horizontal=10, vertical=4),
-                ),
-            ),
-            ft.Button(
-                self._["filter_error"],
-                on_click=self.filter_error_on_click,
-                bgcolor=ft.Colors.RED if self.current_filter == "error" else None,
-                color=ft.Colors.WHITE if self.current_filter == "error" else None,
-                style=ft.ButtonStyle(
-                    shape=ft.RoundedRectangleBorder(radius=5),
-                    padding=ft.Padding.symmetric(horizontal=10, vertical=4),
-                ),
-            ),
-            ft.Button(
-                self._["filter_stopped"],
-                on_click=self.filter_stopped_on_click,
-                bgcolor=ft.Colors.GREY if self.current_filter == "stopped" else None,
-                color=ft.Colors.WHITE if self.current_filter == "stopped" else None,
-                style=ft.ButtonStyle(
-                    shape=ft.RoundedRectangleBorder(radius=5),
-                    padding=ft.Padding.symmetric(horizontal=10, vertical=4),
-                ),
+            ft.OutlinedButton(self._["refresh"], icon=ft.Icons.REFRESH, on_click=self.refresh_cards_on_click),
+            ft.OutlinedButton(
+                self._["batch_delete"],
+                icon=ft.Icons.DELETE_SWEEP,
+                on_click=self.delete_monitor_recordings_on_click,
+                style=ft.ButtonStyle(color=ft.Colors.RED),
             ),
         ]
+        for button in actions:
+            button.height = 40
+        return ft.ResponsiveRow(
+            [
+                ft.Row(actions, wrap=True, spacing=8, run_spacing=8, col={"xs": 12, "xl": 8}),
+                ft.Row(
+                    [
+                        self.search_field,
+                        ft.IconButton(
+                            ft.Icons.GRID_VIEW,
+                            selected=self.is_grid_view,
+                            tooltip=self._["grid_view"],
+                            on_click=self.show_grid_view,
+                        ),
+                        ft.IconButton(
+                            ft.Icons.LIST,
+                            selected=not self.is_grid_view,
+                            tooltip=self._["list_view"],
+                            on_click=self.show_list_view,
+                        ),
+                    ],
+                    spacing=0,
+                    col={"xs": 12, "xl": 4},
+                ),
+            ],
+            spacing=12,
+            run_spacing=8,
+        )
 
-        platforms = {}
-        for recording in self.app.record_manager.recordings:
-            if recording.platform and recording.platform_key:
-                platforms[recording.platform_key] = recording.platform
+    async def show_grid_view(self, event):
+        if not self.is_grid_view:
+            await self.toggle_view_mode(event)
 
-        platform_options = [ft.dropdown.DropdownOption(key="all", text=self._["filter_all"])]
+    async def show_list_view(self, event):
+        if self.is_grid_view:
+            await self.toggle_view_mode(event)
 
-        for key, name in platforms.items():
-            platform_options.append(ft.dropdown.DropdownOption(key=key, text=name))
+    def filter_button_style(self, selected):
+        return ft.ButtonStyle(
+            color=self.theme_color("primary_foreground", ft.Colors.ON_PRIMARY) if selected else ft.Colors.ON_SURFACE,
+            bgcolor={
+                ft.ControlState.DEFAULT: self.theme_color("primary", ft.Colors.PRIMARY)
+                if selected
+                else ft.Colors.SURFACE,
+                ft.ControlState.HOVERED: self.theme_color("primary_hover", ft.Colors.PRIMARY)
+                if selected
+                else self.theme_color("primary_light", ft.Colors.SECONDARY_CONTAINER),
+                ft.ControlState.PRESSED: self.theme_color("primary_active", ft.Colors.PRIMARY),
+            },
+            overlay_color={
+                ft.ControlState.FOCUSED: ft.Colors.with_opacity(0.12, self.theme_color("focus_ring", ft.Colors.PRIMARY))
+            },
+            side={
+                ft.ControlState.DEFAULT: ft.BorderSide(
+                    1, self.theme_color("primary_border", ft.Colors.OUTLINE_VARIANT)
+                ),
+                ft.ControlState.FOCUSED: ft.BorderSide(2, self.theme_color("focus_ring", ft.Colors.PRIMARY)),
+            },
+            shape=ft.RoundedRectangleBorder(radius=18),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+            elevation=0,
+        )
 
-        current_platform_keys = ["all"] + list(platforms.keys())
-        if self.current_platform_filter not in current_platform_keys:
+    def refresh_theme(self):
+        if self.search_field is not None:
+            self.search_field.focused_border_color = self.theme_color("focus_ring", ft.Colors.PRIMARY)
+        for key, button in self._filter_buttons.items():
+            button.style = self.filter_button_style(key == self.current_filter)
+            button.content.controls[1].color = (
+                self.theme_color("primary_foreground", ft.Colors.ON_PRIMARY)
+                if key == self.current_filter
+                else ft.Colors.ON_SURFACE
+            )
+        if getattr(self.app, "current_page", None) is self:
+            try:
+                self.content_area.update()
+            except (ft.FletPageDisconnectedException, AssertionError):
+                pass
+
+    def create_filter_area(self):
+        """Status, platform and search always intersect without replacing cards."""
+        filters = (
+            ("all", "filter_all", ft.Icons.APPS, ft.Colors.ON_SURFACE_VARIANT, self.filter_all_on_click),
+            (
+                "recording",
+                "filter_recording",
+                ft.Icons.FIBER_MANUAL_RECORD,
+                ft.Colors.GREEN,
+                self.filter_recording_on_click,
+            ),
+            ("living", "filter_living", ft.Icons.LIVE_TV, ft.Colors.BLUE, self.filter_living_on_click),
+            ("offline", "filter_offline", ft.Icons.PAUSE_CIRCLE_OUTLINE, ft.Colors.AMBER, self.filter_offline_on_click),
+            ("error", "filter_error", ft.Icons.ERROR_OUTLINE, ft.Colors.RED, self.filter_error_on_click),
+            (
+                "stopped",
+                "filter_stopped",
+                ft.Icons.VISIBILITY_OFF_OUTLINED,
+                ft.Colors.GREY,
+                self.filter_stopped_on_click,
+            ),
+        )
+        self._filter_buttons = {}
+        for key, label, icon, color, handler in filters:
+            self._filter_buttons[key] = ft.Button(
+                content=ft.Row(
+                    [
+                        ft.Icon(icon, size=14, color=color),
+                        ft.Text(
+                            self._[label],
+                            size=13,
+                            color=(
+                                self.theme_color("primary_foreground", ft.Colors.ON_PRIMARY)
+                                if key == self.current_filter
+                                else ft.Colors.ON_SURFACE
+                            ),
+                        ),
+                    ],
+                    spacing=6,
+                    tight=True,
+                ),
+                on_click=handler,
+                height=34,
+                style=self.filter_button_style(key == self.current_filter),
+            )
+        platforms = {
+            recording.platform_key: recording.platform
+            for recording in self.app.record_manager.recordings
+            if recording.platform and recording.platform_key
+        }
+        if self.current_platform_filter not in {"all", *platforms}:
             self.current_platform_filter = "all"
-
         platform_dropdown = ft.Dropdown(
-            options=platform_options,
+            options=[ft.dropdown.DropdownOption(key="all", text=self._["filter_all"])]
+            + [ft.dropdown.DropdownOption(key=key, text=name) for key, name in platforms.items()],
             value=self.current_platform_filter,
+            label=self._["platform_filter"],
             on_select=self.on_platform_dropdown_change,
-            hover_color=ft.Colors.PRIMARY,
-            width=120,
-            text_size=14,
-            content_padding=ft.Padding.only(top=8, bottom=8, left=10, right=10),
-            border_radius=5,
-            border_color=ft.Colors.OUTLINE,
+            width=160,
+            text_size=13,
+            content_padding=ft.Padding.symmetric(horizontal=10, vertical=8),
+            border_radius=8,
+            border_color=ft.Colors.OUTLINE_VARIANT,
             focused_border_color=ft.Colors.PRIMARY,
             dense=True,
+            menu_height=320 if len(platforms) > 7 else None,
         )
-        if len(current_platform_keys) > 8:
-            platform_dropdown.menu_height = 320
-
-        platform_filter_area = ft.Row(
-            [ft.Text(self._["platform_filter"] + ":", size=14), platform_dropdown],
+        return ft.ResponsiveRow(
+            [
+                ft.Row(
+                    list(self._filter_buttons.values()), wrap=True, spacing=8, run_spacing=8, col={"xs": 12, "lg": 9}
+                ),
+                ft.Row([platform_dropdown], alignment=ft.MainAxisAlignment.END, col={"xs": 12, "lg": 3}),
+            ],
             spacing=8,
+            run_spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
-        if self.app.is_mobile:
-            status_filter_row = ft.Row(
-                filter_buttons,
-                alignment=ft.MainAxisAlignment.START,
-                spacing=3,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                scroll=ft.ScrollMode.HIDDEN,
-            )
+    async def on_search_change(self, event):
+        self.search_query = event.control.value or ""
+        self._search_revision += 1
+        if self._search_task is not None:
+            self._search_task.cancel()
+        self._search_task = self.page.run_task(self._apply_search_after_delay, self._search_revision)
 
-            platform_filter_row = ft.Row(
-                [platform_filter_area],
-                alignment=ft.MainAxisAlignment.START,
-                spacing=5,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            )
+    async def _apply_search_after_delay(self, revision):
+        try:
+            await asyncio.sleep(0.25)
+            if revision == self._search_revision:
+                await self.apply_filter()
+        except asyncio.CancelledError:
+            pass
 
-            return ft.Column(
-                [status_filter_row, platform_filter_row],
-                spacing=5,
-                alignment=ft.MainAxisAlignment.START,
-                horizontal_alignment=ft.CrossAxisAlignment.START,
-            )
-        else:
-            return ft.Row(
-                [*filter_buttons, ft.Container(expand=True), platform_filter_area],
-                alignment=ft.MainAxisAlignment.START,
-                spacing=5,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            )
+    async def on_search_submit(self, event):
+        if self._search_task is not None:
+            self._search_task.cancel()
+        await self.filter_recordings(event.control.value or "")
+
+    def dispose(self):
+        if self._search_task is not None:
+            self._search_task.cancel()
+        if self._unsubscribe_theme is not None:
+            self._unsubscribe_theme()
+            self._unsubscribe_theme = None
 
     async def filter_all_on_click(self, _):
         self.current_filter = "all"
@@ -349,68 +375,43 @@ class RecordingsPage(PageBase):
         self.current_filter = "stopped"
         await self.apply_filter()
 
+    def matches_search(self, recording):
+        query = getattr(self, "search_query", "").strip().casefold()
+        return not query or any(
+            query in str(getattr(recording, field, "") or "").casefold()
+            for field in ("streamer_name", "url", "title", "display_title", "platform")
+        )
+
     async def apply_filter(self):
-        if len(self.content_area.controls) > 1:
-            self.content_area.controls[1] = self.create_filter_area()
-        else:
-            self.content_area.controls.append(self.create_filter_area())
-
+        for key, button in getattr(self, "_filter_buttons", {}).items():
+            button.style = self.filter_button_style(key == self.current_filter)
         cards_obj = self.app.record_card_manager.cards_obj
-        recordings = self.app.record_manager.recordings
-
-        for recording in recordings:
+        visible_ids = set()
+        for recording in self.app.record_manager.recordings:
             card_info = cards_obj.get(recording.rec_id)
             if not card_info:
                 continue
-
-            status_visible = RecordingFilters.get_status_filter_result(recording, self.current_filter)
-            platform_visible = RecordingFilters.get_platform_filter_result(recording, self.current_platform_filter)
-
-            visible = status_visible and platform_visible
+            visible = RecordingFilters.should_show_recording(
+                self.current_filter, self.current_platform_filter, recording
+            ) and self.matches_search(recording)
             card_info["card"].visible = visible
-
+            if visible:
+                visible_ids.add(recording.rec_id)
         self.content_area.update()
         self.recording_card_area.update()
+        return visible_ids
 
     async def reset_cards_visibility(self):
-        cards_obj = self.app.record_card_manager.cards_obj
-        for card_info in cards_obj.values():
-            if not card_info["card"].visible:
-                card_info["card"].visible = True
-                card_info["card"].update()
+        self.search_query = ""
+        if self.search_field is not None:
+            self.search_field.value = ""
+        await self.apply_filter()
 
     async def filter_recordings(self, query):
-        recordings = self.app.record_manager.recordings
-        cards_obj = self.app.record_card_manager.cards_obj
-
-        if not query.strip():
-            await self.apply_filter()
-            return {}
-        else:
-            lower_query = query.strip().lower()
-            search_ids = {
-                rec.rec_id
-                for rec in recordings
-                if lower_query in str(rec.to_dict()).lower() or lower_query in rec.display_title
-            }
-
-            filtered_ids = set()
-
-            for rec_id in search_ids:
-                recording = self.app.record_manager.find_recording_by_id(rec_id)
-                if not recording:
-                    continue
-
-                if RecordingFilters.should_show_recording(self.current_filter, self.current_platform_filter, recording):
-                    filtered_ids.add(rec_id)
-
-            for card_info in cards_obj.values():
-                card_info["card"].visible = card_info["card"].key in filtered_ids
-                card_info["card"].update()
-
-            if not filtered_ids:
-                await self.app.snack_bar.show_snack_bar(self._["not_search_result"], duration=2000)
-            return filtered_ids
+        self.search_query = query
+        if self.search_field is not None:
+            self.search_field.value = query
+        return await self.apply_filter()
 
     def create_recordings_content_area(self):
         return ft.Column(
@@ -420,7 +421,7 @@ class RecordingsPage(PageBase):
                 ft.Container(content=self.loading_indicator, alignment=ft.alignment.Alignment.CENTER),
                 self.recording_card_area,
             ],
-            scroll=ft.ScrollMode.AUTO if not self.app.is_mobile else ft.ScrollMode.HIDDEN,
+            scroll=None if self.is_grid_view else ft.ScrollMode.AUTO,
         )
 
     async def add_record_cards(self):
@@ -557,11 +558,8 @@ class RecordingsPage(PageBase):
             await self.app.snack_bar.show_snack_bar(self._["add_recording_success_tip"], bgcolor=ft.Colors.PRIMARY)
 
     async def search_on_click(self, _e):
-        """Open the search dialog when the search button is clicked."""
-        search_dialog = SearchDialog(recordings_page=self)
-        search_dialog.open = True
-        self.app.dialog_area.content = search_dialog
-        self.app.dialog_area.update()
+        if self.search_field is not None:
+            await self.search_field.focus()
 
     async def add_recording_on_click(self, _e):
         await self.add_recording_dialog.show_dialog()
@@ -582,7 +580,9 @@ class RecordingsPage(PageBase):
                 continue
             if card_id in selected_cards:
                 selected_cards[card_id].selected = False
-                card["card"].content.bgcolor = None
+                card["card"].content.bgcolor = self.app.record_card_manager.get_card_background_color(
+                    selected_cards[card_id]
+                )
                 card["card"].update()
 
         for card in to_remove:
@@ -690,26 +690,25 @@ class RecordingsPage(PageBase):
         self.loading_indicator.visible = False
         self.loading_indicator.update()
 
-    async def update_grid_layout(self, _):
-        self.page.run_task(self.recalculate_grid_columns)
+    async def update_grid_layout(self, event):
+        if event.width <= 0:
+            return
+        self._grid_width = event.width
+        await self.recalculate_grid_columns()
 
     def get_grid_available_width(self):
-        page_width = self.page.width or getattr(self.page.window, "width", 0) or 0
-        if self.app.is_mobile:
-            return page_width
-
-        sidebar_width = getattr(self.app.left_navigation_menu, "width", 0) or 0
-        divider_width = 1
-        content_padding = 24
-        return max(0, page_width - sidebar_width - divider_width - content_padding)
+        return self._grid_width or self.CARD_MIN_WIDTH
 
     def get_grid_runs_count(self):
-        column_width = self.MOBILE_CARD_MIN_WIDTH if self.app.is_mobile else self.CARD_MIN_WIDTH
+        column_width = self.CARD_MIN_WIDTH
         available_width = self.get_grid_available_width()
-        return max(1, int(available_width / column_width))
+        spacing = self.CARD_SPACING
+        return max(1, int((available_width + spacing) / (column_width + spacing)))
 
     def get_grid_child_aspect_ratio(self):
-        return self.MOBILE_CARD_ASPECT_RATIO if self.app.is_mobile else self.CARD_ASPECT_RATIO
+        columns = self.get_grid_runs_count()
+        card_width = (self.get_grid_available_width() - (columns - 1) * self.CARD_SPACING) / columns
+        return card_width / self.CARD_HEIGHT
 
     async def recalculate_grid_columns(self):
         if not self.is_grid_view:
@@ -717,17 +716,23 @@ class RecordingsPage(PageBase):
 
         runs_count = self.get_grid_runs_count()
         child_aspect_ratio = self.get_grid_child_aspect_ratio()
+        spacing = self.CARD_SPACING
 
         if isinstance(self.recording_card_area.content, ft.GridView):
             grid_view = self.recording_card_area.content
+            if (
+                grid_view.runs_count == runs_count
+                and grid_view.child_aspect_ratio == child_aspect_ratio
+                and grid_view.spacing == spacing
+                and grid_view.run_spacing == spacing
+                and grid_view.padding == 0
+            ):
+                return
             grid_view.runs_count = runs_count
-
             grid_view.child_aspect_ratio = child_aspect_ratio
-
-            if self.app.is_mobile:
-                grid_view.spacing = 5
-                grid_view.run_spacing = 5
-
+            grid_view.spacing = spacing
+            grid_view.run_spacing = spacing
+            grid_view.padding = 0
             grid_view.update()
 
     async def on_keyboard(self, e: ft.KeyboardEvent):

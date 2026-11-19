@@ -22,10 +22,13 @@ class RecordingCardManager:
         self.update_duration_tasks = {}
         self.selected_cards = {}
         self.last_card_click_at = {}
+        self._hovered_cards = set()
         self.app.language_manager.add_observer(self)
         self._ = {}
         self.load()
         self.pubsub_subscribe()
+        theme_manager = getattr(self.app, "theme_manager", None)
+        self._unsubscribe_theme = theme_manager.subscribe(self.refresh_theme) if theme_manager else None
 
     def load(self):
         language = self.app.language_manager.language
@@ -52,8 +55,10 @@ class RecordingCardManager:
 
     def _create_card_components(self, recording: Recording):
         """create card components."""
-        speed = recording.speed
-        duration_text_label = ft.Text(self.app.record_manager.get_duration(recording), size=12)
+        speed = f"{self._['recording_speed']}: {recording.speed}" if recording.speed else ""
+        duration_text_label = ft.Text(
+            self.app.record_manager.get_duration(recording), size=12, color=ft.Colors.ON_SURFACE_VARIANT
+        )
 
         record_button = ft.IconButton(
             icon=self.get_icon_for_recording_state(recording),
@@ -115,7 +120,33 @@ class RecordingCardManager:
             tooltip=self._["open_folder"],
             on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_dir_button_on_click, e, rec),
         )
-        speed_text_label = ft.Text(speed, size=12)
+        speed_text_label = ft.Text(
+            speed,
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            tooltip=self._["recording_speed_hint"],
+            expand=True,
+            max_lines=1,
+            no_wrap=True,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            text_align=ft.TextAlign.RIGHT,
+        )
+        action_buttons = [
+            record_button,
+            pin_button,
+            open_folder_button,
+            preview_button,
+            edit_button,
+            delete_button,
+            monitor_button,
+        ]
+        for button in action_buttons:
+            button.width = None
+            button.height = 36
+            button.padding = 6
+            button.icon_size = 20
+            button.expand = True
+            self.apply_button_theme(button)
 
         status_label = self.create_status_label(recording)
 
@@ -130,34 +161,28 @@ class RecordingCardManager:
             content=ft.Column(
                 [
                     title_row,
-                    duration_text_label,
-                    speed_text_label,
                     ft.Row(
-                        [
-                            record_button,
-                            pin_button,
-                            open_folder_button,
-                            preview_button,
-                            edit_button,
-                            delete_button,
-                            monitor_button,
-                        ],
-                        spacing=3,
-                        alignment=ft.MainAxisAlignment.START,
-                        scroll=ft.ScrollMode.HIDDEN,
+                        [duration_text_label, speed_text_label],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
+                    ft.Row(
+                        action_buttons,
+                        spacing=0,
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
                 ],
-                spacing=3,
+                spacing=6,
                 tight=True,
             ),
-            padding=8,
+            padding=10,
             tooltip=self._["recording_card_tip"],
             on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_card_on_click, e, rec),
+            on_hover=lambda e, rec=recording: self.on_card_hover(e, rec),
             bgcolor=self.get_card_background_color(recording),
             border_radius=5,
             border=ft.Border.all(2, self.get_card_border_color(recording)),
         )
-        card = ft.Card(key=str(recording.rec_id), content=card_container)
+        card = ft.Card(key=str(recording.rec_id), content=card_container, margin=0)
 
         return {
             "card": card,
@@ -170,13 +195,53 @@ class RecordingCardManager:
             "edit_button": edit_button,
             "monitor_button": monitor_button,
             "status_label": status_label,
+            "recording": recording,
+            "action_buttons": action_buttons,
         }
 
+    def theme_color(self, name, fallback):
+        manager = getattr(self.app, "theme_manager", None)
+        return getattr(manager.tokens, name, fallback) if manager else fallback
+
+    def apply_button_theme(self, button):
+        button.hover_color = self.theme_color("primary_light", ft.Colors.SECONDARY_CONTAINER)
+        focus_ring = self.theme_color("focus_ring", ft.Colors.PRIMARY)
+        button.focus_color = ft.Colors.with_opacity(0.12, focus_ring)
+        button.style = ft.ButtonStyle(side={ft.ControlState.FOCUSED: ft.BorderSide(1, focus_ring)})
+
+    def refresh_theme(self):
+        for card_data in self.cards_obj.values():
+            recording = card_data.get("recording")
+            if recording is not None:
+                card_data["card"].content.bgcolor = self.get_card_background_color(recording)
+            for button in card_data.get("action_buttons", []):
+                self.apply_button_theme(button)
+        current_page = getattr(self.app, "current_page", None)
+        if current_page is not None and getattr(current_page, "page_name", None) == "recordings":
+            try:
+                self.app.page.update()
+            except (ft.FletPageDisconnectedException, AssertionError):
+                pass
+
+    def dispose(self):
+        if self._unsubscribe_theme is not None:
+            self._unsubscribe_theme()
+            self._unsubscribe_theme = None
+
+    def on_card_hover(self, event, recording):
+        if event.data in (True, "true"):
+            self._hovered_cards.add(recording.rec_id)
+        else:
+            self._hovered_cards.discard(recording.rec_id)
+        event.control.bgcolor = self.get_card_background_color(recording)
+        event.control.update()
+
     def get_card_background_color(self, recording: Recording):
-        is_dark_mode = self.app.page.theme_mode == ft.ThemeMode.DARK
         if recording.selected:
-            return ft.Colors.GREY_800 if is_dark_mode else ft.Colors.GREY_400
-        return None
+            return self.theme_color("selected_background", ft.Colors.PRIMARY_CONTAINER)
+        if recording.rec_id in getattr(self, "_hovered_cards", set()):
+            return self.theme_color("primary_light", ft.Colors.SECONDARY_CONTAINER)
+        return ft.Colors.SURFACE
 
     @staticmethod
     def get_card_border_color(recording: Recording):
@@ -195,6 +260,7 @@ class RecordingCardManager:
             padding=5,
             width=60,
             height=26,
+            tooltip=self._["skip_condition"] if recording.skip_current_live else None,
             alignment=ft.alignment.Alignment.CENTER,
         )
 
@@ -233,9 +299,12 @@ class RecordingCardManager:
                     recording_card["duration_label"].value = self.app.record_manager.get_duration(recording)
 
                 if recording_card.get("speed_label"):
-                    recording_card["speed_label"].value = recording.speed
+                    recording_card["speed_label"].value = (
+                        f"{self._['recording_speed']}: {recording.speed}" if recording.speed else ""
+                    )
 
                 if recording_card.get("record_button"):
+                    recording_card["record_button"].disabled = recording.stopping_in_progress
                     recording_card["record_button"].icon = self.get_icon_for_recording_state(recording)
                     recording_card["record_button"].tooltip = self.get_tip_for_recording_state(recording)
 
@@ -252,6 +321,9 @@ class RecordingCardManager:
                     recording_card["card"].content.bgcolor = self.get_card_background_color(recording)
                     recording_card["card"].content.border = ft.Border.all(2, self.get_card_border_color(recording))
                     try:
+                        current_page = getattr(self.app, "current_page", None)
+                        if current_page is not None and getattr(current_page, "page_name", None) == "recordings":
+                            await current_page.apply_filter()
                         self.app.page.update()
                     except (ft.FletPageDisconnectedException, AssertionError) as e:
                         logger.debug(f"Update card failed: {e}")
@@ -334,13 +406,23 @@ class RecordingCardManager:
             return
 
         if recording and self.app.recording_enabled:
+            if recording.stopping_in_progress:
+                await self.app.snack_bar.show_snack_bar(self._["stopping_tip"])
+                return
             if recording.is_recording:
-                self.app.record_manager.stop_recording(recording, manually_stopped=True)
-                await self.app.snack_bar.show_snack_bar(self._["stop_record_tip"])
+                saved = await self.app.record_manager.request_recording_stop(recording)
+                await self.app.snack_bar.show_snack_bar(self._["stop_record_tip" if saved else "stop_save_failed"])
             else:
                 if recording.monitor_status:
-                    await self.app.record_manager.request_recording_start(recording)
-                    if recording.is_recording:
+                    result = await self.app.record_manager.request_recording_start(recording)
+                    if result in ("busy", "scheduled", "save_failed"):
+                        key = {
+                            "busy": "stopping_tip",
+                            "scheduled": "scheduled_tip",
+                            "save_failed": "resume_save_failed",
+                        }[result]
+                        await self.app.snack_bar.show_snack_bar(self._[key])
+                    elif recording.is_recording:
                         await self.app.snack_bar.show_snack_bar(self._["pre_record_tip"], bgcolor=ft.Colors.PRIMARY)
                     else:
                         await self.app.snack_bar.show_snack_bar(self._["is_not_live_tip"])
@@ -395,9 +477,8 @@ class RecordingCardManager:
         except Exception as e:
             logger.debug(f"Remove recording card failed: {e}")
 
-    @staticmethod
-    async def update_record_hover(recording: Recording):
-        return ft.Colors.GREY_400 if recording.selected else None
+    async def update_record_hover(self, recording: Recording):
+        return self.get_card_background_color(recording)
 
     @staticmethod
     def get_icon_for_recording_state(recording: Recording):
@@ -405,6 +486,8 @@ class RecordingCardManager:
         return RecordingCardState.get_recording_icon(recording)
 
     def get_tip_for_recording_state(self, recording: Recording):
+        if recording.skip_current_live and not recording.is_recording:
+            return self._["resume_record"]
         return self._["stop_record"] if recording.is_recording else self._["start_record"]
 
     @staticmethod
@@ -476,6 +559,9 @@ class RecordingCardManager:
                     duration_label = self.cards_obj[recording.rec_id]["duration_label"]
                     duration_label.value = self.app.record_manager.get_duration(recording)
                     duration_label.update()
+                    speed_label = self.cards_obj[recording.rec_id]["speed_label"]
+                    speed_label.value = f"{self._['recording_speed']}: {recording.speed}" if recording.speed else ""
+                    speed_label.update()
                 except (ft.FletPageDisconnectedException, AssertionError) as e:
                     logger.debug(f"Update duration failed: {e}")
                     break

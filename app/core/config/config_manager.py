@@ -12,6 +12,8 @@ T = TypeVar("T")
 
 
 class ConfigManager:
+    APPEARANCE_KEYS = ("theme_color", "theme_mode")
+
     def __init__(self, run_path):
         self.run_path = run_path
         self.config_path = os.path.join(run_path, "config")
@@ -122,6 +124,46 @@ class ConfigManager:
     _write_lock = threading.Lock()
 
     @staticmethod
+    def _write_json(config_path, config):
+        """Replace one file; caller holds _write_lock while merging and writing."""
+        content = json.dumps(config, ensure_ascii=False, indent=4)
+        fd, tmp_path = tempfile.mkstemp(suffix=".tmp", prefix=".cfg_", dir=os.path.dirname(config_path))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as file:
+                file.write(content)
+            os.replace(tmp_path, config_path)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+
+    def _read_user_config_for_write(self):
+        # Do not silently replace a corrupt or unreadable configuration during a merge.
+        try:
+            with open(self.user_config_path, encoding="utf-8") as file:
+                config = json.load(file)
+        except FileNotFoundError:
+            config = {}
+        if not isinstance(config, dict):
+            raise ValueError("User configuration must be an object")
+        return config
+
+    def _save_appearance_config_sync(self, patch):
+        if set(patch) - set(self.APPEARANCE_KEYS):
+            raise ValueError("Appearance updates may only contain theme_color and theme_mode")
+        with self._write_lock:
+            config = self._read_user_config_for_write()
+            config.update(patch)
+            self._write_json(self.user_config_path, config)
+            return {key: config[key] for key in self.APPEARANCE_KEYS if key in config}
+
+    async def save_appearance_config(self, patch):
+        """Commit only appearance fields, propagating I/O errors to the settings UI."""
+        return await asyncio.to_thread(self._save_appearance_config_sync, dict(patch))
+
+    @staticmethod
     async def _save_config(config_path, config, success_message, error_message):
         """Save configuration to a JSON file (thread-safe, atomic write)."""
         try:
@@ -173,12 +215,23 @@ class ConfigManager:
         )
 
     async def save_user_config(self, config):
-        await self._save_config(
-            self.user_config_path,
-            config,
-            success_message="User configuration saved.",
-            error_message="An error occurred while saving user config",
-        )
+        snapshot = dict(config)
+
+        def write():
+            with self._write_lock:
+                committed = self._read_user_config_for_write()
+                for key in self.APPEARANCE_KEYS:
+                    if key in committed:
+                        snapshot[key] = committed[key]
+                    else:
+                        snapshot.pop(key, None)
+                self._write_json(self.user_config_path, snapshot)
+
+        try:
+            await asyncio.to_thread(write)
+            logger.info("User configuration saved.")
+        except Exception as error:
+            logger.error(f"An error occurred while saving user config: {error}")
 
     async def save_cookies_config(self, config):
         await self._save_config(

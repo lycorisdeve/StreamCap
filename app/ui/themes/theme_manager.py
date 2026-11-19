@@ -1,46 +1,119 @@
+"""Session preview and application of the globally committed appearance."""
+
 import sys
 
 import flet as ft
 
+from ...utils.logger import logger
 from .theme import create_dark_theme, create_light_theme
+from .theme_tokens import build_tokens, normalize_appearance, normalize_hex
 
 
 class ThemeManager:
     def __init__(self, app):
-        self.page = app.page
         self.app = app
-        self.custom_font = None
-        self.theme_color = None
-        self.assets_dir = app.assets_dir
-        self.init_fonts()
-        self.page.run_task(self.apply_initial_theme)
-
-    def init_fonts(self):
-        """Initialize fonts for the application."""
-        custom_font = "AlibabaPuHuiTi Light"
-        if sys.platform == "darwin":
-            custom_font = "AlibabaPuHuiTi Light Mac"
-
+        self.page = app.page
+        self.committed, self._revision = app.services.snapshot_appearance()
+        self.committed = normalize_appearance(self.committed)
+        self.draft = None
+        self._observers = []
+        self._disposed = False
+        self.custom_font = "AlibabaPuHuiTi Light Mac" if sys.platform == "darwin" else "AlibabaPuHuiTi Light"
         self.page.fonts = {
             "AlibabaPuHuiTi Light": "/fonts/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-45-Light.otf",
             "AlibabaPuHuiTi Light Mac": "/fonts/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-45-Light-Mac.otf",
         }
-        self.custom_font = custom_font
+        self._brightness_handler = self._on_brightness_change
+        self.page.on_platform_brightness_change = self._brightness_handler
+        self.apply(update=False)
 
-    async def apply_initial_theme(self):
-        """Apply initial theme based on saved settings or default to light theme."""
-        self.page.theme = create_light_theme(self.custom_font)
-        self.page.dark_theme = create_dark_theme(self.custom_font)
+    @property
+    def effective_config(self):
+        return self.draft if self.draft is not None else self.committed
 
-        self.theme_color = self.app.settings.user_config.get("theme_color", "blue")
-        await self.update_theme_color(self.theme_color)
+    def _on_brightness_change(self, _):
+        if self.effective_config["theme_mode"] == "system":
+            self.apply()
 
-    async def update_theme_color(self, color):
-        """Update the current theme color scheme and save it."""
-        self.page.theme.color_scheme_seed = color
-        self.page.theme.color_scheme = ft.ColorScheme(primary=color)
-        self.page.theme.use_material3 = True
-        self.page.update()
+    def apply(self, update=True):
+        if self._disposed:
+            return
+        config = self.effective_config
+        color, mode = config["theme_color"], config["theme_mode"]
+        dark = mode == "dark" or (mode == "system" and self.page.platform_brightness == ft.Brightness.DARK)
+        self.tokens = build_tokens(color, dark=dark)
+        self.page.theme = create_light_theme(self.custom_font, color)
+        self.page.dark_theme = create_dark_theme(self.custom_font, color)
+        self.page.theme_mode = ft.ThemeMode(mode)
+        self.page.bgcolor = self.tokens.background
+        for callback in tuple(self._observers):
+            try:
+                callback()
+            except Exception as error:
+                logger.debug(f"Theme observer update failed: {error}")
+        if update:
+            try:
+                self.page.update()
+            except (ft.FletPageDisconnectedException, AssertionError):
+                pass
 
-        self.app.settings.user_config["theme_color"] = color
-        self.app.services.run_coro(self.app.config_manager.save_user_config(self.app.settings.user_config))
+    def preview(self, color=None, mode=None):
+        draft = dict(self.effective_config)
+        if color is not None:
+            draft["theme_color"] = normalize_hex(color)
+        if mode is not None:
+            if mode not in ("light", "dark", "system"):
+                raise ValueError("Unknown theme mode")
+            draft["theme_mode"] = mode
+        self.draft = draft
+        self.apply()
+
+    def cancel_preview(self):
+        self.committed, self._revision = self.app.services.snapshot_appearance()
+        self.committed = normalize_appearance(self.committed)
+        self.draft = None
+        self.apply()
+
+    async def commit_preview(self):
+        if self.draft is None:
+            return
+        submitted = self.draft
+        saved, revision = await self.app.services.commit_appearance(dict(submitted))
+        self.receive_committed(saved, revision)
+        # An edit made while disk I/O was running remains an uncommitted preview.
+        if self.draft is submitted:
+            self.draft = None
+        self.apply()
+
+    async def toggle_mode(self):
+        previewing = self.draft is not None
+        self.preview(mode="light" if self.tokens.is_dark else "dark")
+        if not previewing:
+            await self.commit_preview()
+
+    def receive_committed(self, config, revision):
+        if self._disposed or revision < self._revision:
+            return
+        self.committed = normalize_appearance(config)
+        self._revision = revision
+        settings = getattr(self.app, "settings", None)
+        if settings is not None:
+            settings.user_config.update(self.committed)
+        self.apply()
+
+    def subscribe(self, callback):
+        if self._disposed:
+            return lambda: None
+        self._observers.append(callback)
+
+        def unsubscribe():
+            if callback in self._observers:
+                self._observers.remove(callback)
+
+        return unsubscribe
+
+    def dispose(self):
+        self._disposed = True
+        self._observers.clear()
+        if self.page.on_platform_brightness_change == self._brightness_handler:
+            self.page.on_platform_brightness_change = None

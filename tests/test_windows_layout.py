@@ -44,7 +44,17 @@ class WindowsLayoutTests(unittest.TestCase):
             assert values["assets_dir"].samefile(root / "resources")
             assert values["locales_dir"].samefile(root / "resources/locales")
             assert values["runtime_dir"].samefile(root / "runtime")
-            assert values["log_dir"].samefile(root / "logs")
+            assert values["log_dir"] == root.resolve() / "logs"
+            for unused in (
+                "logs",
+                "data",
+                "resources/templates",
+                "resources/styles",
+                "runtime/drivers",
+                "runtime/plugins",
+                "_internal/flet_desktop/app",
+            ):
+                assert not (root / unused).exists(), unused
             assert values["default_recordings_dir"].relative_to(root.resolve()) == Path("data/recordings")
             assert (root / "version.txt").read_text().strip() == "1.2.3"
             assert (root / "runtime/flet/flet.exe").read_bytes() == b"client"

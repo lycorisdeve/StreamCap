@@ -36,30 +36,22 @@ StreamCap/
 ├── StreamCap.exe
 ├── version.txt
 ├── config/                 # 默认配置及运行时生成的用户配置
-├── logs/                   # app.log、error.log、play_url.log
-│   └── archive/            # 预留历史日志归档目录
-├── data/
+├── logs/                   # 写日志时创建，app.log、error.log、play_url.log
+├── data/                   # 使用相关功能时创建
 │   ├── database/           # recordings.db，运行时生成
-│   ├── recordings/         # 新安装默认录制目录
-│   ├── cache/
-│   ├── temp/
-│   ├── exports/
-│   └── backups/
+│   └── recordings/         # 新安装默认录制目录
 ├── resources/              # 图标、图片、语言文件及其他静态资源
 │   ├── icons/
 │   ├── images/
-│   ├── locales/
-│   ├── templates/          # 预留
-│   └── styles/             # 预留
+│   └── locales/
 ├── runtime/
 │   ├── ffmpeg/
 │   ├── node/
-│   ├── flet/               # 已解压的桌面客户端，无需首次联网下载
-│   ├── drivers/            # 预留
-│   └── plugins/            # 预留
+│   └── flet/               # 已解压的桌面客户端，无需首次联网下载
 └── _internal/              # Python DLL 和 PyInstaller 收集的 Python 依赖
 ```
 
+打包不预建日志、数据目录或没有功能使用的占位目录。
 新安装把配置、数据和日志放在 EXE 旁，因此需解压到当前用户可写目录。
 若检测到 `%APPDATA%/StreamCap` 已有用户配置或数据库，继续使用原位置；EXE 旁已有便携数据
 时优先使用便携数据。保留已配置的录制路径和已有 `downloads` 目录。旧包把资源放在

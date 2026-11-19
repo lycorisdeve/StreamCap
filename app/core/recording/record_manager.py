@@ -101,8 +101,14 @@ class RecordingManager:
 
     async def persist_recordings(self):
         """Persist recording rooms to SQLite."""
-        data_to_save = [rec.to_dict() for rec in self.recordings]
-        await self.repository.save_recordings(data_to_save)
+        loop = getattr(self.services, "backend_loop", None)
+        if loop is not None and loop.is_running() and loop is not asyncio.get_running_loop():
+            return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(self.persist_recordings(), loop))
+        if not hasattr(self, "_persist_lock"):
+            self._persist_lock = asyncio.Lock()
+        async with self._persist_lock:
+            data_to_save = [rec.to_dict() for rec in self.recordings]
+            await self.repository.save_recordings(data_to_save)
 
     async def update_recording_card(self, recording: Recording, updated_info: dict):
         """Update an existing recording object and persist changes to SQLite."""
@@ -126,7 +132,14 @@ class RecordingManager:
             GlobalRecordingState.recordings.sort(key=self.recording_sort_key, reverse=True)
 
     async def request_recording_start(self, recording):
-        """Promote a manual request before its first network wait."""
+        """Resume automatic recording and check the room immediately."""
+        loop = getattr(self.services, "backend_loop", None)
+        if loop is not None and loop.is_running() and loop is not asyncio.get_running_loop():
+            return await asyncio.wrap_future(
+                asyncio.run_coroutine_threadsafe(self.request_recording_start(recording), loop)
+            )
+        if recording.stopping_in_progress or recording.rec_id in self.active_recorders:
+            return "busy"
         if (
             recording.recording_start_pending
             or recording.is_recording
@@ -134,7 +147,15 @@ class RecordingManager:
             or not recording.monitor_status
             or not self.services.recording_enabled
         ):
-            return
+            return "busy"
+        if recording.skip_current_live:
+            recording.recording_start_pending = True
+            try:
+                if not await self._clear_skip(recording):
+                    return "save_failed"
+            finally:
+                recording.recording_start_pending = False
+        self._reset_offline_confirmation(recording)
         recording.recording_start_pending = True
         request_time = time.monotonic_ns()
         recording.recording_sort_time = request_time
@@ -142,11 +163,57 @@ class RecordingManager:
         self.services.broadcast_card_update(recording)
         try:
             await self.check_if_live(recording)
+            if recording.is_recording:
+                return "started"
+            if recording.status_info == RecordingStatus.NOT_IN_SCHEDULED_CHECK:
+                return "scheduled"
+            return "offline"
         finally:
             if recording.recording_sort_time == request_time:
                 recording.recording_start_pending = False
             self.sort_recordings()
             self.services.broadcast_card_update(recording)
+
+    @staticmethod
+    def _reset_offline_confirmation(recording):
+        recording.offline_confirmation_count = 0
+        recording.last_offline_confirmation_at = None
+
+    async def request_recording_stop(self, recording):
+        loop = getattr(self.services, "backend_loop", None)
+        if loop is not None and loop.is_running() and loop is not asyncio.get_running_loop():
+            return await asyncio.wrap_future(
+                asyncio.run_coroutine_threadsafe(self.request_recording_stop(recording), loop)
+            )
+        recording.skip_current_live = True
+        self._reset_offline_confirmation(recording)
+        self.stop_recording(recording)
+        try:
+            await self.persist_recordings()
+            return True
+        except Exception:
+            logger.exception("Could not save skipped recording")
+            return False
+
+    async def _clear_skip(self, recording):
+        if not hasattr(self, "_persist_lock"):
+            self._persist_lock = asyncio.Lock()
+        generation = recording.monitor_generation
+        try:
+            async with self._persist_lock:
+                data = [rec.to_dict() for rec in self.recordings]
+                for item in data:
+                    if item["rec_id"] == recording.rec_id:
+                        item["skip_current_live"] = False
+                await self.repository.save_recordings(data)
+                if generation != recording.monitor_generation:
+                    return False
+                recording.skip_current_live = False
+        except Exception:
+            logger.exception("Could not save recording resume")
+            return False
+        self._reset_offline_confirmation(recording)
+        return True
 
     async def toggle_pin_recording(self, recording: Recording) -> bool:
         now = self.repository.now_iso()
@@ -395,10 +462,31 @@ class RecordingManager:
             logger.info("Periodic live check task already running globally, skipping initialization")
 
     async def check_if_live(self, recording: Recording):
+        loop = getattr(self.services, "backend_loop", None)
+        if loop is not None and loop.is_running() and loop is not asyncio.get_running_loop():
+            return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(self.check_if_live(recording), loop))
+        if not hasattr(self, "_checks_in_flight"):
+            self._checks_in_flight = set()
+        if recording.rec_id in self._checks_in_flight:
+            return
+        self._checks_in_flight.add(recording.rec_id)
+        generation = recording.monitor_generation
+        try:
+            await self._check_if_live(recording)
+        except Exception:
+            if generation == recording.monitor_generation:
+                self._reset_offline_confirmation(recording)
+                recording.status_info = RecordingStatus.LIVE_STATUS_CHECK_ERROR
+            logger.exception("Live status check failed")
+        finally:
+            self._checks_in_flight.discard(recording.rec_id)
+            recording.is_checking = False
+            self.services.broadcast_card_update(recording)
+
+    async def _check_if_live(self, recording: Recording):
         """Check if the live stream is available, fetch stream data and update is_live status."""
 
         monitor_generation = recording.monitor_generation
-        recording.manually_stopped = False
         if recording.is_recording or recording.stopping_in_progress:
             logger.debug(f"Skip check_if_live because recording is busy: {recording.url}")
             return
@@ -435,7 +523,7 @@ class RecordingManager:
 
             if not in_scheduled:
                 recording.status_info = RecordingStatus.NOT_IN_SCHEDULED_CHECK
-                recording.is_live = False
+                self._reset_offline_confirmation(recording)
                 recording.is_checking = False
                 logger.info(f"Skip Detection: {recording.url} not in scheduled check range {scheduled_time_range_list}")
                 self.services.broadcast_card_update(recording)
@@ -478,7 +566,8 @@ class RecordingManager:
         if not recording.monitor_status or recording.monitor_generation != monitor_generation:
             recording.is_checking = False
             return
-        if not stream_info or not stream_info.anchor_name:
+        if not stream_info or not stream_info.anchor_name or stream_info.is_live not in (True, False):
+            self._reset_offline_confirmation(recording)
             logger.error(f"Fetch stream data failed: {recording.url}")
             recording.is_checking = False
             recording.status_info = RecordingStatus.LIVE_STATUS_CHECK_ERROR
@@ -490,6 +579,7 @@ class RecordingManager:
             stream_info.anchor_name = utils.clean_name(stream_info.anchor_name, self._["live_room"])
 
         if stream_info.is_live:
+            self._reset_offline_confirmation(recording)
             recording.live_title = stream_info.title
             if recording.streamer_name.strip() == self._["live_room"]:
                 recording.streamer_name = stream_info.anchor_name
@@ -532,7 +622,10 @@ class RecordingManager:
                 BackgroundService.get_instance().add_task(msg_manager.push_messages_sync, msg_title, push_content)
                 recording.notified_live_start = True
 
-            if not recording.only_notify_no_record:
+            if recording.skip_current_live:
+                recording.status_info = RecordingStatus.NOT_RECORDING
+            elif not recording.only_notify_no_record:
+                recording.manually_stopped = False
                 recording.status_info = RecordingStatus.PREPARING_RECORDING
                 recording.loop_time_seconds = self.loop_time_seconds
                 self.start_update(recording)
@@ -549,6 +642,14 @@ class RecordingManager:
                 recording.status_info = RecordingStatus.LIVE_BROADCASTING
 
         else:
+            if recording.skip_current_live:
+                now = time.monotonic()
+                previous = recording.last_offline_confirmation_at
+                if previous is None or now - previous >= (recording.loop_time_seconds or self.loop_time_seconds or 180):
+                    recording.offline_confirmation_count += 1
+                    recording.last_offline_confirmation_at = now
+                if recording.offline_confirmation_count >= 2:
+                    await self._clear_skip(recording)
             recording.is_recording = False
             if recording.is_live:
                 recording.is_live = False
@@ -584,6 +685,7 @@ class RecordingManager:
                     "last_duration": timedelta(),
                     "start_time": datetime.now(),
                     "is_recording": True,
+                    "speed": "—",
                 }
             )
             logger.info(f"Started recording for {recording.title}")
@@ -592,7 +694,7 @@ class RecordingManager:
         """Stop the recording process."""
         recording.monitor_generation += 1
         recording.recording_start_pending = False
-        recording.is_live = False
+        recording.speed = "—"
         if recording.is_recording:
             recording.stopping_in_progress = True
 
@@ -606,8 +708,9 @@ class RecordingManager:
                 logger.info(f"Requested stop for recorder: {recording.rec_id}")
             else:
                 logger.warning(f"No active recorder found for {recording.rec_id}, cannot request stop")
-                recording.force_stop = True
-                logger.info(f"Set force_stop=True for recording: {recording.rec_id}")
+                recording.force_stop = False
+                recording.stopping_in_progress = False
+                logger.info(f"Cancelled pending recording: {recording.rec_id}")
 
             if recording.start_time is not None:
                 elapsed = datetime.now() - recording.start_time
@@ -620,8 +723,6 @@ class RecordingManager:
             recording.manually_stopped = manually_stopped
             recording.status_info = RecordingStatus.NOT_RECORDING
             logger.info(f"Stopped recording for {recording.title}")
-
-            self.services.run_coro(self._reset_stopping_flag(recording))
 
         self.sort_recordings()
         self.services.broadcast_card_update(recording)
@@ -674,8 +775,3 @@ class RecordingManager:
             except Exception:
                 pass
         return scheduled_time_range_list
-
-    @staticmethod
-    async def _reset_stopping_flag(recording: Recording):
-        recording.stopping_in_progress = False
-        logger.debug(f"Reset stopping_in_progress flag for recording: {recording.rec_id}")

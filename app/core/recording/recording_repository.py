@@ -11,6 +11,7 @@ class RecordingRepository:
     """SQLite persistence for recording rooms and recording history."""
 
     ROOM_BOOL_FIELDS = {
+        "skip_current_live",
         "segment_record",
         "monitor_status",
         "scheduled_recording",
@@ -25,6 +26,7 @@ class RecordingRepository:
         "streamer_name",
         "record_format",
         "quality",
+        "skip_current_live",
         "segment_record",
         "segment_time",
         "monitor_status",
@@ -314,7 +316,9 @@ class RecordingRepository:
         columns = {row[1] for row in conn.execute("PRAGMA table_info(recording_rooms)")}
         if "video_bitrate" not in columns:
             conn.execute("ALTER TABLE recording_rooms ADD COLUMN video_bitrate INTEGER")
-        conn.execute("INSERT OR REPLACE INTO recording_meta (key, value) VALUES ('schema_version', '2')")
+        if "skip_current_live" not in columns:
+            conn.execute("ALTER TABLE recording_rooms ADD COLUMN skip_current_live INTEGER NOT NULL DEFAULT 0")
+        conn.execute("INSERT OR REPLACE INTO recording_meta (key, value) VALUES ('schema_version', '3')")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_recording_history_rec_id ON recording_history(rec_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_recording_history_ended_at ON recording_history(ended_at)")
 

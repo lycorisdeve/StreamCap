@@ -44,6 +44,12 @@ class RecordingCardState:
 
     @staticmethod
     def get_status_label_config(recording: Recording, language_dict: dict) -> dict:
+        if recording.stopping_in_progress or recording.skip_current_live:
+            return {
+                "text": language_dict["stopping" if recording.stopping_in_progress else "skipped"],
+                "bgcolor": ft.Colors.GREY,
+                "text_color": ft.Colors.WHITE,
+            }
         state = RecordingCardState.get_card_state(recording)
 
         configs = {
