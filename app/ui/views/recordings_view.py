@@ -287,7 +287,7 @@ class RecordingsPage(PageBase):
             )
         for surface in getattr(self, "_field_surfaces", []):
             surface.gradient = glass_gradient(tokens)
-            surface.border = glass_border(tokens)
+            surface.border = None if isinstance(surface.content, ft.Dropdown) else glass_border(tokens)
             surface.shadow = glass_shadows(tokens)
 
     def refresh_theme(self):
@@ -363,25 +363,31 @@ class RecordingsPage(PageBase):
             options=[ft.dropdown.DropdownOption(key="all", text=self._["filter_all"])]
             + [ft.dropdown.DropdownOption(key=key, text=name) for key, name in platforms.items()],
             value=self.current_platform_filter,
+            label=self._["platform_filter"],
             tooltip=self._["platform_filter"],
             on_select=self.on_platform_dropdown_change,
             width=140,
             height=FILTER_HEIGHT,
             text_size=13,
-            content_padding=ft.Padding.symmetric(horizontal=10, vertical=0),
+            content_padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             border_radius=12,
-            border_color=ft.Colors.TRANSPARENT,
+            border_color=ft.Colors.OUTLINE_VARIANT,
             focused_border_color=ft.Colors.PRIMARY,
             dense=True,
             menu_height=320 if len(platforms) > 7 else None,
         )
-        platform_surface = ft.Container(content=platform_dropdown, height=FILTER_HEIGHT, border_radius=12)
+        platform_surface = ft.Container(
+            content=platform_dropdown, height=FILTER_HEIGHT, border_radius=12, clip_behavior=ft.ClipBehavior.NONE
+        )
         self._field_surfaces = getattr(self, "_field_surfaces", [])[:1] + [platform_surface]
         self.refresh_materials()
         return ft.ResponsiveRow(
             [
                 ft.Row(
-                    [ft.Text(f"{self._['status_filter']}：", size=13), *self._filter_buttons.values()],
+                    [
+                        ft.Text(f"{self._['status_filter']}：", size=13, weight=ft.FontWeight.BOLD),
+                        *self._filter_buttons.values(),
+                    ],
                     wrap=True,
                     spacing=8,
                     run_spacing=8,
@@ -389,7 +395,7 @@ class RecordingsPage(PageBase):
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 ft.Row(
-                    [ft.Text(f"{self._['platform_filter']}：", size=13), platform_surface],
+                    [platform_surface],
                     spacing=8,
                     alignment=ft.MainAxisAlignment.END,
                     col={"xs": 12, "xl": 3},

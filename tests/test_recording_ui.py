@@ -98,7 +98,9 @@ class RecordingUiTests(unittest.IsolatedAsyncioTestCase):
         view.app.theme_manager = SimpleNamespace(tokens=tokens)
         filters = view.create_filter_area()
         assert filters.controls[0].controls[0].value == f"{view._['status_filter']}："
-        dropdown = filters.controls[1].controls[1].content
+        assert filters.controls[0].controls[0].weight == ft.FontWeight.BOLD
+        dropdown = filters.controls[1].controls[0].content
+        assert dropdown.label == view._["platform_filter"]
         assert dropdown.height == FILTER_HEIGHT
         assert all(button.height == dropdown.height for button in view._filter_buttons.values())
         button = view._filter_buttons["recording"]
