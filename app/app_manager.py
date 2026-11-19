@@ -10,9 +10,11 @@ from .core.runtime.scheduled_shutdown import ScheduledShutdownManager
 from .core.update.update_checker import UpdateChecker
 from .initialization.installation_manager import InstallationManager
 from .ui.components.business.recording_card import RecordingCardManager
+from .ui.components.common.ambient_background import AmbientBackground
 from .ui.components.common.show_snackbar import ShowSnackBar
 from .ui.navigation.sidebar import LeftNavigationMenu, NavigationSidebar
 from .ui.themes import ThemeManager
+from .ui.themes.theme_tokens import mix
 from .ui.views.about_view import AboutPage
 from .ui.views.home_view import HomePage
 from .ui.views.logs_view import LogsPage
@@ -69,13 +71,21 @@ class App:
 
         self.snack_bar_area = ft.Container()
         self.dialog_area = ft.Container()
-        self.content_surface = ft.Container(content=self.content_area, expand=True, padding=12)
+        self.ambient_background = AmbientBackground(self.theme_manager.tokens)
+        self.content_surface = ft.Container(
+            content=ft.Stack(
+                [self.ambient_background, ft.Container(content=self.content_area, padding=12)],
+                fit=ft.StackFit.EXPAND,
+            ),
+            expand=True,
+        )
+        self.sidebar_surface = ft.Container(content=self.left_navigation_menu, width=192)
         self.theme_manager.subscribe(self.update_theme_surface)
         self.update_theme_surface()
         self.complete_page = ft.Row(
             expand=True,
             controls=[
-                self.left_navigation_menu,
+                self.sidebar_surface,
                 ft.VerticalDivider(width=1),
                 self.content_surface,
                 self.dialog_area,
@@ -171,10 +181,16 @@ class App:
 
     def update_theme_surface(self):
         tokens = self.theme_manager.tokens
+        self.ambient_background.set_theme(tokens)
         self.content_surface.gradient = ft.LinearGradient(
             begin=ft.Alignment.TOP_LEFT,
             end=ft.Alignment.BOTTOM_RIGHT,
             colors=[tokens.background, tokens.surface],
+        )
+        self.sidebar_surface.gradient = ft.LinearGradient(
+            begin=ft.Alignment.TOP_LEFT,
+            end=ft.Alignment.BOTTOM_RIGHT,
+            colors=[tokens.background, mix(tokens.surface, tokens.primary, 0.09 if tokens.is_dark else 0.08)],
         )
 
     def initialize_pages(self):

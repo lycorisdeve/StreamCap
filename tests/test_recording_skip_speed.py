@@ -176,9 +176,18 @@ class SkipTests(unittest.IsolatedAsyncioTestCase):
         rec.is_recording = True
         rec.speed = "512 KB/s"
         duration, speed = SimpleNamespace(value="", update=Mock()), SimpleNamespace(value="", update=Mock())
+        speed_icon = SimpleNamespace(visible=False)
+        speed_row = SimpleNamespace(update=Mock())
         ui = RecordingCardManager.__new__(RecordingCardManager)
         ui._ = {"recording_speed": "Rate"}
-        ui.cards_obj = {rec.rec_id: {"duration_label": duration, "speed_label": speed}}
+        ui.cards_obj = {
+            rec.rec_id: {
+                "duration_label": duration,
+                "speed_label": speed,
+                "speed_icon": speed_icon,
+                "speed_row": speed_row,
+            }
+        }
         ui.app = SimpleNamespace(current_page=SimpleNamespace(page_name="recordings"), record_manager=mgr)
         mgr.get_duration = Mock(return_value="00:00:01")
         calls = 0
@@ -191,9 +200,10 @@ class SkipTests(unittest.IsolatedAsyncioTestCase):
 
         with patch("app.ui.components.business.recording_card.asyncio.sleep", side_effect=tick):
             await ui.update_duration(rec)
-        assert speed.value == "Rate: 512 KB/s"
+        assert speed.value == "512 KB/s"
+        assert speed_icon.visible
         assert duration.value == "00:00:01"
-        speed.update.assert_called_once()
+        speed_row.update.assert_called_once()
 
     async def test_schedule_does_not_count_as_offline(self):
         rec, mgr = self.setup_room()

@@ -8,6 +8,7 @@ from ....models.recording.recording_model import Recording
 from ....models.recording.recording_status_model import RecordingStatus
 from ....utils import utils
 from ....utils.logger import logger
+from ...themes.glass import CARD_BORDER_WIDTH, CARD_RADIUS, glass_gradient, glass_shadows
 from ...views.storage_view import StoragePage
 from ..dialogs.card_dialog import CardDialog
 from ..state.recording_card_state import RecordingCardState
@@ -55,9 +56,18 @@ class RecordingCardManager:
 
     def _create_card_components(self, recording: Recording):
         """create card components."""
-        speed = f"{self._['recording_speed']}: {recording.speed}" if recording.speed else ""
+        speed = recording.speed or ""
         duration_text_label = ft.Text(
-            self.app.record_manager.get_duration(recording), size=12, color=ft.Colors.ON_SURFACE_VARIANT
+            self.app.record_manager.get_duration(recording),
+            size=12,
+            weight=ft.FontWeight.W_600,
+            color=ft.Colors.ON_SURFACE,
+        )
+        duration_icon = ft.Icon(
+            ft.Icons.FIBER_MANUAL_RECORD if recording.is_recording else ft.Icons.SCHEDULE,
+            size=14,
+            color=ft.Colors.RED if recording.is_recording else ft.Colors.PRIMARY,
+            tooltip=self.app.language_manager.language["logs_page"]["duration"],
         )
 
         record_button = ft.IconButton(
@@ -125,11 +135,18 @@ class RecordingCardManager:
             size=12,
             color=ft.Colors.ON_SURFACE_VARIANT,
             tooltip=self._["recording_speed_hint"],
-            expand=True,
             max_lines=1,
             no_wrap=True,
             overflow=ft.TextOverflow.ELLIPSIS,
             text_align=ft.TextAlign.RIGHT,
+        )
+        speed_icon = ft.Icon(ft.Icons.DOWNLOAD_ROUNDED, size=15, color=ft.Colors.GREEN, visible=bool(speed))
+        speed_row = ft.Row(
+            [speed_icon, speed_text_label],
+            spacing=4,
+            expand=True,
+            alignment=ft.MainAxisAlignment.END,
+            tooltip=self._["recording_speed_hint"],
         )
         action_buttons = [
             record_button,
@@ -162,8 +179,9 @@ class RecordingCardManager:
                 [
                     title_row,
                     ft.Row(
-                        [duration_text_label, speed_text_label],
+                        [ft.Row([duration_icon, duration_text_label], spacing=6, tight=True), speed_row],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        spacing=8,
                     ),
                     ft.Row(
                         action_buttons,
@@ -174,21 +192,36 @@ class RecordingCardManager:
                 spacing=6,
                 tight=True,
             ),
-            padding=10,
             tooltip=self._["recording_card_tip"],
             on_click=lambda e, rec=recording: self.app.page.run_task(self.recording_card_on_click, e, rec),
-            on_hover=lambda e, rec=recording: self.on_card_hover(e, rec),
+            on_hover=lambda e, rec=recording: self.app.page.run_task(self.on_card_hover, e, rec),
             bgcolor=self.get_card_background_color(recording),
-            border_radius=5,
-            border=ft.Border.all(2, self.get_card_border_color(recording)),
+            border_radius=CARD_RADIUS,
+            border=ft.Border.all(CARD_BORDER_WIDTH, self.get_card_border_color(recording)),
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         )
-        card = ft.Card(key=str(recording.rec_id), content=card_container, margin=0)
+        # Keep the blur inside the surface so it doesn't clip the outer shadows.
+        card_container.content = ft.Container(
+            content=card_container.content, padding=10, blur=8, border_radius=CARD_RADIUS - CARD_BORDER_WIDTH
+        )
+        self.apply_card_material(card_container, recording)
+        card = ft.Card(
+            key=str(recording.rec_id),
+            content=card_container,
+            margin=0,
+            elevation=0,
+            bgcolor=ft.Colors.TRANSPARENT,
+            clip_behavior=ft.ClipBehavior.NONE,
+        )
 
         return {
             "card": card,
             "display_title_label": display_title_label,
             "duration_label": duration_text_label,
+            "duration_icon": duration_icon,
             "speed_label": speed_text_label,
+            "speed_icon": speed_icon,
+            "speed_row": speed_row,
             "record_button": record_button,
             "pin_button": pin_button,
             "open_folder_button": open_folder_button,
@@ -213,7 +246,7 @@ class RecordingCardManager:
         for card_data in self.cards_obj.values():
             recording = card_data.get("recording")
             if recording is not None:
-                card_data["card"].content.bgcolor = self.get_card_background_color(recording)
+                self.apply_card_material(card_data["card"].content, recording)
             for button in card_data.get("action_buttons", []):
                 self.apply_button_theme(button)
         current_page = getattr(self.app, "current_page", None)
@@ -228,12 +261,32 @@ class RecordingCardManager:
             self._unsubscribe_theme()
             self._unsubscribe_theme = None
 
-    def on_card_hover(self, event, recording):
+    def apply_card_material(self, container, recording):
+        container.bgcolor = self.get_card_background_color(recording)
+        manager = getattr(self.app, "theme_manager", None)
+        if manager is not None:
+            hovered = recording.rec_id in self._hovered_cards
+            container.gradient = glass_gradient(manager.tokens, tinted=recording.selected or hovered)
+            container.shadow = glass_shadows(manager.tokens, hovered=hovered)
+        container.border = ft.Border.all(
+            CARD_BORDER_WIDTH,
+            ft.Colors.with_opacity(
+                1 if recording.rec_id in self._hovered_cards else 0.76, self.get_card_border_color(recording)
+            ),
+        )
+
+    async def on_card_hover(self, event, recording):
         if event.data in (True, "true"):
             self._hovered_cards.add(recording.rec_id)
         else:
             self._hovered_cards.discard(recording.rec_id)
-        event.control.bgcolor = self.get_card_background_color(recording)
+        manager = getattr(self.app, "theme_manager", None)
+        duration = await manager.motion_duration() if manager is not None else 0
+        hovered = recording.rec_id in self._hovered_cards
+        event.control.animate = ft.Animation(duration, ft.AnimationCurve.EASE_OUT)
+        event.control.animate_offset = ft.Animation(duration, ft.AnimationCurve.EASE_OUT)
+        event.control.offset = ft.Offset(0, -2 / 120 if hovered and duration else 0)
+        self.apply_card_material(event.control, recording)
         event.control.update()
 
     def get_card_background_color(self, recording: Recording):
@@ -241,7 +294,7 @@ class RecordingCardManager:
             return self.theme_color("selected_background", ft.Colors.PRIMARY_CONTAINER)
         if recording.rec_id in getattr(self, "_hovered_cards", set()):
             return self.theme_color("primary_light", ft.Colors.SECONDARY_CONTAINER)
-        return ft.Colors.SURFACE
+        return None
 
     @staticmethod
     def get_card_border_color(recording: Recording):
@@ -256,7 +309,7 @@ class RecordingCardManager:
         return ft.Container(
             content=ft.Text(config["text"], color=config["text_color"], size=12, weight=ft.FontWeight.BOLD),
             bgcolor=config["bgcolor"],
-            border_radius=5,
+            border_radius=7,
             padding=5,
             width=60,
             height=26,
@@ -297,11 +350,16 @@ class RecordingCardManager:
 
                 if recording_card.get("duration_label"):
                     recording_card["duration_label"].value = self.app.record_manager.get_duration(recording)
+                    recording_card["duration_icon"].icon = (
+                        ft.Icons.FIBER_MANUAL_RECORD if recording.is_recording else ft.Icons.SCHEDULE
+                    )
+                    recording_card["duration_icon"].color = (
+                        ft.Colors.RED if recording.is_recording else ft.Colors.PRIMARY
+                    )
 
                 if recording_card.get("speed_label"):
-                    recording_card["speed_label"].value = (
-                        f"{self._['recording_speed']}: {recording.speed}" if recording.speed else ""
-                    )
+                    recording_card["speed_label"].value = recording.speed or ""
+                    recording_card["speed_icon"].visible = bool(recording.speed)
 
                 if recording_card.get("record_button"):
                     recording_card["record_button"].disabled = recording.stopping_in_progress
@@ -318,8 +376,7 @@ class RecordingCardManager:
                     recording_card["pin_button"].tooltip = self.get_tip_for_pin_state(recording)
 
                 if recording_card["card"] and recording_card["card"].content:
-                    recording_card["card"].content.bgcolor = self.get_card_background_color(recording)
-                    recording_card["card"].content.border = ft.Border.all(2, self.get_card_border_color(recording))
+                    self.apply_card_material(recording_card["card"].content, recording)
                     try:
                         current_page = getattr(self.app, "current_page", None)
                         if current_page is not None and getattr(current_page, "page_name", None) == "recordings":
@@ -560,8 +617,9 @@ class RecordingCardManager:
                     duration_label.value = self.app.record_manager.get_duration(recording)
                     duration_label.update()
                     speed_label = self.cards_obj[recording.rec_id]["speed_label"]
-                    speed_label.value = f"{self._['recording_speed']}: {recording.speed}" if recording.speed else ""
-                    speed_label.update()
+                    speed_label.value = recording.speed or ""
+                    self.cards_obj[recording.rec_id]["speed_icon"].visible = bool(recording.speed)
+                    self.cards_obj[recording.rec_id]["speed_row"].update()
                 except (ft.FletPageDisconnectedException, AssertionError) as e:
                     logger.debug(f"Update duration failed: {e}")
                     break
@@ -584,7 +642,7 @@ class RecordingCardManager:
 
             recording.selected = not recording.selected
             self.selected_cards[recording.rec_id] = recording
-            self.cards_obj[recording.rec_id]["card"].content.bgcolor = await self.update_record_hover(recording)
+            self.apply_card_material(self.cards_obj[recording.rec_id]["card"].content, recording)
             try:
                 self.cards_obj[recording.rec_id]["card"].update()
             except (ft.FletPageDisconnectedException, AssertionError) as e:

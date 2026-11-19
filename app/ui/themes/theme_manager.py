@@ -1,10 +1,12 @@
 """Session preview and application of the globally committed appearance."""
 
+import asyncio
 import sys
 
 import flet as ft
 
 from ...utils.logger import logger
+from .glass import HOVER_DURATION
 from .theme import create_dark_theme, create_light_theme
 from .theme_tokens import build_tokens, normalize_appearance, normalize_hex
 
@@ -18,6 +20,7 @@ class ThemeManager:
         self.draft = None
         self._observers = []
         self._disposed = False
+        self._semantics = ft.SemanticsService()
         self.custom_font = "AlibabaPuHuiTi Light Mac" if sys.platform == "darwin" else "AlibabaPuHuiTi Light"
         self.page.fonts = {
             "AlibabaPuHuiTi Light": "/fonts/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-45-Light.otf",
@@ -111,6 +114,15 @@ class ThemeManager:
                 self._observers.remove(callback)
 
         return unsubscribe
+
+    async def motion_duration(self):
+        # Read on interaction, so changing the OS/browser preference also takes effect.
+        try:
+            features = await asyncio.wait_for(self._semantics.get_accessibility_features(), timeout=1)
+            return 0 if features.disable_animations or features.reduce_motion else HOVER_DURATION
+        except Exception:
+            # A missing/disconnected platform service must never enable unwanted motion.
+            return 0
 
     def dispose(self):
         self._disposed = True

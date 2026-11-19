@@ -49,7 +49,7 @@ def setup_responsive_layout(page: ft.Page, app: App) -> None:
         app.complete_page = ft.Row(
             expand=True,
             controls=[
-                app.left_navigation_menu,
+                getattr(app, "sidebar_surface", app.left_navigation_menu),
                 ft.VerticalDivider(width=1),
                 content,
                 app.dialog_area,

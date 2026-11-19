@@ -5,6 +5,8 @@ from typing import cast
 
 import flet as ft
 
+from ..themes.glass import glass_border, glass_gradient, glass_shadows
+
 
 class ControlGroup:
     def __init__(self, icon, label: str, index: int, name: str, selected_icon):
@@ -42,6 +44,8 @@ class NavigationColumn(ft.Column):
         self.flet_page = page
         self.app = app
         self.navigation_items = self.get_navigation_items()
+        for item in self.navigation_items:
+            item.on_hover = self.item_hovered
         self.controls = cast(list[ft.Control], self.navigation_items)
         current_page = getattr(self.app, "current_page", None)
         if current_page is not None:
@@ -67,6 +71,9 @@ class NavigationColumn(ft.Column):
             item.icon_control.color = ft.Colors.PRIMARY
             item.label_control.color = ft.Colors.PRIMARY
             item.label_control.weight = None
+            item.gradient = None
+            item.shadow = None
+            item.border = None
         if 0 <= self.selected_index < len(self.navigation_items):
             selected_item = self.navigation_items[self.selected_index]
             selected_item.bgcolor = ft.Colors.SECONDARY_CONTAINER
@@ -74,6 +81,23 @@ class NavigationColumn(ft.Column):
             selected_item.icon_control.color = ft.Colors.PRIMARY
             selected_item.label_control.color = ft.Colors.PRIMARY
             selected_item.label_control.weight = ft.FontWeight.W_600
+            theme = getattr(self.app, "theme_manager", None)
+            if theme is not None:
+                selected_item.bgcolor = None
+                selected_item.gradient = glass_gradient(theme.tokens, tinted=True)
+                selected_item.border = glass_border(theme.tokens)
+                selected_item.shadow = glass_shadows(theme.tokens)
+
+    async def item_hovered(self, event):
+        item = event.control
+        theme = getattr(self.app, "theme_manager", None)
+        if theme is None or item.destination.index == self.selected_index:
+            return
+        item.data = event.data in (True, "true")
+        duration = await theme.motion_duration()
+        item.animate = ft.Animation(duration, ft.AnimationCurve.EASE_OUT)
+        item.bgcolor = ft.Colors.with_opacity(0.65, theme.tokens.primary_light) if item.data else None
+        item.update()
 
     def select_page(self, page_name: str):
         for item in self.navigation_items:

@@ -11,6 +11,8 @@ from ..base_page import PageBase
 from ..components.business.recording_dialog import RecordingDialog
 from ..components.dialogs.help_dialog import HelpDialog
 from ..filters import RecordingFilters
+from ..themes.glass import CONTROL_HEIGHT, CONTROL_RADIUS, FILTER_HEIGHT, glass_border, glass_gradient, glass_shadows
+from ..themes.theme_tokens import build_tokens
 
 
 class RecordingsPage(PageBase):
@@ -36,6 +38,8 @@ class RecordingsPage(PageBase):
         self._search_task = None
         self._search_revision = 0
         self._filter_buttons = {}
+        self._toolbar_surfaces = []
+        self._field_surfaces = []
         self.init()
         theme_manager = getattr(self.app, "theme_manager", None)
         self._unsubscribe_theme = theme_manager.subscribe(self.refresh_theme) if theme_manager else None
@@ -139,12 +143,12 @@ class RecordingsPage(PageBase):
                 hint_text=self._["search_placeholder"],
                 on_change=self.on_search_change,
                 on_submit=self.on_search_submit,
-                height=40,
+                height=CONTROL_HEIGHT,
                 text_size=13,
                 dense=True,
                 content_padding=ft.Padding.symmetric(horizontal=12, vertical=8),
-                border_radius=8,
-                border_color=ft.Colors.OUTLINE_VARIANT,
+                border_radius=CONTROL_RADIUS,
+                border_color=ft.Colors.TRANSPARENT,
                 focused_border_color=self.theme_color("focus_ring", ft.Colors.PRIMARY),
                 expand=True,
             )
@@ -166,14 +170,26 @@ class RecordingsPage(PageBase):
                 style=ft.ButtonStyle(color=ft.Colors.RED),
             ),
         ]
-        for button in actions:
-            button.height = 40
+        self._toolbar_surfaces = []
+        for index, button in enumerate(actions):
+            button.height = CONTROL_HEIGHT
+            surface = ft.Container(content=button, border_radius=CONTROL_RADIUS, on_hover=self.toolbar_hover)
+            self._toolbar_surfaces.append((surface, index == 0, index == 4))
+        search_surface = ft.Container(content=self.search_field, expand=True, border_radius=CONTROL_RADIUS)
+        self._field_surfaces = [search_surface]
+        self.refresh_materials()
         return ft.ResponsiveRow(
             [
-                ft.Row(actions, wrap=True, spacing=8, run_spacing=8, col={"xs": 12, "xl": 8}),
+                ft.Row(
+                    [surface for surface, _, _ in self._toolbar_surfaces],
+                    wrap=True,
+                    spacing=8,
+                    run_spacing=8,
+                    col={"xs": 12, "xl": 8},
+                ),
                 ft.Row(
                     [
-                        self.search_field,
+                        search_surface,
                         ft.IconButton(
                             ft.Icons.GRID_VIEW,
                             selected=self.is_grid_view,
@@ -199,6 +215,17 @@ class RecordingsPage(PageBase):
         if not self.is_grid_view:
             await self.toggle_view_mode(event)
 
+    async def toolbar_hover(self, event):
+        manager = getattr(self.app, "theme_manager", None)
+        if manager is None:
+            return
+        surface = event.control
+        surface.data = event.data in (True, "true")
+        duration = await manager.motion_duration()
+        surface.animate = ft.Animation(duration, ft.AnimationCurve.EASE_OUT)
+        surface.shadow = glass_shadows(manager.tokens, hovered=surface.data)
+        surface.update()
+
     async def show_list_view(self, event):
         if self.is_grid_view:
             await self.toggle_view_mode(event)
@@ -209,7 +236,7 @@ class RecordingsPage(PageBase):
             bgcolor={
                 ft.ControlState.DEFAULT: self.theme_color("primary", ft.Colors.PRIMARY)
                 if selected
-                else ft.Colors.SURFACE,
+                else ft.Colors.with_opacity(0.8, ft.Colors.SURFACE),
                 ft.ControlState.HOVERED: self.theme_color("primary_hover", ft.Colors.PRIMARY)
                 if selected
                 else self.theme_color("primary_light", ft.Colors.SECONDARY_CONTAINER),
@@ -226,10 +253,45 @@ class RecordingsPage(PageBase):
             },
             shape=ft.RoundedRectangleBorder(radius=18),
             padding=ft.Padding.symmetric(horizontal=12, vertical=6),
-            elevation=0,
+            elevation={ft.ControlState.DEFAULT: 1, ft.ControlState.HOVERED: 3},
+            shadow_color=ft.Colors.with_opacity(0.18, self.theme_color("primary", ft.Colors.PRIMARY)),
         )
 
+    def refresh_materials(self):
+        manager = getattr(self.app, "theme_manager", None)
+        tokens = manager.tokens if manager else build_tokens(None)
+        for surface, primary, danger in getattr(self, "_toolbar_surfaces", []):
+            surface.gradient = (
+                ft.LinearGradient(
+                    begin=ft.Alignment.TOP_LEFT,
+                    end=ft.Alignment.BOTTOM_RIGHT,
+                    colors=[tokens.primary_hover, tokens.primary, tokens.primary_active],
+                )
+                if primary
+                else glass_gradient(tokens)
+            )
+            surface.border = glass_border(tokens)
+            surface.shadow = glass_shadows(tokens)
+            surface.content.style = ft.ButtonStyle(
+                color=tokens.primary_foreground if primary else ft.Colors.RED if danger else tokens.interactive_accent,
+                bgcolor=ft.Colors.TRANSPARENT,
+                overlay_color={
+                    ft.ControlState.HOVERED: ft.Colors.with_opacity(
+                        0.12, tokens.primary_foreground if primary else tokens.primary
+                    ),
+                    ft.ControlState.FOCUSED: ft.Colors.with_opacity(0.16, tokens.focus_ring),
+                },
+                elevation=0,
+                side=ft.BorderSide(0, ft.Colors.TRANSPARENT),
+                shape=ft.RoundedRectangleBorder(radius=CONTROL_RADIUS),
+            )
+        for surface in getattr(self, "_field_surfaces", []):
+            surface.gradient = glass_gradient(tokens)
+            surface.border = glass_border(tokens)
+            surface.shadow = glass_shadows(tokens)
+
     def refresh_theme(self):
+        self.refresh_materials()
         if self.search_field is not None:
             self.search_field.focused_border_color = self.theme_color("focus_ring", ft.Colors.PRIMARY)
         for key, button in self._filter_buttons.items():
@@ -287,7 +349,7 @@ class RecordingsPage(PageBase):
                     tight=True,
                 ),
                 on_click=handler,
-                height=34,
+                height=FILTER_HEIGHT,
                 style=self.filter_button_style(key == self.current_filter),
             )
         platforms = {
@@ -301,23 +363,37 @@ class RecordingsPage(PageBase):
             options=[ft.dropdown.DropdownOption(key="all", text=self._["filter_all"])]
             + [ft.dropdown.DropdownOption(key=key, text=name) for key, name in platforms.items()],
             value=self.current_platform_filter,
-            label=self._["platform_filter"],
+            tooltip=self._["platform_filter"],
             on_select=self.on_platform_dropdown_change,
-            width=160,
+            width=140,
+            height=FILTER_HEIGHT,
             text_size=13,
-            content_padding=ft.Padding.symmetric(horizontal=10, vertical=8),
-            border_radius=8,
-            border_color=ft.Colors.OUTLINE_VARIANT,
+            content_padding=ft.Padding.symmetric(horizontal=10, vertical=0),
+            border_radius=12,
+            border_color=ft.Colors.TRANSPARENT,
             focused_border_color=ft.Colors.PRIMARY,
             dense=True,
             menu_height=320 if len(platforms) > 7 else None,
         )
+        platform_surface = ft.Container(content=platform_dropdown, height=FILTER_HEIGHT, border_radius=12)
+        self._field_surfaces = getattr(self, "_field_surfaces", [])[:1] + [platform_surface]
+        self.refresh_materials()
         return ft.ResponsiveRow(
             [
                 ft.Row(
-                    list(self._filter_buttons.values()), wrap=True, spacing=8, run_spacing=8, col={"xs": 12, "lg": 9}
+                    [ft.Text(f"{self._['status_filter']}：", size=13), *self._filter_buttons.values()],
+                    wrap=True,
+                    spacing=8,
+                    run_spacing=8,
+                    col={"xs": 12, "xl": 9},
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                ft.Row([platform_dropdown], alignment=ft.MainAxisAlignment.END, col={"xs": 12, "lg": 3}),
+                ft.Row(
+                    [ft.Text(f"{self._['platform_filter']}：", size=13), platform_surface],
+                    spacing=8,
+                    alignment=ft.MainAxisAlignment.END,
+                    col={"xs": 12, "xl": 3},
+                ),
             ],
             spacing=8,
             run_spacing=8,
@@ -580,9 +656,7 @@ class RecordingsPage(PageBase):
                 continue
             if card_id in selected_cards:
                 selected_cards[card_id].selected = False
-                card["card"].content.bgcolor = self.app.record_card_manager.get_card_background_color(
-                    selected_cards[card_id]
-                )
+                self.app.record_card_manager.apply_card_material(card["card"].content, selected_cards[card_id])
                 card["card"].update()
 
         for card in to_remove:

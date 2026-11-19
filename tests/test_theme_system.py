@@ -159,6 +159,18 @@ class ThemeSessionTests(unittest.IsolatedAsyncioTestCase):
         assert self.services.snapshot_appearance() == (saved, revision)
         assert self.services.config_manager.load_user_config()["theme_color"] == saved["theme_color"]
 
+    async def test_motion_preference_is_read_again_and_unavailable_service_disables_motion(self):
+        manager = self.make_app().theme_manager
+        read_features = AsyncMock(return_value=SimpleNamespace(disable_animations=False, reduce_motion=False))
+        with patch.object(manager._semantics, "get_accessibility_features", read_features):
+            assert await manager.motion_duration() == 200
+            read_features.return_value.reduce_motion = True
+            assert await manager.motion_duration() == 0
+            read_features.return_value = SimpleNamespace(disable_animations=True, reduce_motion=False)
+            assert await manager.motion_duration() == 0
+            read_features.side_effect = RuntimeError("session disconnected")
+            assert await manager.motion_duration() == 0
+
     async def test_system_mode_preview_ui_validation_and_defaults(self):
         app = self.make_app()
         manager = app.theme_manager
