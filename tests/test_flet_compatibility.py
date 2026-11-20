@@ -84,18 +84,23 @@ class FletCompatibilityTests(unittest.IsolatedAsyncioTestCase):
         login.on_login_success.assert_awaited_once_with("test-token")
         assert not login.login_button.disabled
 
-    async def test_web_resize_replaces_root_and_restores_sidebar(self):
+    async def test_web_resize_preserves_background_root_and_restores_sidebar(self):
         page = Mock(spec=ft.Page)
         page.width = 1280
         page.route = "/settings"
         language = json.loads(Path("locales/zh_CN.json").read_text(encoding="utf-8"))
         content = ft.Column([ft.Text("existing content")])
+        workspace_layout = ft.Container(padding=10)
+        background = ft.Container(ignore_interactions=True)
+        root = ft.Container(content=ft.Stack([background, workspace_layout]), expand=True)
         app = SimpleNamespace(
             language_manager=SimpleNamespace(language=language),
             left_navigation_menu=ft.Column(width=192),
             content_area=content,
             dialog_area=ft.Container(),
             snack_bar_area=ft.Container(),
+            workspace_layout=workspace_layout,
+            complete_page=root,
         )
         setup_responsive_layout(page, app)
         page.controls = [app.complete_page]
@@ -103,15 +108,19 @@ class FletCompatibilityTests(unittest.IsolatedAsyncioTestCase):
         page.width = 390
         resize(None)
         assert page.controls[0] is app.complete_page
-        assert isinstance(page.controls[0], ft.Column)
-        assert app.complete_page.controls[0] is content
+        assert page.controls[0] is root
+        assert root.content.controls[0] is background
+        assert isinstance(workspace_layout.content, ft.Column)
+        assert workspace_layout.content.controls[0] is content
         assert not app.left_navigation_menu.visible
         assert app.bottom_navigation.selected_index == 2
         app.bottom_navigation.on_change(SimpleNamespace(control=SimpleNamespace(selected_index=3)))
         page.run_task.assert_called_once_with(page.push_route, "/storage")
         page.width = 1280
         resize(None)
-        assert isinstance(page.controls[0], ft.Row)
+        assert page.controls[0] is root
+        assert root.content.controls[0] is background
+        assert isinstance(workspace_layout.content, ft.Row)
         assert app.left_navigation_menu.visible
         assert app.left_navigation_menu.width == 192
-        assert app.complete_page.controls[2] is content
+        assert workspace_layout.content.controls[2] is content

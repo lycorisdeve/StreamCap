@@ -14,7 +14,6 @@ from .ui.components.common.ambient_background import AmbientBackground
 from .ui.components.common.show_snackbar import ShowSnackBar
 from .ui.navigation.sidebar import LeftNavigationMenu, NavigationSidebar
 from .ui.themes import ThemeManager
-from .ui.themes.theme_tokens import mix
 from .ui.views.about_view import AboutPage
 from .ui.views.home_view import HomePage
 from .ui.views.logs_view import LogsPage
@@ -72,26 +71,29 @@ class App:
         self.snack_bar_area = ft.Container()
         self.dialog_area = ft.Container()
         self.ambient_background = AmbientBackground(self.theme_manager.tokens)
-        self.content_surface = ft.Container(
-            content=ft.Stack(
-                [self.ambient_background, ft.Container(content=self.content_area, padding=12)],
-                fit=ft.StackFit.EXPAND,
+        self.content_surface = ft.Container(content=self.content_area, padding=12, expand=True)
+        self.sidebar_surface = ft.Container(content=self.left_navigation_menu, width=192)
+        self.workspace_layout = ft.Container(
+            content=ft.Row(
+                expand=True,
+                controls=[
+                    self.sidebar_surface,
+                    ft.VerticalDivider(width=1),
+                    self.content_surface,
+                    self.dialog_area,
+                    self.snack_bar_area,
+                ],
             ),
+            padding=10,
+        )
+        self.complete_page = ft.Container(
+            content=ft.Stack([self.ambient_background, self.workspace_layout], fit=ft.StackFit.EXPAND),
             expand=True,
         )
-        self.sidebar_surface = ft.Container(content=self.left_navigation_menu, width=192)
+        # Keep the inset inside the shared background, not Page's flat padding.
+        self.page.padding = 0
         self.theme_manager.subscribe(self.update_theme_surface)
         self.update_theme_surface()
-        self.complete_page = ft.Row(
-            expand=True,
-            controls=[
-                self.sidebar_surface,
-                ft.VerticalDivider(width=1),
-                self.content_surface,
-                self.dialog_area,
-                self.snack_bar_area,
-            ],
-        )
         self.snack_bar = ShowSnackBar(self)
         self.subprocess_start_up_info = services.subprocess_start_up_info
         self.shutdown_manager = ScheduledShutdownManager(self)
@@ -182,15 +184,10 @@ class App:
     def update_theme_surface(self):
         tokens = self.theme_manager.tokens
         self.ambient_background.set_theme(tokens)
-        self.content_surface.gradient = ft.LinearGradient(
+        self.complete_page.gradient = ft.LinearGradient(
             begin=ft.Alignment.TOP_LEFT,
             end=ft.Alignment.BOTTOM_RIGHT,
             colors=[tokens.background, tokens.surface],
-        )
-        self.sidebar_surface.gradient = ft.LinearGradient(
-            begin=ft.Alignment.TOP_LEFT,
-            end=ft.Alignment.BOTTOM_RIGHT,
-            colors=[tokens.background, mix(tokens.surface, tokens.primary, 0.09 if tokens.is_dark else 0.08)],
         )
 
     def initialize_pages(self):

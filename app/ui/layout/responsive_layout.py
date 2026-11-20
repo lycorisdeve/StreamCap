@@ -20,6 +20,7 @@ def setup_responsive_layout(page: ft.Page, app: App) -> None:
         routes = ["home", "recordings", "settings", "storage", "logs", "about"]
         current_route = page.route.lstrip("/")
         app.bottom_navigation = ft.NavigationBar(
+            bgcolor=ft.Colors.TRANSPARENT,
             selected_index=routes.index(current_route) if current_route in routes else 0,
             destinations=[
                 ft.NavigationBarDestination(icon=ft.Icons.HOME, label=_["home"]),
@@ -37,7 +38,7 @@ def setup_responsive_layout(page: ft.Page, app: App) -> None:
 
         app.content_area.expand = True
 
-        app.complete_page = ft.Column(
+        app.workspace_layout.content = ft.Column(
             expand=True,
             spacing=0,
             controls=[content, app.bottom_navigation, app.dialog_area, app.snack_bar_area],
@@ -46,7 +47,7 @@ def setup_responsive_layout(page: ft.Page, app: App) -> None:
         logger.info("desktop device detected, enable desktop layout")
         app.is_mobile = False
         app.left_navigation_menu.visible = True
-        app.complete_page = ft.Row(
+        app.workspace_layout.content = ft.Row(
             expand=True,
             controls=[
                 getattr(app, "sidebar_surface", app.left_navigation_menu),
