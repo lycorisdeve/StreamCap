@@ -3,7 +3,7 @@ import time
 
 import flet as ft
 
-from ...themes.theme_tokens import DEFAULT_COLOR, PRESET_COLORS, normalize_hex
+from ...themes.theme_tokens import CLASSIC_COLOR, DEFAULT_COLOR, PRESET_COLORS, normalize_hex
 
 
 class AppearanceSettings(ft.Column):
@@ -106,7 +106,8 @@ class AppearanceSettings(ft.Column):
             on_change_end=self.finish_slider,
         )
         self.preset_controls = []
-        for key, color in PRESET_COLORS:
+        for key, color in [("original_classic", CLASSIC_COLOR), *PRESET_COLORS]:
+            style = "classic" if key == "original_classic" else "glass"
             swatch = ft.Container(
                 content=ft.Row(
                     [ft.Container(width=22, height=22, bgcolor=color, border_radius=11), ft.Text(self._[key])],
@@ -117,8 +118,10 @@ class AppearanceSettings(ft.Column):
                 border_radius=8,
                 ink=True,
                 tooltip=f"{self._[key]} {color}",
-                on_click=lambda _, selected=color: self.select_color(selected),
-                data=color,
+                on_click=lambda _, selected=color, selected_style=style: self.select_color(
+                    selected, style=selected_style, mode="light" if selected_style == "classic" else None
+                ),
+                data={"color": color, "style": style},
             )
             self.preset_controls.append(swatch)
         self.apply_button = ft.FilledButton(self._["apply"], on_click=self.apply_changes, disabled=True)
@@ -244,7 +247,7 @@ class AppearanceSettings(ft.Column):
         self.cursor.top = max(0, min(self.PICKER_HEIGHT - 14, (1 - self.value) * self.PICKER_HEIGHT - 7))
         tokens = self.manager.tokens
         for swatch in self.preset_controls:
-            selected = swatch.data == color
+            selected = swatch.data["color"] == color and swatch.data["style"] == config["theme_style"]
             swatch.bgcolor = tokens.selected_background if selected else tokens.surface
             swatch.border = ft.Border.all(2 if selected else 1, tokens.primary if selected else tokens.primary_border)
         self.preview_surface.bgcolor = tokens.background
@@ -258,11 +261,11 @@ class AppearanceSettings(ft.Column):
         self.apply_button.disabled = self._invalid_hex or self._busy or self.manager.draft is None
         self._update()
 
-    def select_color(self, color):
+    def select_color(self, color, *, style=None, mode=None):
         self._hex_editing = False
         self._invalid_hex = False
         self.hex_input.error_text = None
-        self.manager.preview(color=color)
+        self.manager.preview(color=color, style=style, mode=mode)
         self.refresh_theme()
 
     def hex_changed(self, event):
@@ -360,5 +363,5 @@ class AppearanceSettings(ft.Column):
         self._invalid_hex = False
         self._hex_editing = False
         self.hex_input.error_text = None
-        self.manager.preview(color=DEFAULT_COLOR, mode="light")
+        self.manager.preview(color=DEFAULT_COLOR, mode="light", style="glass")
         self.refresh_theme()

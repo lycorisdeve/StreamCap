@@ -107,9 +107,9 @@ def create_theme(custom_font: str, tokens: ThemeTokens) -> ft.Theme:
     )
 
 
-def create_light_theme(custom_font: str, color: str = DEFAULT_COLOR) -> ft.Theme:
-    return create_theme(custom_font, build_tokens(color))
+def create_light_theme(custom_font: str, color: str = DEFAULT_COLOR, style: str = "glass") -> ft.Theme:
+    return create_theme(custom_font, build_tokens(color, style=style))
 
 
-def create_dark_theme(custom_font: str, color: str = DEFAULT_COLOR) -> ft.Theme:
-    return create_theme(custom_font, build_tokens(color, dark=True))
+def create_dark_theme(custom_font: str, color: str = DEFAULT_COLOR, style: str = "glass") -> ft.Theme:
+    return create_theme(custom_font, build_tokens(color, dark=True, style=style))

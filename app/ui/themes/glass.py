@@ -17,11 +17,15 @@ def glass_gradient(tokens, tinted=False):
     return ft.LinearGradient(
         begin=ft.Alignment.TOP_LEFT,
         end=ft.Alignment.BOTTOM_RIGHT,
-        colors=[ft.Colors.with_opacity(0.9, base), ft.Colors.with_opacity(0.78, base)],
+        colors=[base, base]
+        if tokens.is_classic
+        else [ft.Colors.with_opacity(0.9, base), ft.Colors.with_opacity(0.78, base)],
     )
 
 
 def glass_shadows(tokens, hovered=False):
+    if tokens.is_classic:
+        return None
     ink = mix(tokens.primary, tokens.on_surface, 0.55)
     return [
         ft.BoxShadow(

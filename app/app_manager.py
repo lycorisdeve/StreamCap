@@ -183,12 +183,16 @@ class App:
 
     def update_theme_surface(self):
         tokens = self.theme_manager.tokens
+        self.ambient_background.visible = not tokens.is_classic
         self.ambient_background.set_theme(tokens)
+        self.complete_page.bgcolor = tokens.background if tokens.is_classic else None
         self.complete_page.gradient = ft.LinearGradient(
             begin=ft.Alignment.TOP_LEFT,
             end=ft.Alignment.BOTTOM_RIGHT,
             colors=[tokens.background, tokens.surface],
         )
+        if tokens.is_classic:
+            self.complete_page.gradient = None
 
     def initialize_pages(self):
         return {

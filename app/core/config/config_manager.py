@@ -12,7 +12,7 @@ T = TypeVar("T")
 
 
 class ConfigManager:
-    APPEARANCE_KEYS = ("theme_color", "theme_mode")
+    APPEARANCE_KEYS = ("theme_color", "theme_mode", "theme_style")
 
     def __init__(self, run_path):
         self.run_path = run_path
@@ -152,7 +152,7 @@ class ConfigManager:
 
     def _save_appearance_config_sync(self, patch):
         if set(patch) - set(self.APPEARANCE_KEYS):
-            raise ValueError("Appearance updates may only contain theme_color and theme_mode")
+            raise ValueError("Appearance updates may only contain theme_color, theme_mode and theme_style")
         with self._write_lock:
             config = self._read_user_config_for_write()
             config.update(patch)

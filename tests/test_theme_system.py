@@ -14,16 +14,32 @@ from app.core.runtime.backend_services import BackendServices
 from app.ui.components.common.appearance_settings import AppearanceSettings
 from app.ui.themes import ThemeManager
 from app.ui.themes.theme_tokens import (
+    CLASSIC_COLOR,
     DEFAULT_COLOR,
     PRESET_COLORS,
     build_tokens,
     contrast_ratio,
+    normalize_appearance,
     normalize_color,
     normalize_hex,
 )
 
 
 class TokenTests(unittest.TestCase):
+    def test_classic_palette_keeps_old_blue_and_plain_background(self):
+        classic = build_tokens(CLASSIC_COLOR, style="classic")
+        assert classic.is_classic
+        assert classic.primary == "#2196F3"
+        assert classic.background == classic.surface == "#FFFFFF"
+        assert not build_tokens(CLASSIC_COLOR).is_classic
+        assert build_tokens(CLASSIC_COLOR).background != "#FFFFFF"
+        dark = build_tokens(CLASSIC_COLOR, dark=True, style="classic")
+        assert dark.is_classic
+        assert dark.is_dark
+        assert contrast_ratio(dark.on_surface, dark.background) >= 4.5
+        assert normalize_appearance({"theme_color": "blue"})["theme_style"] == "glass"
+        assert normalize_appearance({"theme_style": "invalid"})["theme_style"] == "glass"
+
     def test_palette_contrast_and_brand_identity(self):
         rng = random.Random(12)
         colors = [color for _, color in PRESET_COLORS] + ["#000000", "#FFFFFF", "#808080"]
@@ -112,15 +128,17 @@ class ThemeSessionTests(unittest.IsolatedAsyncioTestCase):
             bridges.append(bridge)
             self.services.register_ui_bridge(bridge)
         original = Path(self.services.config_manager.user_config_path).read_bytes()
-        one.preview(color="#EC599A")
+        one.preview(color="#EC599A", style="classic")
         assert Path(self.services.config_manager.user_config_path).read_bytes() == original
         assert two.tokens.primary == DEFAULT_COLOR
         two.preview(color="#0EAFA0")
         await one.commit_preview()
         await asyncio.sleep(0)
         assert two.tokens.primary == "#0EAFA0"
+        assert not two.tokens.is_classic
         two.cancel_preview()
         assert two.tokens.primary == "#EC599A"
+        assert two.tokens.is_classic
         two.receive_committed({"theme_color": "#303443", "theme_mode": "dark"}, 0)
         assert two.tokens.primary == "#EC599A"
         assert one.draft is None
@@ -171,6 +189,41 @@ class ThemeSessionTests(unittest.IsolatedAsyncioTestCase):
             read_features.side_effect = RuntimeError("session disconnected")
             assert await manager.motion_duration() == 0
 
+    async def test_classic_preset_preview_cancel_save_restart_and_stale_save(self):
+        app = self.make_app()
+        panel = AppearanceSettings(app)
+        manager = app.theme_manager
+        cm = self.services.config_manager
+        old_config = cm.load_user_config()
+        before = Path(cm.user_config_path).read_bytes()
+        classic = panel.preset_controls[0]
+        classic.on_click(None)
+        assert manager.tokens.is_classic
+        assert manager.tokens.background == "#FFFFFF"
+        assert manager.tokens.primary == CLASSIC_COLOR
+        assert manager.effective_config["theme_mode"] == "light"
+        assert await manager.motion_duration() == 0
+        assert Path(cm.user_config_path).read_bytes() == before
+        panel.cancel_changes(None)
+        assert not manager.tokens.is_classic
+        classic.on_click(None)
+        await panel.apply_changes(None)
+        await cm.save_user_config(old_config)
+        saved = cm.load_user_config()
+        assert saved["theme_style"] == "classic"
+        assert saved["theme_color"] == CLASSIC_COLOR
+        restarted = BackendServices(self.directory.name)
+        assert restarted.snapshot_appearance()[0]["theme_style"] == "classic"
+        second = self.make_app().theme_manager
+        assert second.tokens.is_classic
+        panel.preset_controls[1].on_click(None)
+        assert not manager.tokens.is_classic
+        panel.cancel_changes(None)
+        assert manager.tokens.is_classic
+        panel.restore_defaults(None)
+        assert not manager.tokens.is_classic
+        panel.dispose()
+
     async def test_system_mode_preview_ui_validation_and_defaults(self):
         app = self.make_app()
         manager = app.theme_manager
@@ -191,7 +244,7 @@ class ThemeSessionTests(unittest.IsolatedAsyncioTestCase):
         panel.hex_blurred(None)
         assert panel.hex_input.value == "#AABBCC"
         panel.restore_defaults(None)
-        assert manager.draft == {"theme_color": DEFAULT_COLOR, "theme_mode": "light"}
+        assert manager.draft == {"theme_color": DEFAULT_COLOR, "theme_mode": "light", "theme_style": "glass"}
         panel.cancel_changes(None)
         assert manager.draft is None
         panel.pick_color(SimpleNamespace(local_position=ft.Offset(132, 74)))

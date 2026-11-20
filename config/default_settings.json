@@ -68,6 +68,7 @@
     "theme_color": "#7555F6",
     "is_grid_view": true,
     "theme_mode": "light",
+    "theme_style": "glass",
     "platform_max_concurrent_requests": "3",
     "last_route": "/home",
     "check_live_on_browser_refresh": false

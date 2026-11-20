@@ -243,6 +243,8 @@ class BackendServices:
             patch["theme_color"] = normalize_hex(patch["theme_color"])
         if "theme_mode" in patch and patch["theme_mode"] not in ("light", "dark", "system"):
             raise ValueError("Unknown theme mode")
+        if "theme_style" in patch and patch["theme_style"] not in ("glass", "classic"):
+            raise ValueError("Unknown theme style")
 
         def commit():
             with self._appearance_commit_lock:

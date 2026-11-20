@@ -268,6 +268,11 @@ class RecordingCardManager:
             hovered = recording.rec_id in self._hovered_cards
             container.gradient = glass_gradient(manager.tokens, tinted=recording.selected or hovered)
             container.shadow = glass_shadows(manager.tokens, hovered=hovered)
+            container.content.blur = None if manager.tokens.is_classic else 8
+            if manager.tokens.is_classic:
+                container.animate = None
+                container.animate_offset = None
+                container.offset = ft.Offset(0, 0)
         container.border = ft.Border.all(
             CARD_BORDER_WIDTH,
             ft.Colors.with_opacity(

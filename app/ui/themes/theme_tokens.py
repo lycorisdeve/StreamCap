@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 
 DEFAULT_COLOR = "#7555F6"
+CLASSIC_COLOR = "#2196F3"
 PRESET_COLORS = [
     ("dream_purple", DEFAULT_COLOR),
     ("classic_blue", "#2389F5"),
@@ -53,9 +54,11 @@ def normalize_color(value) -> str:
 
 def normalize_appearance(config: dict) -> dict:
     mode = config.get("theme_mode", "light")
+    style = config.get("theme_style", "glass")
     return {
         "theme_color": normalize_color(config.get("theme_color")),
         "theme_mode": mode if mode in ("light", "dark", "system") else "light",
+        "theme_style": style if style in ("glass", "classic") else "glass",
     }
 
 
@@ -107,11 +110,15 @@ class ThemeTokens:
     on_surface: str
     on_surface_variant: str
     is_dark: bool
+    is_classic: bool = False
 
 
-def build_tokens(color: str, dark: bool = False) -> ThemeTokens:
+def build_tokens(color: str, dark: bool = False, style: str = "glass") -> ThemeTokens:
     base = normalize_color(color)
+    classic = style == "classic"
     background = mix("#16181F", base, 0.04) if dark else mix("#FFFFFF", base, 0.035)
+    if classic:
+        background = "#181818" if dark else "#FFFFFF"
     surface = "#20222B" if dark else "#FFFFFF"
     primary = base
     foreground = max(("#FFFFFF", "#000000"), key=lambda value: contrast_ratio(value, primary))
@@ -141,4 +148,5 @@ def build_tokens(color: str, dark: bool = False) -> ThemeTokens:
         on_surface="#F3F2F7" if dark else "#23222B",
         on_surface_variant="#C5C3D0" if dark else "#5F5B6B",
         is_dark=dark,
+        is_classic=classic,
     )

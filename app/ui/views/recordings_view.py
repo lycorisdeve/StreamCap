@@ -265,7 +265,9 @@ class RecordingsPage(PageBase):
                 ft.LinearGradient(
                     begin=ft.Alignment.TOP_LEFT,
                     end=ft.Alignment.BOTTOM_RIGHT,
-                    colors=[tokens.primary_hover, tokens.primary, tokens.primary_active],
+                    colors=[tokens.primary, tokens.primary]
+                    if tokens.is_classic
+                    else [tokens.primary_hover, tokens.primary, tokens.primary_active],
                 )
                 if primary
                 else glass_gradient(tokens)

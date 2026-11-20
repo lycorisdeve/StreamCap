@@ -43,10 +43,11 @@ class ThemeManager:
             return
         config = self.effective_config
         color, mode = config["theme_color"], config["theme_mode"]
+        style = config["theme_style"]
         dark = mode == "dark" or (mode == "system" and self.page.platform_brightness == ft.Brightness.DARK)
-        self.tokens = build_tokens(color, dark=dark)
-        self.page.theme = create_light_theme(self.custom_font, color)
-        self.page.dark_theme = create_dark_theme(self.custom_font, color)
+        self.tokens = build_tokens(color, dark=dark, style=style)
+        self.page.theme = create_light_theme(self.custom_font, color, style)
+        self.page.dark_theme = create_dark_theme(self.custom_font, color, style)
         self.page.theme_mode = ft.ThemeMode(mode)
         self.page.bgcolor = self.tokens.background
         for callback in tuple(self._observers):
@@ -60,7 +61,7 @@ class ThemeManager:
             except (ft.FletPageDisconnectedException, AssertionError):
                 pass
 
-    def preview(self, color=None, mode=None):
+    def preview(self, color=None, mode=None, style=None):
         draft = dict(self.effective_config)
         if color is not None:
             draft["theme_color"] = normalize_hex(color)
@@ -68,6 +69,10 @@ class ThemeManager:
             if mode not in ("light", "dark", "system"):
                 raise ValueError("Unknown theme mode")
             draft["theme_mode"] = mode
+        if style is not None:
+            if style not in ("glass", "classic"):
+                raise ValueError("Unknown theme style")
+            draft["theme_style"] = style
         self.draft = draft
         self.apply()
 
@@ -116,6 +121,8 @@ class ThemeManager:
         return unsubscribe
 
     async def motion_duration(self):
+        if self.tokens.is_classic:
+            return 0
         # Read on interaction, so changing the OS/browser preference also takes effect.
         try:
             features = await asyncio.wait_for(self._semantics.get_accessibility_features(), timeout=1)
