@@ -60,6 +60,8 @@ class RecordingCardManager:
         duration_text_label = ft.Text(
             self.app.record_manager.get_duration(recording),
             size=12,
+            max_lines=1,
+            no_wrap=True,
             weight=ft.FontWeight.W_600,
             color=ft.Colors.ON_SURFACE,
         )
@@ -116,11 +118,9 @@ class RecordingCardManager:
         display_title_label = ft.Text(
             display_title,
             size=14,
-            selectable=True,
             max_lines=1,
             no_wrap=True,
             overflow=ft.TextOverflow.ELLIPSIS,
-            expand=True,
             weight=RecordingCardState.get_title_weight(recording),
         )
 
@@ -139,6 +139,8 @@ class RecordingCardManager:
             no_wrap=True,
             overflow=ft.TextOverflow.ELLIPSIS,
             text_align=ft.TextAlign.RIGHT,
+            expand=True,
+            expand_loose=True,
         )
         speed_icon = ft.Icon(ft.Icons.DOWNLOAD_ROUNDED, size=15, color=ft.Colors.GREEN, visible=bool(speed))
         speed_row = ft.Row(
@@ -158,20 +160,29 @@ class RecordingCardManager:
             monitor_button,
         ]
         for button in action_buttons:
-            button.width = None
+            button.width = 36
             button.height = 36
             button.padding = 6
             button.icon_size = 20
             button.expand = True
+            button.expand_loose = True
             self.apply_button_theme(button)
 
-        status_label = self.create_status_label(recording)
-
+        status_label = ft.Container(
+            content=ft.Text(size=12, weight=ft.FontWeight.BOLD, max_lines=1, no_wrap=True),
+            min_width=60,
+            height=26,
+            padding=ft.Padding.symmetric(horizontal=7),
+            border_radius=7,
+            alignment=ft.Alignment.CENTER,
+        )
+        self.update_status_label(status_label, recording)
+        info_margin = ft.Margin.symmetric(horizontal=8)
         title_row = ft.Row(
-            [display_title_label, status_label] if status_label else [display_title_label],
-            alignment=ft.MainAxisAlignment.START,
-            spacing=5,
-            tight=True,
+            [ft.SelectionArea(content=display_title_label, expand=True), status_label],
+            height=26,
+            margin=info_margin,
+            spacing=8,
         )
 
         card_container = ft.Container(
@@ -180,7 +191,8 @@ class RecordingCardManager:
                     title_row,
                     ft.Row(
                         [ft.Row([duration_icon, duration_text_label], spacing=6, tight=True), speed_row],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        height=20,
+                        margin=info_margin,
                         spacing=8,
                     ),
                     ft.Row(
@@ -189,7 +201,8 @@ class RecordingCardManager:
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
                 ],
-                spacing=6,
+                spacing=7,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
                 tight=True,
             ),
             tooltip=self._["recording_card_tip"],
@@ -202,7 +215,10 @@ class RecordingCardManager:
         )
         # Keep the blur inside the surface so it doesn't clip the outer shadows.
         card_container.content = ft.Container(
-            content=card_container.content, padding=10, blur=8, border_radius=CARD_RADIUS - CARD_BORDER_WIDTH
+            content=card_container.content,
+            padding=ft.Padding.symmetric(horizontal=4, vertical=10),
+            blur=8,
+            border_radius=CARD_RADIUS - CARD_BORDER_WIDTH,
         )
         self.apply_card_material(card_container, recording)
         card = ft.Card(
@@ -306,21 +322,14 @@ class RecordingCardManager:
         """Get the border color of the card."""
         return RecordingCardState.get_border_color(recording)
 
-    def create_status_label(self, recording: Recording):
+    def update_status_label(self, label, recording: Recording):
         config = RecordingCardState.get_status_label_config(recording, self._)
-        if not config:
-            return None
-
-        return ft.Container(
-            content=ft.Text(config["text"], color=config["text_color"], size=12, weight=ft.FontWeight.BOLD),
-            bgcolor=config["bgcolor"],
-            border_radius=7,
-            padding=5,
-            width=60,
-            height=26,
-            tooltip=self._["skip_condition"] if recording.skip_current_live else None,
-            alignment=ft.alignment.Alignment.CENTER,
-        )
+        label.visible = bool(config)
+        if config:
+            label.content.value = config["text"]
+            label.content.color = config["text_color"]
+            label.bgcolor = config["bgcolor"]
+        label.tooltip = self._["skip_condition"] if recording.skip_current_live else None
 
     async def update_card(self, recording):
         """Update only the recordings cards in the scrollable content area."""
@@ -335,23 +344,7 @@ class RecordingCardManager:
                     recording_card["display_title_label"].value = display_title
                     recording_card["display_title_label"].weight = RecordingCardState.get_title_weight(recording)
 
-                new_status_label = self.create_status_label(recording)
-
-                if recording_card["card"] and recording_card["card"].content and recording_card["card"].content.content:
-                    title_row = recording_card["card"].content.content.controls[0]
-                    title_row.alignment = ft.MainAxisAlignment.START
-                    title_row.spacing = 5
-                    title_row.tight = True
-
-                    # Update the status label if it exists
-                    if new_status_label:
-                        if len(title_row.controls) > 1:
-                            title_row.controls[1] = new_status_label
-                        else:
-                            title_row.controls.append(new_status_label)
-                    else:
-                        if len(title_row.controls) > 1:
-                            title_row.controls.pop()
+                self.update_status_label(recording_card["status_label"], recording)
 
                 if recording_card.get("duration_label"):
                     recording_card["duration_label"].value = self.app.record_manager.get_duration(recording)

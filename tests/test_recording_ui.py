@@ -132,6 +132,26 @@ class RecordingUiTests(unittest.IsolatedAsyncioTestCase):
         manager = RecordingCardManager(app)
         return manager, theme, callbacks, unsubscribe
 
+    async def test_existing_card_refreshes_status_metrics_and_actions_together(self):
+        manager, _, _, _ = self.make_card_manager()
+        manager.app.record_manager.sort_recordings = Mock()
+        manager.app.current_page.apply_filter = AsyncMock()
+        rec = room("a", monitor_status=True)
+        data = manager._create_card_components(rec)
+        manager.cards_obj[rec.rec_id] = data
+        badge = data["status_label"]
+        for active in (True, False):
+            rec.is_recording = active
+            rec.speed = "12.3 MB/s" if active else ""
+            await manager.update_card(rec)
+            assert data["status_label"] is badge
+            assert badge.content.value == manager._["recording" if active else "offline"]
+            assert data["duration_icon"].icon == (ft.Icons.FIBER_MANUAL_RECORD if active else ft.Icons.SCHEDULE)
+            assert data["speed_icon"].visible == active
+            assert data["speed_label"].value == rec.speed
+            assert data["record_button"].icon == (ft.Icons.STOP_CIRCLE if active else ft.Icons.PLAY_CIRCLE)
+        manager.dispose()
+
     async def test_card_theme_changes_preserve_status_skip_speed_and_actions(self):
         manager, theme, callbacks, unsubscribe = self.make_card_manager()
         rec = room("a", skip_current_live=True, selected=True, monitor_status=True)
