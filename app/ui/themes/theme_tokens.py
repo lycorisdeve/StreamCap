@@ -122,6 +122,10 @@ def build_tokens(color: str, dark: bool = False, style: str = "glass") -> ThemeT
     surface = "#20222B" if dark else "#FFFFFF"
     primary = base
     foreground = max(("#FFFFFF", "#000000"), key=lambda value: contrast_ratio(value, primary))
+    # The original light preset preserves Material blue and its white button labels.
+    original_blue = classic and not dark and primary == CLASSIC_COLOR
+    if original_blue:
+        foreground = "#FFFFFF"
     # Move away from the foreground so hover/press retain readable button labels.
     shade = "#000000" if foreground == "#FFFFFF" else "#FFFFFF"
     if primary == shade:
@@ -142,7 +146,7 @@ def build_tokens(color: str, dark: bool = False, style: str = "glass") -> ThemeT
         focus_ring=accent,
         selected_background=selected_background,
         navigation_active=navigation_active,
-        interactive_accent=accent,
+        interactive_accent=primary if original_blue else accent,
         background=background,
         surface=surface,
         on_surface="#F3F2F7" if dark else "#23222B",

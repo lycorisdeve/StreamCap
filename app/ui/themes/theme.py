@@ -23,6 +23,8 @@ def create_theme(custom_font: str, tokens: ThemeTokens) -> ft.Theme:
     )
     text_style = ft.ButtonStyle(color=tokens.interactive_accent, overlay_color=overlay)
     accent_foreground = max(("#FFFFFF", "#000000"), key=lambda color: contrast_ratio(color, tokens.interactive_accent))
+    if tokens.interactive_accent == tokens.primary:
+        accent_foreground = tokens.primary_foreground
     return ft.Theme(
         font_family=custom_font,
         text_theme=ft.TextTheme(

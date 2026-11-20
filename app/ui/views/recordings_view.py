@@ -276,7 +276,7 @@ class RecordingsPage(PageBase):
             surface.shadow = glass_shadows(tokens)
             surface.content.style = ft.ButtonStyle(
                 color=tokens.primary_foreground if primary else ft.Colors.RED if danger else tokens.interactive_accent,
-                bgcolor=ft.Colors.TRANSPARENT,
+                bgcolor=tokens.primary if primary and tokens.is_classic else ft.Colors.TRANSPARENT,
                 overlay_color={
                     ft.ControlState.HOVERED: ft.Colors.with_opacity(
                         0.12, tokens.primary_foreground if primary else tokens.primary

@@ -13,6 +13,7 @@ import flet as ft
 from app.core.runtime.backend_services import BackendServices
 from app.ui.components.common.appearance_settings import AppearanceSettings
 from app.ui.themes import ThemeManager
+from app.ui.themes.theme import create_light_theme
 from app.ui.themes.theme_tokens import (
     CLASSIC_COLOR,
     DEFAULT_COLOR,
@@ -30,7 +31,15 @@ class TokenTests(unittest.TestCase):
         classic = build_tokens(CLASSIC_COLOR, style="classic")
         assert classic.is_classic
         assert classic.primary == "#2196F3"
+        assert classic.interactive_accent == "#2196F3"
+        assert classic.primary_foreground == "#FFFFFF"
         assert classic.background == classic.surface == "#FFFFFF"
+        theme = create_light_theme("test", CLASSIC_COLOR, style="classic")
+        assert theme.color_scheme.primary == "#2196F3"
+        assert theme.color_scheme.on_primary == "#FFFFFF"
+        assert theme.icon_button_theme.style.color == "#2196F3"
+        assert theme.filled_button_theme.style.bgcolor[ft.ControlState.DEFAULT] == "#2196F3"
+        assert theme.filled_button_theme.style.color[ft.ControlState.DEFAULT] == "#FFFFFF"
         assert not build_tokens(CLASSIC_COLOR).is_classic
         assert build_tokens(CLASSIC_COLOR).background != "#FFFFFF"
         dark = build_tokens(CLASSIC_COLOR, dark=True, style="classic")
@@ -39,6 +48,12 @@ class TokenTests(unittest.TestCase):
         assert contrast_ratio(dark.on_surface, dark.background) >= 4.5
         assert normalize_appearance({"theme_color": "blue"})["theme_style"] == "glass"
         assert normalize_appearance({"theme_style": "invalid"})["theme_style"] == "glass"
+
+    def test_custom_classic_colors_and_dark_mode_keep_readable_accents(self):
+        for color, dark in (("#FFFFFF", False), ("#000000", False), (CLASSIC_COLOR, True)):
+            tokens = build_tokens(color, dark=dark, style="classic")
+            assert contrast_ratio(tokens.interactive_accent, tokens.surface) >= 4.5
+            assert contrast_ratio(tokens.primary_foreground, tokens.primary) >= 4.5
 
     def test_palette_contrast_and_brand_identity(self):
         rng = random.Random(12)
