@@ -27,7 +27,7 @@ class RecordingLayoutTests(unittest.IsolatedAsyncioTestCase):
                 await view.update_grid_layout(SimpleNamespace(width=width))
                 columns = grid.runs_count
                 card_width = (width - (columns - 1) * grid.run_spacing) / columns
-                assert abs(card_width / grid.child_aspect_ratio - 120) < 0.001
+                assert abs(card_width / grid.child_aspect_ratio - 108) < 0.001
                 assert card_width >= min(width, 280)
                 assert grid.padding == 0
                 assert grid.spacing == grid.run_spacing == 12
@@ -48,7 +48,7 @@ class RecordingLayoutTests(unittest.IsolatedAsyncioTestCase):
             view.app.is_mobile = True
             await view.update_grid_layout(SimpleNamespace(width=390))
             assert grid.spacing == grid.run_spacing == 12
-            assert grid.child_aspect_ratio == 390 / 120
+            assert grid.child_aspect_ratio == 390 / 108
             view.app.is_mobile = False
             await view.update_grid_layout(SimpleNamespace(width=700))
             assert grid.spacing == grid.run_spacing == 12

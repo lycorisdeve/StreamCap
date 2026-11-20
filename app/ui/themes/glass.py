@@ -5,6 +5,8 @@ import flet as ft
 from .theme_tokens import mix
 
 CARD_RADIUS = 13
+# The action buttons' 36 px hit area already includes the inset below their icons.
+CARD_HEIGHT = 108
 CONTROL_RADIUS = 20
 CONTROL_HEIGHT = 40
 FILTER_HEIGHT = 36

@@ -11,13 +11,20 @@ from ..base_page import PageBase
 from ..components.business.recording_dialog import RecordingDialog
 from ..components.dialogs.help_dialog import HelpDialog
 from ..filters import RecordingFilters
-from ..themes.glass import CONTROL_HEIGHT, CONTROL_RADIUS, FILTER_HEIGHT, glass_border, glass_gradient, glass_shadows
+from ..themes.glass import (
+    CARD_HEIGHT,
+    CONTROL_HEIGHT,
+    CONTROL_RADIUS,
+    FILTER_HEIGHT,
+    glass_border,
+    glass_gradient,
+    glass_shadows,
+)
 from ..themes.theme_tokens import build_tokens
 
 
 class RecordingsPage(PageBase):
     CARD_MIN_WIDTH = 280
-    CARD_HEIGHT = 120
     CARD_SPACING = 12
 
     def __init__(self, app):
@@ -58,7 +65,7 @@ class RecordingsPage(PageBase):
                 runs_count=1,
                 spacing=self.CARD_SPACING,
                 run_spacing=self.CARD_SPACING,
-                child_aspect_ratio=self.CARD_MIN_WIDTH / self.CARD_HEIGHT,
+                child_aspect_ratio=self.CARD_MIN_WIDTH / CARD_HEIGHT,
                 padding=0,
                 controls=[],
             )
@@ -790,7 +797,7 @@ class RecordingsPage(PageBase):
     def get_grid_child_aspect_ratio(self):
         columns = self.get_grid_runs_count()
         card_width = (self.get_grid_available_width() - (columns - 1) * self.CARD_SPACING) / columns
-        return card_width / self.CARD_HEIGHT
+        return card_width / CARD_HEIGHT
 
     async def recalculate_grid_columns(self):
         if not self.is_grid_view:

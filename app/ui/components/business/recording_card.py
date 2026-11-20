@@ -8,7 +8,7 @@ from ....models.recording.recording_model import Recording
 from ....models.recording.recording_status_model import RecordingStatus
 from ....utils import utils
 from ....utils.logger import logger
-from ...themes.glass import CARD_BORDER_WIDTH, CARD_RADIUS, glass_gradient, glass_shadows
+from ...themes.glass import CARD_BORDER_WIDTH, CARD_HEIGHT, CARD_RADIUS, glass_gradient, glass_shadows
 from ...views.storage_view import StoragePage
 from ..dialogs.card_dialog import CardDialog
 from ..state.recording_card_state import RecordingCardState
@@ -216,7 +216,7 @@ class RecordingCardManager:
         # Keep the blur inside the surface so it doesn't clip the outer shadows.
         card_container.content = ft.Container(
             content=card_container.content,
-            padding=ft.Padding.symmetric(horizontal=4, vertical=10),
+            padding=ft.Padding.only(left=4, top=10, right=4),
             blur=8,
             border_radius=CARD_RADIUS - CARD_BORDER_WIDTH,
         )
@@ -306,7 +306,7 @@ class RecordingCardManager:
         hovered = recording.rec_id in self._hovered_cards
         event.control.animate = ft.Animation(duration, ft.AnimationCurve.EASE_OUT)
         event.control.animate_offset = ft.Animation(duration, ft.AnimationCurve.EASE_OUT)
-        event.control.offset = ft.Offset(0, -2 / 120 if hovered and duration else 0)
+        event.control.offset = ft.Offset(0, -2 / CARD_HEIGHT if hovered and duration else 0)
         self.apply_card_material(event.control, recording)
         event.control.update()
 
